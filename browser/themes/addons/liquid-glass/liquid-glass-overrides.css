@@ -1,0 +1,25 @@
+:root,
+:host(.anonymous-content-host) {
+  color-scheme: light dark;
+  background-color: var(--background-color-canvas);
+  color: var(--text-color);
+  accent-color: var(--color-accent-primary);
+  --toolbox-bgcolor-inactive: red !important;
+}
+
+a:any-link {
+  color: var(--link-color);
+}
+a:any-link:hover {
+  color: var(--link-color-hover);
+}
+a:any-link:active {
+  color: var(--link-color-active);
+}
+
+button,
+html|select,
+html|input[type="color"],
+xul|menulist {
+  color: var(--button-text-color);
+}
