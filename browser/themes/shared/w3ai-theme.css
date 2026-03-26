@@ -1,0 +1,357 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/*
+ * W3Ai Premium Browser Theme
+ * Liquid-glass macOS premium design system for W3Ai by Plato.
+ *
+ * This file defines the centralized design token foundation.
+ * All W3Ai-specific visual primitives should be defined here and
+ * consumed via CSS variables throughout the browser chrome.
+ *
+ * Upgrade note: This file is an additive layer on top of Firefox's
+ * existing design system. It does not replace upstream tokens —
+ * it overrides and extends them using the existing CSS variable system.
+ */
+
+:root {
+  /* ============================================================
+   * W3Ai COLOR PALETTE
+   * Rich indigo / navy / electric blue base with glass layering
+   * ============================================================ */
+
+  /* Base background gradients */
+  --w3ai-bg-deep:           #0d0d1a;
+  --w3ai-bg-navy:           #0f1535;
+  --w3ai-bg-indigo:         #131a45;
+  --w3ai-bg-blue:           #1a2460;
+  --w3ai-bg-mid:            #1e2d6b;
+
+  /* Glass surface fills */
+  --w3ai-glass-surface:     rgba(255, 255, 255, 0.06);
+  --w3ai-glass-surface-hover: rgba(255, 255, 255, 0.10);
+  --w3ai-glass-surface-active: rgba(255, 255, 255, 0.14);
+  --w3ai-glass-card:        rgba(255, 255, 255, 0.08);
+  --w3ai-glass-panel:       rgba(20, 28, 80, 0.75);
+  --w3ai-glass-panel-deep:  rgba(10, 14, 50, 0.85);
+  --w3ai-glass-toolbar:     rgba(15, 21, 60, 0.80);
+  --w3ai-glass-sidebar:     rgba(12, 18, 55, 0.90);
+
+  /* Accent / highlight colors */
+  --w3ai-accent-electric:   #3b82f6;
+  --w3ai-accent-cyan:       #06b6d4;
+  --w3ai-accent-indigo:     #6366f1;
+  --w3ai-accent-purple:     #8b5cf6;
+  --w3ai-accent-violet:     #a78bfa;
+  --w3ai-accent-glow:       rgba(99, 102, 241, 0.35);
+  --w3ai-accent-glow-strong: rgba(99, 102, 241, 0.55);
+
+  /* Selected / active state */
+  --w3ai-selected-bg:       rgba(99, 102, 241, 0.25);
+  --w3ai-selected-bg-hover: rgba(99, 102, 241, 0.35);
+  --w3ai-selected-border:   rgba(139, 92, 246, 0.60);
+
+  /* Text colors */
+  --w3ai-text-primary:      rgba(255, 255, 255, 0.95);
+  --w3ai-text-secondary:    rgba(255, 255, 255, 0.65);
+  --w3ai-text-muted:        rgba(255, 255, 255, 0.40);
+  --w3ai-text-accent:       #a5b4fc;
+
+  /* Border / divider colors */
+  --w3ai-border-glass:      rgba(255, 255, 255, 0.10);
+  --w3ai-border-glass-strong: rgba(255, 255, 255, 0.18);
+  --w3ai-border-accent:     rgba(99, 102, 241, 0.40);
+  --w3ai-border-inner:      rgba(255, 255, 255, 0.05);
+
+  /* ============================================================
+   * W3Ai SHADOWS AND GLOWS
+   * ============================================================ */
+
+  --w3ai-shadow-sm:         0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --w3ai-shadow-md:         0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --w3ai-shadow-lg:         0 8px 24px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4);
+  --w3ai-shadow-xl:         0 16px 48px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.5);
+  --w3ai-glow-accent:       0 0 20px rgba(99, 102, 241, 0.4), 0 0 40px rgba(99, 102, 241, 0.2);
+  --w3ai-glow-panel:        0 0 0 0.5px rgba(255, 255, 255, 0.12), var(--w3ai-shadow-md);
+  --w3ai-glow-button:       0 0 12px rgba(99, 102, 241, 0.5);
+
+  /* ============================================================
+   * W3Ai GEOMETRY
+   * Large-radius rounded containers, premium spacing
+   * ============================================================ */
+
+  --w3ai-radius-xs:         4px;
+  --w3ai-radius-sm:         8px;
+  --w3ai-radius-md:         12px;
+  --w3ai-radius-lg:         16px;
+  --w3ai-radius-xl:         20px;
+  --w3ai-radius-2xl:        24px;
+  --w3ai-radius-pill:       100px;
+
+  /* Spacing scale */
+  --w3ai-space-1:            4px;
+  --w3ai-space-2:            8px;
+  --w3ai-space-3:           12px;
+  --w3ai-space-4:           16px;
+  --w3ai-space-5:           20px;
+  --w3ai-space-6:           24px;
+  --w3ai-space-8:           32px;
+
+  /* Toolbar / rail sizing */
+  --w3ai-sidebar-rail-width: 56px;
+  --w3ai-sidebar-expanded-width: 240px;
+  --w3ai-toolbar-height:    48px;
+  --w3ai-urlbar-height:     36px;
+  --w3ai-tab-height:        36px;
+  --w3ai-tab-min-width:     32px;
+  --w3ai-icon-size:         20px;
+
+  /* ============================================================
+   * W3Ai TRANSLUCENCY / BACKDROP
+   * ============================================================ */
+
+  --w3ai-backdrop-blur:     blur(20px) saturate(180%);
+  --w3ai-backdrop-blur-sm:  blur(12px) saturate(160%);
+  --w3ai-backdrop-blur-lg:  blur(32px) saturate(200%);
+
+  /* ============================================================
+   * OVERRIDE FIREFOX DESIGN TOKENS
+   * Map W3Ai values into Firefox's existing CSS variable system
+   * for maximum compatibility and merge-friendliness.
+   * ============================================================ */
+
+  /* Override accent color to W3Ai electric indigo */
+  --color-accent-primary:   var(--w3ai-accent-indigo);
+  --color-accent-primary-hover: var(--w3ai-accent-purple);
+  --color-accent-primary-active: var(--w3ai-accent-violet);
+  --color-accent-primary-selected: var(--w3ai-accent-indigo);
+
+  /* Override sidebar colors */
+  --sidebar-background-color: var(--w3ai-glass-sidebar);
+  --sidebar-text-color:     var(--w3ai-text-primary);
+  --sidebar-border-color:   var(--w3ai-border-glass);
+
+  /* Override button styles */
+  --button-background-color: var(--w3ai-glass-surface);
+  --button-background-color-hover: var(--w3ai-glass-surface-hover);
+  --button-background-color-active: var(--w3ai-glass-surface-active);
+  --button-text-color:      var(--w3ai-text-primary);
+
+  /* Override urlbar */
+  --urlbar-box-bgcolor:     var(--w3ai-glass-surface);
+  --urlbar-box-focus-bgcolor: rgba(255, 255, 255, 0.10);
+  --urlbar-box-hover-bgcolor: var(--w3ai-glass-surface-hover);
+  --urlbar-box-text-color:  var(--w3ai-text-primary);
+
+  /* Override arrowpanel (menus, popovers) */
+  --arrowpanel-background:  var(--w3ai-glass-panel);
+  --arrowpanel-color:       var(--w3ai-text-primary);
+  --arrowpanel-border-color: var(--w3ai-border-glass);
+
+  /* Override tab colors */
+  --tab-selected-bgcolor:   var(--w3ai-selected-bg);
+  --tab-selected-textcolor: var(--w3ai-text-primary);
+
+  /* Override content area shadow */
+  --content-area-shadow:    var(--w3ai-glow-panel);
+
+  /* Override toolbox background */
+  --toolbox-bgcolor:        var(--w3ai-glass-toolbar);
+  --toolbox-textcolor:      var(--w3ai-text-primary);
+}
+
+/* ============================================================
+ * W3Ai MAIN BROWSER CHROME
+ * Applied when not using a lightweight theme (lwtheme).
+ * Uses backdrop-filter for true glass effect on macOS.
+ * ============================================================ */
+
+@media (-moz-platform: macos) {
+  :root:not([lwtheme]) {
+    --toolbox-bgcolor: var(--w3ai-glass-toolbar);
+    --toolbox-bgcolor-inactive: rgba(15, 21, 60, 0.70);
+    background-color: var(--w3ai-bg-navy);
+  }
+}
+
+/* Browser window root background gradient */
+#browser,
+#appcontent,
+:root:not([lwtheme]) #navigator-toolbox {
+  background: linear-gradient(
+    180deg,
+    var(--w3ai-bg-navy) 0%,
+    var(--w3ai-bg-indigo) 40%,
+    var(--w3ai-bg-mid) 100%
+  );
+}
+
+/* ============================================================
+ * W3Ai TOOLBAR STYLING
+ * Floating glass toolbar with premium spacing
+ * ============================================================ */
+
+#navigator-toolbox:not([lwtheme]) {
+  background-color: var(--w3ai-glass-toolbar);
+  border-bottom: 1px solid var(--w3ai-border-glass);
+}
+
+#nav-bar:not([lwtheme]) {
+  background: transparent;
+  padding-block: var(--w3ai-space-2);
+  padding-inline: var(--w3ai-space-3);
+}
+
+/* ============================================================
+ * W3Ai URLBAR STYLING
+ * Rounded premium address field with glass appearance
+ * ============================================================ */
+
+#urlbar {
+  border-radius: var(--w3ai-radius-pill) !important;
+  background-color: var(--w3ai-glass-surface) !important;
+  border: 1px solid var(--w3ai-border-glass) !important;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#urlbar[focused] {
+  background-color: var(--w3ai-glass-surface-hover) !important;
+  border-color: var(--w3ai-border-accent) !important;
+  box-shadow: var(--w3ai-glow-accent) !important;
+}
+
+#urlbar-background {
+  border-radius: var(--w3ai-radius-pill) !important;
+  background: transparent !important;
+}
+
+#urlbar-input-container {
+  border-radius: var(--w3ai-radius-pill) !important;
+}
+
+/* ============================================================
+ * W3Ai TAB STRIP (horizontal, for non-vertical-tabs layout)
+ * ============================================================ */
+
+#tabbrowser-tabs {
+  background: transparent;
+}
+
+.tabbrowser-tab .tab-background {
+  border-radius: var(--w3ai-radius-md) !important;
+  transition: background-color 0.15s ease;
+}
+
+.tabbrowser-tab:hover .tab-background {
+  background-color: var(--w3ai-glass-surface-hover) !important;
+}
+
+.tabbrowser-tab[selected] .tab-background {
+  background-color: var(--w3ai-selected-bg) !important;
+  border: 1px solid var(--w3ai-selected-border) !important;
+  box-shadow: var(--w3ai-glow-accent) !important;
+}
+
+.tab-label {
+  color: var(--w3ai-text-primary);
+  font-size: 13px;
+}
+
+/* ============================================================
+ * W3Ai SIDEBAR STYLING
+ * Left glass rail for vertical tabs and navigation
+ * ============================================================ */
+
+#sidebar-main {
+  background: var(--w3ai-glass-sidebar) !important;
+  border-inline-end: 1px solid var(--w3ai-border-glass) !important;
+  backdrop-filter: var(--w3ai-backdrop-blur) !important;
+}
+
+#sidebar-box {
+  background: var(--w3ai-glass-sidebar) !important;
+  border-inline-end: 1px solid var(--w3ai-border-glass) !important;
+}
+
+#sidebar {
+  border-radius: var(--w3ai-radius-lg) !important;
+  box-shadow: var(--w3ai-glow-panel) !important;
+  outline: 0.5px solid var(--w3ai-border-glass) !important;
+  background-color: var(--w3ai-glass-sidebar) !important;
+  overflow: hidden;
+}
+
+/* ============================================================
+ * W3Ai PANELS AND POPOVERS
+ * Glass-like surfaces with consistent corner radius
+ * ============================================================ */
+
+panel,
+menupopup,
+#appMenu-popup,
+#PanelUI-popup {
+  --panel-background: var(--w3ai-glass-panel) !important;
+  --panel-color: var(--w3ai-text-primary) !important;
+  --panel-border-color: var(--w3ai-border-glass) !important;
+  border-radius: var(--w3ai-radius-lg) !important;
+  backdrop-filter: var(--w3ai-backdrop-blur) !important;
+  box-shadow: var(--w3ai-shadow-xl) !important;
+  overflow: hidden;
+}
+
+menupopup > menuitem:hover,
+panel menuitem:hover {
+  background-color: var(--w3ai-glass-surface-hover) !important;
+  border-radius: var(--w3ai-radius-sm) !important;
+}
+
+/* ============================================================
+ * W3Ai TOOLBAR BUTTONS
+ * Elegant glassy action controls
+ * ============================================================ */
+
+toolbarbutton:not([disabled]):hover {
+  background-color: var(--w3ai-glass-surface-hover) !important;
+  border-radius: var(--w3ai-radius-sm) !important;
+}
+
+toolbarbutton:not([disabled]):active,
+toolbarbutton[open="true"] {
+  background-color: var(--w3ai-glass-surface-active) !important;
+  border-radius: var(--w3ai-radius-sm) !important;
+}
+
+/* ============================================================
+ * W3Ai AI WINDOW SIDEBAR (right rail)
+ * Premium glass assistant rail on the right
+ * ============================================================ */
+
+#ai-window-sidebar-box {
+  background: var(--w3ai-glass-sidebar) !important;
+  border-inline-start: 1px solid var(--w3ai-border-glass) !important;
+  backdrop-filter: var(--w3ai-backdrop-blur) !important;
+}
+
+/* ============================================================
+ * W3Ai CONTENT AREA
+ * Rounded premium content container
+ * ============================================================ */
+
+@media -moz-pref("sidebar.revamp") {
+  #tabbrowser-tabpanels,
+  browser[type="content"] {
+    border-radius: var(--w3ai-radius-lg) !important;
+    overflow: hidden;
+  }
+}
+
+/* ============================================================
+ * W3Ai SCROLLBARS
+ * Slim elegant scrollbars
+ * ============================================================ */
+
+:root {
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+  scrollbar-width: thin;
+}

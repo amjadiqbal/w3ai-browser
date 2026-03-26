@@ -4,6 +4,7 @@
 
 @import url("chrome://global/skin/design-system/toolbar.css");
 @import url("chrome://browser/skin/browser-colors.css");
+@import url("chrome://browser/skin/w3ai-theme.css");
 @import url("chrome://browser/skin/addons/extension-controlled.css");
 @import url("chrome://browser/skin/addons/unified-extensions.css");
 @import url("chrome://browser/skin/downloads/indicator.css");

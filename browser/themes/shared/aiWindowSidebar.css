@@ -16,6 +16,11 @@
 
 .ai-window-right-sidebar {
   width: var(--ai-window-sidebar-width-default);
+
+  /* W3Ai: premium right-rail glass treatment */
+  background: rgba(12, 18, 55, 0.90) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  border-inline-start: 1px solid rgba(255, 255, 255, 0.10) !important;
 }
 
 /* Splitter styling to match the left sidebar */
@@ -30,5 +35,11 @@
 }
 
 #ai-window-splitter:hover {
-  background-color: var(--toolbarbutton-hover-background);
+  background-color: rgba(99, 102, 241, 0.15);
 }
+
+/* W3Ai: ensure the AI window content area has the right background */
+.ai-window-browser-stack {
+  background: transparent;
+}
+

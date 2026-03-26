@@ -123,3 +123,71 @@
     --sidebar-border-color: var(--card-border-color);
   }
 }
+
+/* ============================================================
+ * W3Ai Premium Browser Color Overrides
+ * Applied in dark mode (prefers-color-scheme: dark) to enforce
+ * the deep indigo/navy glass aesthetic across all surfaces.
+ * Uses the existing CSS variable system for merge-friendliness.
+ * ============================================================ */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([lwtheme]) {
+    /* Core accent: electric indigo */
+    --color-accent-primary: #6366f1;
+    --color-accent-primary-hover: #8b5cf6;
+    --color-accent-primary-active: #a78bfa;
+    --color-accent-primary-selected: #6366f1;
+
+    /* Button glass fills */
+    --button-background-color: rgba(255, 255, 255, 0.06);
+    --button-background-color-hover: rgba(255, 255, 255, 0.10);
+    --button-background-color-active: rgba(255, 255, 255, 0.14);
+    --button-text-color: rgba(255, 255, 255, 0.95);
+    --button-text-color-primary: rgba(255, 255, 255, 0.95);
+
+    /* Panels and popovers */
+    --arrowpanel-background: rgba(20, 28, 80, 0.92);
+    --arrowpanel-color: rgba(255, 255, 255, 0.95);
+    --arrowpanel-border-color: rgba(255, 255, 255, 0.10);
+    --arrowpanel-dimmed: rgba(255, 255, 255, 0.08);
+    --arrowpanel-dimmed-further: rgba(255, 255, 255, 0.12);
+
+    /* Input fields */
+    --input-color: rgba(255, 255, 255, 0.95);
+    --input-bgcolor: rgba(255, 255, 255, 0.08);
+
+    /* Tabs */
+    --tab-selected-bgcolor: rgba(99, 102, 241, 0.25);
+    --tab-selected-textcolor: rgba(255, 255, 255, 0.95);
+
+    /* URL bar */
+    --urlbar-box-bgcolor: rgba(255, 255, 255, 0.06);
+    --urlbar-box-focus-bgcolor: rgba(255, 255, 255, 0.10);
+    --urlbar-box-hover-bgcolor: rgba(255, 255, 255, 0.10);
+    --urlbar-icon-fill-opacity: 0.85;
+
+    /* URL bar dropdown */
+    --urlbarView-action-color: rgba(165, 180, 252, 0.85);
+    --urlbarView-separator-color: rgba(255, 255, 255, 0.10);
+    --urlbarView-highlight-background: rgba(99, 102, 241, 0.20);
+    --urlbarView-highlight-color: rgba(255, 255, 255, 0.95);
+    --urlbarView-hover-background: rgba(255, 255, 255, 0.08);
+
+    /* Sidebar */
+    --sidebar-background-color: rgba(12, 18, 55, 0.90);
+    --sidebar-text-color: rgba(255, 255, 255, 0.90);
+    --sidebar-border-color: rgba(255, 255, 255, 0.10);
+
+    /* Toolbox */
+    --toolbox-bgcolor: rgba(15, 21, 60, 0.85);
+    --toolbox-textcolor: rgba(255, 255, 255, 0.90);
+    --toolbox-bgcolor-inactive: rgba(15, 21, 60, 0.70);
+
+    /* Chrome/content separator */
+    --chrome-content-separator-color: rgba(255, 255, 255, 0.08);
+
+    /* Content area shadow */
+    --content-area-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+}

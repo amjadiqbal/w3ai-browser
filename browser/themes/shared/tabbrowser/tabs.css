@@ -2833,3 +2833,48 @@ toolbar:not(#TabsToolbar) #firefox-view-button {
   white-space: nowrap;
   width: 100%;
 }
+
+/* ============================================================
+ * W3Ai Vertical Tab Premium Styling
+ * Applied when sidebar.verticalTabs is enabled (the default).
+ * Provides the premium glass rail aesthetic for the left tab strip.
+ * ============================================================ */
+
+@media -moz-pref("sidebar.verticalTabs") {
+  @media (prefers-color-scheme: dark) {
+    /* Selected tab: indigo glass with glow */
+    .tabbrowser-tab[selected] .tab-background {
+      background-color: rgba(99, 102, 241, 0.25) !important;
+      border: 1px solid rgba(139, 92, 246, 0.50) !important;
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
+      border-radius: 10px !important;
+    }
+
+    /* Hovered tab: subtle glass lift */
+    .tabbrowser-tab:not([selected]):hover .tab-background {
+      background-color: rgba(255, 255, 255, 0.08) !important;
+      border-radius: 10px !important;
+    }
+
+    /* Tab text */
+    .tabbrowser-tab[selected] .tab-label {
+      color: rgba(255, 255, 255, 0.95) !important;
+      font-weight: 500;
+    }
+
+    .tabbrowser-tab:not([selected]) .tab-label {
+      color: rgba(255, 255, 255, 0.70);
+    }
+
+    /* Tab strip background */
+    #tabbrowser-tabs[orient="vertical"] {
+      background: transparent;
+    }
+
+    /* Pinned tabs: clean square glass */
+    .tabbrowser-tab[pinned][selected] .tab-background {
+      background-color: rgba(99, 102, 241, 0.30) !important;
+      border-color: rgba(139, 92, 246, 0.60) !important;
+    }
+  }
+}

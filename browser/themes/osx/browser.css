@@ -5,7 +5,195 @@
 @import url("chrome://browser/skin/browser-shared.css");
 
 :root {
-  --arrowpanel-field-background: light-dark(rgba(249, 249, 250, 0.3), rgba(12, 12, 13, 0.3));
+  --arrowpanel-field-background: rgba(30, 40, 100, 0.50);
+}
+
+@media (-moz-native-theme) {
+  @media not (prefers-contrast) {
+    :root:not([lwtheme]) {
+      /* W3Ai: deep navy/indigo base for macOS native theme */
+      --urlbar-box-bgcolor: rgba(255, 255, 255, 0.08);
+      --tab-selected-bgcolor: rgba(99, 102, 241, 0.25);
+      --toolbox-bgcolor: rgba(15, 21, 60, 0.85);
+    }
+  }
+}
+
+/** Begin titlebar **/
+
+.titlebar-button {
+  display: none;
+}
+
+.titlebar-buttonbox-container {
+  align-items: center;
+  /* Hide window controls in fullscreen */
+  :root[inFullscreen] & {
+    display: none;
+  }
+}
+
+.titlebar-buttonbox {
+  &:-moz-locale-dir(ltr) {
+    /* W3Ai: proper macOS traffic light spacing */
+    margin-inline: 12px 8px;
+
+    @media (-moz-mac-rtl) {
+      margin-inline: 12px;
+    }
+  }
+
+  &:-moz-locale-dir(rtl) {
+    margin-inline: 12px;
+
+    @media (-moz-mac-rtl) {
+      margin-inline: 12px 8px;
+    }
+  }
+}
+
+/** End titlebar **/
+
+:root[chromehidden~="toolbar"][chromehidden~="location"][chromehidden~="directories"] {
+  border-top: 1px solid rgba(99, 102, 241, 0.30);
+}
+
+/* ----- BOOKMARK TOOLBAR ----- */
+
+#nav-bar-customization-target > #wrapper-personal-bookmarks > #personal-bookmarks {
+  min-height: 32px;
+  align-items: center;
+}
+
+/* Workaround for native menubar inheritance */
+.openintabs-menuitem {
+  list-style-image: none;
+}
+
+/* Inactive elements are faded on macOS - W3Ai uses softer fade */
+.toolbarbutton-1:not(:hover):-moz-window-inactive,
+.bookmark-item:not(:hover):-moz-window-inactive,
+:root:not([customizing]) .toolbarbutton-1:-moz-window-inactive[disabled] {
+  opacity: 0.45;
+}
+
+/* Address bar - W3Ai premium sizing */
+
+.urlbar,
+#searchbar {
+  font-size: 1.25em;
+}
+
+/* ----- AUTOCOMPLETE ----- */
+
+#PopupAutoComplete > richlistbox > richlistitem[originaltype~="datalist-first"] {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Bookmarking panel */
+
+/* The following elements come from editBookmarkPanel.inc.xhtml. Styling that's
+   specific to the editBookmarkPanel should be in browser.css. Styling that
+   should be shared by all editBookmarkPanel.inc.xhtml consumers should be in
+   editBookmark.css. */
+
+/**** folder tree and tag selector ****/
+
+#editBMPanel_folderTree,
+#editBMPanel_tagsSelector {
+  appearance: none;
+  background-color: var(--arrowpanel-field-background);
+  color: inherit;
+  border-radius: var(--border-radius-xsmall);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  margin: 0;
+}
+
+#editBMPanel_folderTree > treechildren::-moz-tree-row(blur, selected),
+#editBMPanel_tagsSelector:not(:focus) > richlistitem[selected] {
+  background-color: rgba(99, 102, 241, 0.20);
+}
+
+#editBMPanel_folderTree > treechildren::-moz-tree-twisty(blur, selected),
+#editBMPanel_folderTree > treechildren::-moz-tree-image(blur, selected),
+#editBMPanel_folderTree > treechildren::-moz-tree-cell-text(blur, selected),
+#editBMPanel_tagsSelector:not(:focus) > richlistitem[selected] {
+  color: inherit;
+}
+
+#editBMPanel_folderTree {
+  border-bottom: none;
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+  /* Implements editBookmarkPanel resizing on folderTree un-collapse. */
+  margin: 0 !important;
+  min-width: 27em;
+  position: relative;
+}
+
+/* ----- SIDEBAR ELEMENTS ----- */
+
+#sidebar-box {
+  /* Default font size is 11px on mac, so this is 12px */
+  font-size: 1.0909rem;
+}
+
+/* ::::: tabbrowser ::::: */
+
+.tab-label,
+.tab-group-label {
+  margin-block: 1px 0;
+}
+
+.tabbrowser-tab:not(:hover) > .tab-stack > .tab-content > .tab-icon-image:not([selected], [multiselected]) {
+  opacity: 0.9;
+}
+
+/*
+ * Force the overlay to create a new stacking context so it always appears on
+ * top of the icon.
+ */
+.tab-icon-overlay {
+  opacity: 0.9999;
+}
+
+.tab-label-container:not([selected], [multiselected]) {
+  opacity: 0.7;
+}
+
+.tabbrowser-tab {
+  border: none;
+}
+
+/* Bookmark drag and drop styles */
+
+.bookmark-item[dragover-into="true"] {
+  background: rgba(99, 102, 241, 0.35) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+#UITourTooltipDescription {
+  font-size: 1.18rem;
+  line-height: 2rem;
+}
+
+#UITourTooltipClose {
+  margin-inline-end: -10px;
+  margin-top: -14px;
+}
+
+/* W3Ai: macOS window vibrancy and rounded corners for the app shell */
+@media (-moz-platform: macos) {
+  :root:not([lwtheme]) {
+    #navigator-toolbox {
+      background-color: rgba(15, 21, 60, 0.80);
+      backdrop-filter: blur(20px) saturate(180%);
+    }
+
+    #TabsToolbar {
+      background: transparent;
+    }
+  }
 }
 
 @media (-moz-native-theme) {

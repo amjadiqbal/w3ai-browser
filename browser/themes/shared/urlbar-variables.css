@@ -32,3 +32,11 @@
     --urlbar-min-height: max(34px, 1.4em);
   }
 }
+
+/* W3Ai: premium URL bar dimensions - slightly taller for the glass pill look */
+@media (prefers-color-scheme: dark) {
+  :root:not([lwtheme]) {
+    --urlbar-min-height: max(36px, 1.4em);
+    --urlbar-inner-border-radius: 100px;
+  }
+}

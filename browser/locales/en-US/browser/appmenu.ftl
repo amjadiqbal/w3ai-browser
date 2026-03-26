@@ -320,10 +320,7 @@ appmenuitem-vpn-title = { -mozilla-vpn-brand-name }
 appmenuitem-vpn-description-2 = Get whole-device protection
 
 appmenu-services-header = My services
-# "Mozilla" is intentionally hardcoded to prevent forks from replacing it
-# with their own vendor name, since these tools are created and maintained by
-# Mozilla.
-appmenu-other-protection-header2 = Try other protection tools from Mozilla:
+appmenu-other-protection-header2 = Privacy &amp; protection tools:
 
 ## Profiles panel
 

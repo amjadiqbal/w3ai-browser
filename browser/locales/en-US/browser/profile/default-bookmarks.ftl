@@ -9,38 +9,38 @@
 default-bookmarks-title = Bookmarks
 default-bookmarks-heading = Bookmarks
 
-# Firefox links folder name
-default-bookmarks-firefox-heading = Mozilla Firefox
+# W3Ai links folder name
+default-bookmarks-firefox-heading = W3Ai by Plato
 
-# link title for https://www.mozilla.org/firefox/help/
+# link title for https://support.plato.ai/
 default-bookmarks-firefox-get-help = Get Help
 
-# link title for https://www.mozilla.org/firefox/customize/
-default-bookmarks-firefox-customize = Customize Firefox
+# link title for https://www.plato.ai/w3ai/
+default-bookmarks-firefox-customize = Customize W3Ai
 
-# link title for https://www.mozilla.org/contribute/
+# link title for https://www.plato.ai/about/
 default-bookmarks-firefox-community = Get Involved
 
-# link title for https://www.mozilla.org/about/
+# link title for https://www.plato.ai/about/
 default-bookmarks-firefox-about = About Us
 
-# Firefox Nightly links folder name
-default-bookmarks-nightly-heading = Firefox Nightly Resources
+# W3Ai Developer resources folder name
+default-bookmarks-nightly-heading = W3Ai Developer Resources
 
-# Nightly builds only, link title for https://blog.nightly.mozilla.org/
-default-bookmarks-nightly-blog = Firefox Nightly blog
+# link title for https://www.plato.ai/blog/
+default-bookmarks-nightly-blog = W3Ai Blog
 
-# Nightly builds only, link title for https://bugzilla.mozilla.org/
-default-bookmarks-bugzilla = Mozilla Bug Tracker
+# link title for https://github.com/amjadiqbal/w3ai-browser/issues
+default-bookmarks-bugzilla = W3Ai Issue Tracker
 
-# Nightly builds only, link title for https://developer.mozilla.org/
-default-bookmarks-mdn = Mozilla Developer Network
+# link title for https://developer.mozilla.org/
+default-bookmarks-mdn = MDN Web Docs
 
-# Nightly builds only, link title for https://addons.mozilla.org/firefox/addon/nightly-tester-tools/
-default-bookmarks-nightly-tester-tools = Nightly Tester Tools
+# link title for W3Ai dev tools
+default-bookmarks-nightly-tester-tools = W3Ai Developer Tools
 
-# Nightly builds only, link title for about:crashes
+# link title for about:crashes
 default-bookmarks-crashes = All your crashes
 
-# Nightly builds only, link title for https://planet.mozilla.org/
-default-bookmarks-planet = Planet Mozilla
+# link title for https://web3.foundation/
+default-bookmarks-planet = Web3 Foundation
