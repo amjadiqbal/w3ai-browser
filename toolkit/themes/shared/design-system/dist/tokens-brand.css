@@ -89,3 +89,48 @@
     }
   }
 }
+
+/* ================================================================
+ * W3Ai Corrective Pass: Purple/Magenta Visual Override
+ * Placed outside @layer so these rules win over tokens-foundation.
+ * Fixes:
+ *   - Dead-black (#1c1b22) canvas → deep purple-navy (#160d30)
+ *   - Cyan accent → luminous purple/magenta accent
+ * ================================================================ */
+
+@media (prefers-color-scheme: dark) {
+  :root,
+  :host(.anonymous-content-host) {
+    /* Page/canvas background: rich deep purple-navy instead of near-black */
+    --background-color-canvas: #160d30;
+    --background-color-box: rgba(168, 85, 247, 0.12);
+    --background-color-box-info: rgba(168, 85, 247, 0.08);
+    --background-color-list-item-hover: rgba(168, 85, 247, 0.18);
+
+    /* Purple accent replaces cyan entirely */
+    --color-accent-primary: #a855f7;
+    --color-accent-primary-hover: #c084fc;
+    --color-accent-primary-active: #d8b4fe;
+    --color-accent-primary-selected: #a855f7;
+
+    /* Borders inherit purple character */
+    --border-color: rgba(168, 85, 247, 0.30);
+    --border-color-deemphasized: rgba(168, 85, 247, 0.18);
+    --border-color-interactive: rgba(168, 85, 247, 0.45);
+
+    /* Links follow accent */
+    --link-color: #c084fc;
+    --link-color-hover: #d8b4fe;
+    --link-color-active: #e9d5ff;
+    --link-color-visited: #a855f7;
+
+    /* Text remains readable white with slight warm cast */
+    --text-color: rgba(249, 240, 255, 0.92);
+
+    /* Buttons */
+    --button-background-color: rgba(168, 85, 247, 0.14);
+    --button-background-color-hover: rgba(168, 85, 247, 0.24);
+    --button-background-color-active: rgba(168, 85, 247, 0.35);
+    --button-text-color: rgba(249, 240, 255, 0.95);
+  }
+}

@@ -816,3 +816,88 @@ section:not(:empty) ~ #empty-addons-message {
 .permission-header > .addon-sitepermissions-host {
   font-weight: var(--font-weight-bold);
 }
+
+/* ================================================================
+ * W3Ai about:addons Premium Purple Redesign
+ * Overrides the flat dark backgrounds with rich purple-indigo
+ * gradient surfaces matching the W3Ai glass design language.
+ * ================================================================ */
+
+@media (prefers-color-scheme: dark) {
+  /* Page root: deep purple-to-indigo gradient instead of flat black */
+  :root {
+    background: linear-gradient(
+      160deg,
+      #160d30 0%,
+      #1a0f3d 35%,
+      #1e1550 65%,
+      #1a0d45 100%
+    ) !important;
+  }
+
+  /* Left sidebar: frosted purple glass panel */
+  #sidebar {
+    background: rgba(22, 13, 48, 0.88) !important;
+    border-inline-end: 1px solid rgba(168, 85, 247, 0.20) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+  }
+
+  /* Category items: clean glass treatment */
+  .category {
+    border-radius: 10px;
+    margin-block: 1px;
+    margin-inline: 4px;
+    padding-block: 6px;
+    padding-inline: 10px;
+    transition: background-color 0.15s ease;
+  }
+
+  .category:hover {
+    background-color: rgba(168, 85, 247, 0.18) !important;
+  }
+
+  .category[selected] {
+    background-color: rgba(168, 85, 247, 0.28) !important;
+    border: 1px solid rgba(192, 132, 252, 0.40) !important;
+    box-shadow: 0 0 14px rgba(168, 85, 247, 0.30) !important;
+    border-radius: 10px !important;
+  }
+
+  /* Content area header/search strip: match the gradient */
+  .sticky-container,
+  .main-search,
+  .main-heading {
+    background: transparent !important;
+  }
+
+  /* Addon cards: purple-tinted glass cards */
+  addon-card,
+  .card {
+    background: rgba(168, 85, 247, 0.10) !important;
+    border: 1px solid rgba(168, 85, 247, 0.22) !important;
+    border-radius: 14px !important;
+    backdrop-filter: blur(12px) !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25) !important;
+  }
+
+  addon-card:hover,
+  .card:hover {
+    background: rgba(168, 85, 247, 0.16) !important;
+    border-color: rgba(192, 132, 252, 0.35) !important;
+  }
+
+  /* Detail sections inside cards */
+  .details {
+    background: transparent !important;
+  }
+
+  /* Section headings */
+  h1, h2 {
+    color: rgba(249, 240, 255, 0.95) !important;
+  }
+
+  /* Badge/count uses purple */
+  .category[badge-count]::after {
+    background-color: #a855f7 !important;
+  }
+}
