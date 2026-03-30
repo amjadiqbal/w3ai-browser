@@ -133,61 +133,62 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([lwtheme]) {
-    /* Core accent: electric indigo */
-    --color-accent-primary: #6366f1;
-    --color-accent-primary-hover: #8b5cf6;
-    --color-accent-primary-active: #a78bfa;
-    --color-accent-primary-selected: #6366f1;
+    /* Core accent: luminous purple (matches w3ai-theme.css) */
+    --color-accent-primary: #a855f7;
+    --color-accent-primary-hover: #c084fc;
+    --color-accent-primary-active: #d8b4fe;
+    --color-accent-primary-selected: #a855f7;
 
     /* Button glass fills */
-    --button-background-color: rgba(255, 255, 255, 0.06);
-    --button-background-color-hover: rgba(255, 255, 255, 0.10);
-    --button-background-color-active: rgba(255, 255, 255, 0.14);
-    --button-text-color: rgba(255, 255, 255, 0.95);
-    --button-text-color-primary: rgba(255, 255, 255, 0.95);
+    --button-background-color: rgba(168, 85, 247, 0.12);
+    --button-background-color-hover: rgba(168, 85, 247, 0.22);
+    --button-background-color-active: rgba(168, 85, 247, 0.32);
+    --button-text-color: rgba(249, 240, 255, 0.95);
+    --button-text-color-primary: rgba(249, 240, 255, 0.98);
 
     /* Panels and popovers */
-    --arrowpanel-background: rgba(20, 28, 80, 0.92);
-    --arrowpanel-color: rgba(255, 255, 255, 0.95);
-    --arrowpanel-border-color: rgba(255, 255, 255, 0.10);
-    --arrowpanel-dimmed: rgba(255, 255, 255, 0.08);
-    --arrowpanel-dimmed-further: rgba(255, 255, 255, 0.12);
+    --arrowpanel-background: rgba(22, 13, 48, 0.96);
+    --arrowpanel-color: rgba(249, 240, 255, 0.95);
+    --arrowpanel-border-color: rgba(168, 85, 247, 0.22);
+    --arrowpanel-dimmed: rgba(168, 85, 247, 0.10);
+    --arrowpanel-dimmed-further: rgba(168, 85, 247, 0.18);
 
     /* Input fields */
-    --input-color: rgba(255, 255, 255, 0.95);
-    --input-bgcolor: rgba(255, 255, 255, 0.08);
+    --input-color: rgba(249, 240, 255, 0.95);
+    --input-bgcolor: rgba(30, 18, 65, 0.90);
 
     /* Tabs */
-    --tab-selected-bgcolor: rgba(99, 102, 241, 0.25);
-    --tab-selected-textcolor: rgba(255, 255, 255, 0.95);
+    --tab-selected-bgcolor: rgba(168, 85, 247, 0.28);
+    --tab-selected-textcolor: rgba(249, 240, 255, 0.95);
 
-    /* URL bar */
-    --urlbar-box-bgcolor: rgba(255, 255, 255, 0.06);
-    --urlbar-box-focus-bgcolor: rgba(255, 255, 255, 0.10);
-    --urlbar-box-hover-bgcolor: rgba(255, 255, 255, 0.10);
-    --urlbar-icon-fill-opacity: 0.85;
+    /* URL bar — solid enough so typed text is always visible */
+    --urlbar-box-bgcolor: rgba(30, 18, 65, 0.92);
+    --urlbar-box-focus-bgcolor: rgba(40, 22, 80, 0.96);
+    --urlbar-box-hover-bgcolor: rgba(35, 20, 72, 0.94);
+    --urlbar-box-text-color: rgba(249, 240, 255, 0.95);
+    --urlbar-icon-fill-opacity: 0.90;
 
     /* URL bar dropdown */
-    --urlbarView-action-color: rgba(165, 180, 252, 0.85);
-    --urlbarView-separator-color: rgba(255, 255, 255, 0.10);
-    --urlbarView-highlight-background: rgba(99, 102, 241, 0.20);
-    --urlbarView-highlight-color: rgba(255, 255, 255, 0.95);
-    --urlbarView-hover-background: rgba(255, 255, 255, 0.08);
+    --urlbarView-action-color: rgba(192, 132, 252, 0.90);
+    --urlbarView-separator-color: rgba(168, 85, 247, 0.18);
+    --urlbarView-highlight-background: rgba(168, 85, 247, 0.28);
+    --urlbarView-highlight-color: rgba(249, 240, 255, 0.95);
+    --urlbarView-hover-background: rgba(168, 85, 247, 0.16);
 
     /* Sidebar */
-    --sidebar-background-color: rgba(12, 18, 55, 0.90);
-    --sidebar-text-color: rgba(255, 255, 255, 0.90);
-    --sidebar-border-color: rgba(255, 255, 255, 0.10);
+    --sidebar-background-color: rgba(18, 10, 40, 0.94);
+    --sidebar-text-color: rgba(249, 240, 255, 0.92);
+    --sidebar-border-color: rgba(168, 85, 247, 0.20);
 
     /* Toolbox */
-    --toolbox-bgcolor: rgba(15, 21, 60, 0.85);
-    --toolbox-textcolor: rgba(255, 255, 255, 0.90);
-    --toolbox-bgcolor-inactive: rgba(15, 21, 60, 0.70);
+    --toolbox-bgcolor: rgba(20, 12, 44, 0.90);
+    --toolbox-textcolor: rgba(249, 240, 255, 0.92);
+    --toolbox-bgcolor-inactive: rgba(20, 12, 44, 0.72);
 
     /* Chrome/content separator */
-    --chrome-content-separator-color: rgba(255, 255, 255, 0.08);
+    --chrome-content-separator-color: rgba(168, 85, 247, 0.14);
 
     /* Content area shadow */
-    --content-area-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 4px 12px rgba(0, 0, 0, 0.4);
+    --content-area-shadow: 0 0 0 0.5px rgba(168, 85, 247, 0.18), 0 4px 12px rgba(0, 0, 0, 0.45);
   }
 }

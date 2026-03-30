@@ -5,16 +5,16 @@
 @import url("chrome://browser/skin/browser-shared.css");
 
 :root {
-  --arrowpanel-field-background: rgba(30, 40, 100, 0.50);
+  --arrowpanel-field-background: rgba(30, 18, 65, 0.90);
 }
 
 @media (-moz-native-theme) {
   @media not (prefers-contrast) {
     :root:not([lwtheme]) {
-      /* W3Ai: deep navy/indigo base for macOS native theme */
-      --urlbar-box-bgcolor: rgba(255, 255, 255, 0.08);
-      --tab-selected-bgcolor: rgba(99, 102, 241, 0.25);
-      --toolbox-bgcolor: rgba(15, 21, 60, 0.85);
+      /* W3Ai: solid purple glass for macOS — text must be readable */
+      --urlbar-box-bgcolor: rgba(30, 18, 65, 0.92);
+      --tab-selected-bgcolor: rgba(168, 85, 247, 0.28);
+      --toolbox-bgcolor: rgba(20, 12, 44, 0.90);
     }
   }
 }
@@ -55,7 +55,7 @@
 /** End titlebar **/
 
 :root[chromehidden~="toolbar"][chromehidden~="location"][chromehidden~="directories"] {
-  border-top: 1px solid rgba(99, 102, 241, 0.30);
+  border-top: 1px solid rgba(168, 85, 247, 0.30);
 }
 
 /* ----- BOOKMARK TOOLBAR ----- */
@@ -111,7 +111,7 @@
 
 #editBMPanel_folderTree > treechildren::-moz-tree-row(blur, selected),
 #editBMPanel_tagsSelector:not(:focus) > richlistitem[selected] {
-  background-color: rgba(99, 102, 241, 0.20);
+  background-color: rgba(168, 85, 247, 0.22);
 }
 
 #editBMPanel_folderTree > treechildren::-moz-tree-twisty(blur, selected),
@@ -168,7 +168,7 @@
 /* Bookmark drag and drop styles */
 
 .bookmark-item[dragover-into="true"] {
-  background: rgba(99, 102, 241, 0.35) !important;
+  background: rgba(168, 85, 247, 0.35) !important;
   color: rgba(255, 255, 255, 0.95) !important;
 }
 
@@ -186,7 +186,7 @@
 @media (-moz-platform: macos) {
   :root:not([lwtheme]) {
     #navigator-toolbox {
-      background-color: rgba(15, 21, 60, 0.80);
+      background-color: rgba(20, 12, 44, 0.88);
       backdrop-filter: blur(20px) saturate(180%);
     }
 

@@ -24,15 +24,15 @@
   --w3ai-bg-indigo:         #1e1550;
   --w3ai-bg-violet:         #221260;
 
-  /* Glass surface fills — purple-tinted */
-  --w3ai-glass-surface:     rgba(168, 85, 247, 0.08);
-  --w3ai-glass-surface-hover: rgba(168, 85, 247, 0.16);
-  --w3ai-glass-surface-active: rgba(168, 85, 247, 0.24);
-  --w3ai-glass-card:        rgba(168, 85, 247, 0.10);
-  --w3ai-glass-panel:       rgba(22, 13, 48, 0.82);
-  --w3ai-glass-panel-deep:  rgba(15, 8, 32, 0.90);
-  --w3ai-glass-toolbar:     rgba(22, 13, 48, 0.85);
-  --w3ai-glass-sidebar:     rgba(18, 10, 40, 0.92);
+  /* Glass surface fills — purple-tinted, opaque enough to be readable */
+  --w3ai-glass-surface:     rgba(30, 18, 65, 0.88);
+  --w3ai-glass-surface-hover: rgba(38, 22, 80, 0.92);
+  --w3ai-glass-surface-active: rgba(48, 28, 95, 0.96);
+  --w3ai-glass-card:        rgba(30, 18, 65, 0.85);
+  --w3ai-glass-panel:       rgba(22, 13, 48, 0.92);
+  --w3ai-glass-panel-deep:  rgba(15, 8, 32, 0.96);
+  --w3ai-glass-toolbar:     rgba(20, 12, 44, 0.90);
+  --w3ai-glass-sidebar:     rgba(18, 10, 40, 0.94);
 
   /* Primary accent: luminous purple — NO cyan */
   --w3ai-accent-primary:    #a855f7;
@@ -192,18 +192,19 @@
 }
 
 /* ============================================================
- * W3Ai URLBAR — rounded pill, purple glass
+ * W3Ai URLBAR — rounded pill, solid purple glass (text always readable)
  * ============================================================ */
 
 #urlbar {
   border-radius: var(--w3ai-radius-pill) !important;
-  background-color: var(--w3ai-glass-surface) !important;
+  background-color: rgba(30, 18, 65, 0.92) !important;
   border: 1px solid var(--w3ai-border-glass) !important;
+  color: var(--w3ai-text-primary) !important;
   transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 #urlbar[focused] {
-  background-color: rgba(168, 85, 247, 0.14) !important;
+  background-color: rgba(40, 22, 80, 0.96) !important;
   border-color: var(--w3ai-border-accent) !important;
   box-shadow: var(--w3ai-glow-accent) !important;
 }
@@ -215,6 +216,27 @@
 
 #urlbar-input-container {
   border-radius: var(--w3ai-radius-pill) !important;
+}
+
+#urlbar-input {
+  color: var(--w3ai-text-primary) !important;
+}
+
+.urlbar-input-box {
+  color: var(--w3ai-text-primary) !important;
+}
+
+.urlbar-placeholder {
+  color: var(--w3ai-text-secondary) !important;
+}
+
+/* URL bar dropdown/results panel */
+#urlbar-results,
+.urlbarView {
+  background: rgba(22, 13, 48, 0.96) !important;
+  border: 1px solid var(--w3ai-border-glass) !important;
+  border-radius: var(--w3ai-radius-lg) !important;
+  backdrop-filter: var(--w3ai-backdrop-blur) !important;
 }
 
 /* ============================================================
