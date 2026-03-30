@@ -736,6 +736,8 @@ var gBrowserInit = {
       document.documentElement.setAttribute("sessionrestored", "true");
     });
 
+    W3AiTabTheme.init();
+
     this.delayedStartupFinished = true;
     _resolveDelayedStartup();
     Services.obs.notifyObservers(window, "browser-delayed-startup-finished");
@@ -1118,6 +1120,8 @@ var gBrowserInit = {
   },
 
   onUnload() {
+    W3AiTabTheme.uninit();
+
     gUIDensity.uninit();
 
     CustomTitlebar.uninit();

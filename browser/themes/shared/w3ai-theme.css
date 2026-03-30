@@ -144,41 +144,36 @@
 
 /* ============================================================
  * W3Ai BROWSER SHELL BACKGROUND
- * Deep purple-indigo gradient — matches screenshot mood.
- * Replaces all flat-dark/near-black inherited shells.
+ * Uses dynamic theme variables set by w3ai-tab-theme.js.
+ * Falls back to deep purple when the JS hasn't run yet.
  * ============================================================ */
+
+:root {
+  --w3ai-theme-bg-base:      #0f0820;
+  --w3ai-theme-bg-gradient:  linear-gradient(160deg, #0f0820 0%, #160d30 30%, #1a0f3d 60%, #221260 100%);
+  --w3ai-theme-surface:      rgba(30, 18, 65, 0.92);
+  --w3ai-theme-surface-hover: rgba(42, 24, 88, 0.94);
+  --w3ai-theme-accent:       #a855f7;
+  --w3ai-theme-accent-glow:  rgba(168, 85, 247, 0.45);
+  --w3ai-theme-border:       rgba(168, 85, 247, 0.20);
+  --w3ai-theme-toolbar:      rgba(18, 10, 42, 0.92);
+}
 
 @media (-moz-platform: macos) {
   :root:not([lwtheme]) {
-    background-color: var(--w3ai-bg-purple);
-    background: linear-gradient(
-      160deg,
-      var(--w3ai-bg-purple) 0%,
-      var(--w3ai-bg-plum) 40%,
-      var(--w3ai-bg-indigo) 80%,
-      var(--w3ai-bg-violet) 100%
-    );
+    background-color: var(--w3ai-theme-bg-base);
+    background: var(--w3ai-theme-bg-gradient);
   }
 }
 
 #browser,
 #appcontent {
-  background: linear-gradient(
-    160deg,
-    #160d30 0%,
-    #1a0f3d 40%,
-    #1e1550 80%,
-    #221260 100%
-  );
+  background: var(--w3ai-theme-bg-gradient);
 }
 
 :root:not([lwtheme]) #navigator-toolbox {
-  background: linear-gradient(
-    180deg,
-    rgba(22, 13, 48, 0.90) 0%,
-    rgba(26, 15, 61, 0.85) 100%
-  );
-  border-bottom: 1px solid var(--w3ai-border-glass);
+  background: var(--w3ai-theme-toolbar);
+  border-bottom: 1px solid var(--w3ai-theme-border);
 }
 
 /* ============================================================
@@ -192,21 +187,21 @@
 }
 
 /* ============================================================
- * W3Ai URLBAR — rounded pill, solid purple glass (text always readable)
+ * W3Ai URLBAR — rounded pill, solid glass (text always readable)
  * ============================================================ */
 
 #urlbar {
   border-radius: var(--w3ai-radius-pill) !important;
-  background-color: rgba(30, 18, 65, 0.92) !important;
-  border: 1px solid var(--w3ai-border-glass) !important;
+  background-color: var(--w3ai-theme-surface) !important;
+  border: 1px solid var(--w3ai-theme-border) !important;
   color: var(--w3ai-text-primary) !important;
   transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 #urlbar[focused] {
-  background-color: rgba(40, 22, 80, 0.96) !important;
-  border-color: var(--w3ai-border-accent) !important;
-  box-shadow: var(--w3ai-glow-accent) !important;
+  background-color: var(--w3ai-theme-surface-hover) !important;
+  border-color: var(--w3ai-theme-accent) !important;
+  box-shadow: 0 0 0 1px var(--w3ai-theme-accent-glow), 0 0 22px var(--w3ai-theme-accent-glow) !important;
 }
 
 #urlbar-background {
@@ -233,14 +228,14 @@
 /* URL bar dropdown/results panel */
 #urlbar-results,
 .urlbarView {
-  background: rgba(22, 13, 48, 0.96) !important;
-  border: 1px solid var(--w3ai-border-glass) !important;
+  background: var(--w3ai-glass-panel) !important;
+  border: 1px solid var(--w3ai-theme-border) !important;
   border-radius: var(--w3ai-radius-lg) !important;
   backdrop-filter: var(--w3ai-backdrop-blur) !important;
 }
 
 /* ============================================================
- * W3Ai TAB STRIP (horizontal fallback)
+ * W3Ai TAB STRIP — liquid glass with dynamic palette
  * ============================================================ */
 
 #tabbrowser-tabs {
@@ -249,17 +244,20 @@
 
 .tabbrowser-tab .tab-background {
   border-radius: var(--w3ai-radius-md) !important;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, backdrop-filter 0.15s ease;
 }
 
 .tabbrowser-tab:hover .tab-background {
-  background-color: var(--w3ai-glass-surface-hover) !important;
+  background: var(--w3ai-theme-surface-hover) !important;
+  backdrop-filter: blur(16px) saturate(200%) !important;
+  box-shadow: 0 0 0 1px var(--w3ai-theme-border) !important;
 }
 
 .tabbrowser-tab[selected] .tab-background {
-  background-color: var(--w3ai-selected-bg) !important;
-  border: 1px solid var(--w3ai-selected-border) !important;
-  box-shadow: var(--w3ai-glow-accent) !important;
+  background: var(--w3ai-theme-surface) !important;
+  border: 1px solid var(--w3ai-theme-border) !important;
+  box-shadow: 0 0 0 1px var(--w3ai-theme-border), 0 0 18px var(--w3ai-theme-accent-glow) !important;
+  backdrop-filter: blur(20px) saturate(200%) !important;
 }
 
 .tab-label {
@@ -268,30 +266,30 @@
 }
 
 /* ============================================================
- * W3Ai SIDEBAR — left glass rail (purple-frosted)
+ * W3Ai SIDEBAR — liquid glass rail with dynamic palette
  * ============================================================ */
 
 #sidebar-main {
-  background: var(--w3ai-glass-sidebar) !important;
-  border-inline-end: 1px solid var(--w3ai-border-glass) !important;
+  background: var(--w3ai-theme-toolbar) !important;
+  border-inline-end: 1px solid var(--w3ai-theme-border) !important;
   backdrop-filter: var(--w3ai-backdrop-blur) !important;
 }
 
 #sidebar-box {
-  background: var(--w3ai-glass-sidebar) !important;
-  border-inline-end: 1px solid var(--w3ai-border-glass) !important;
+  background: var(--w3ai-theme-toolbar) !important;
+  border-inline-end: 1px solid var(--w3ai-theme-border) !important;
 }
 
 #sidebar {
   border-radius: var(--w3ai-radius-lg) !important;
-  box-shadow: var(--w3ai-glow-panel) !important;
-  outline: 0.5px solid var(--w3ai-border-glass) !important;
-  background-color: var(--w3ai-glass-sidebar) !important;
+  box-shadow: 0 0 0 0.5px var(--w3ai-theme-border), var(--w3ai-shadow-md) !important;
+  outline: 0.5px solid var(--w3ai-theme-border) !important;
+  background-color: var(--w3ai-theme-toolbar) !important;
   overflow: hidden;
 }
 
 /* ============================================================
- * W3Ai PANELS AND POPOVERS — purple glass
+ * W3Ai PANELS AND POPOVERS — liquid glass with dynamic palette
  * ============================================================ */
 
 panel,
@@ -300,7 +298,7 @@ menupopup,
 #PanelUI-popup {
   --panel-background: var(--w3ai-glass-panel) !important;
   --panel-color: var(--w3ai-text-primary) !important;
-  --panel-border-color: var(--w3ai-border-glass) !important;
+  --panel-border-color: var(--w3ai-theme-border) !important;
   border-radius: var(--w3ai-radius-lg) !important;
   backdrop-filter: var(--w3ai-backdrop-blur) !important;
   box-shadow: var(--w3ai-shadow-xl) !important;
@@ -309,32 +307,37 @@ menupopup,
 
 menupopup > menuitem:hover,
 panel menuitem:hover {
-  background-color: var(--w3ai-glass-surface-hover) !important;
+  background: var(--w3ai-theme-surface-hover) !important;
+  backdrop-filter: blur(10px) !important;
   border-radius: var(--w3ai-radius-sm) !important;
 }
 
 /* ============================================================
- * W3Ai TOOLBAR BUTTONS — subtle purple hover
+ * W3Ai TOOLBAR BUTTONS — liquid glass hover effect
  * ============================================================ */
 
 toolbarbutton:not([disabled]):hover {
-  background-color: var(--w3ai-glass-surface-hover) !important;
+  background: var(--w3ai-theme-surface-hover) !important;
+  backdrop-filter: blur(16px) saturate(200%) !important;
   border-radius: var(--w3ai-radius-sm) !important;
+  box-shadow: 0 0 0 1px var(--w3ai-theme-border), 0 2px 8px rgba(0, 0, 0, 0.30) !important;
 }
 
 toolbarbutton:not([disabled]):active,
 toolbarbutton[open="true"] {
-  background-color: var(--w3ai-glass-surface-active) !important;
+  background: var(--w3ai-glass-surface-active) !important;
+  backdrop-filter: blur(20px) saturate(220%) !important;
   border-radius: var(--w3ai-radius-sm) !important;
+  box-shadow: 0 0 0 1px var(--w3ai-theme-accent-glow), var(--w3ai-glow-button) !important;
 }
 
 /* ============================================================
- * W3Ai RIGHT-RAIL AI WINDOW — purple glass
+ * W3Ai RIGHT-RAIL AI WINDOW — liquid glass with dynamic palette
  * ============================================================ */
 
 #ai-window-sidebar-box {
-  background: var(--w3ai-glass-sidebar) !important;
-  border-inline-start: 1px solid var(--w3ai-border-glass) !important;
+  background: var(--w3ai-theme-toolbar) !important;
+  border-inline-start: 1px solid var(--w3ai-theme-border) !important;
   backdrop-filter: var(--w3ai-backdrop-blur) !important;
 }
 
