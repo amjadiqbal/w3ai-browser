@@ -10393,3 +10393,55 @@ hr {
     padding-block-end: 0;
   }
 }
+
+/* ================================================================
+ * W3Ai about:newtab — Purple/Magenta Theme Override
+ * ================================================================ */
+
+@media (prefers-color-scheme: dark) {
+  body,
+  #root {
+    background: linear-gradient(160deg, #0f0820 0%, #160d30 35%, #1a0f3d 65%, #221260 100%) !important;
+  }
+
+  .outer-wrapper {
+    background: transparent !important;
+  }
+
+  .search-wrapper .search-inner-wrapper {
+    background: rgba(30, 18, 65, 0.92) !important;
+    border: 1px solid rgba(168, 85, 247, 0.25) !important;
+    border-radius: 100px !important;
+  }
+
+  .search-wrapper .search-inner-wrapper:focus-within {
+    background: rgba(40, 22, 80, 0.96) !important;
+    border-color: rgba(168, 85, 247, 0.55) !important;
+    box-shadow: 0 0 14px rgba(168, 85, 247, 0.35) !important;
+  }
+
+  .top-site-outer .tile {
+    background: rgba(30, 18, 65, 0.88) !important;
+    border: 1px solid rgba(168, 85, 247, 0.18) !important;
+    border-radius: 12px !important;
+  }
+
+  .top-site-outer:hover .tile,
+  .top-site-outer:focus .tile {
+    background: rgba(42, 24, 88, 0.92) !important;
+    backdrop-filter: blur(14px) saturate(180%) !important;
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.30) !important;
+  }
+
+  .card-outer {
+    background: rgba(30, 18, 65, 0.88) !important;
+    border: 1px solid rgba(168, 85, 247, 0.18) !important;
+    border-radius: 14px !important;
+  }
+
+  .card-outer:hover {
+    background: rgba(42, 24, 88, 0.92) !important;
+    backdrop-filter: blur(14px) saturate(180%) !important;
+    border-color: rgba(192, 132, 252, 0.30) !important;
+  }
+}

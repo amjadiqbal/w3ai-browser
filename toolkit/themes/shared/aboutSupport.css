@@ -173,3 +173,46 @@ td.integer {
 #sandbox-tbody tr > td.feature-unavailable > .user-namespaces-unavailabe-support-link {
   margin: 0 5px;
 }
+
+/* ================================================================
+ * W3Ai about:support — Purple/Magenta Theme Override
+ * ================================================================ */
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: linear-gradient(160deg, #160d30 0%, #1a0f3d 35%, #1e1550 65%, #160d30 100%) !important;
+    color: rgba(249, 240, 255, 0.92) !important;
+  }
+
+  table {
+    background: rgba(30, 18, 65, 0.88) !important;
+    border: 1px solid rgba(168, 85, 247, 0.20) !important;
+    border-radius: 10px !important;
+  }
+
+  th {
+    background: rgba(168, 85, 247, 0.18) !important;
+    color: rgba(249, 240, 255, 0.95) !important;
+  }
+
+  td {
+    border-color: rgba(168, 85, 247, 0.12) !important;
+  }
+
+  .action-box {
+    background: rgba(30, 18, 65, 0.88) !important;
+    border: 1px solid rgba(168, 85, 247, 0.20) !important;
+    border-radius: 12px !important;
+  }
+
+  button {
+    background: rgba(168, 85, 247, 0.18) !important;
+    border: 1px solid rgba(168, 85, 247, 0.30) !important;
+    color: rgba(249, 240, 255, 0.92) !important;
+    border-radius: 8px !important;
+  }
+
+  button:hover {
+    background: rgba(168, 85, 247, 0.28) !important;
+  }
+}

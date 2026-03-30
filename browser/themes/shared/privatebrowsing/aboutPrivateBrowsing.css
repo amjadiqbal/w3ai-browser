@@ -500,3 +500,18 @@ content-search-handoff-ui {
     }
   }
 }
+
+/* ================================================================
+ * W3Ai about:privatebrowsing — Purple/Magenta Theme Override
+ * ================================================================ */
+
+@media (prefers-color-scheme: dark) {
+  html.private {
+    background: linear-gradient(160deg, #0f0820 0%, #160d30 35%, #1a0f3d 65%, #221260 100%) !important;
+  }
+
+  :root {
+    --content-search-handoff-ui-background-color: #1a0f3d !important;
+    --background-color-canvas: #0f0820 !important;
+  }
+}

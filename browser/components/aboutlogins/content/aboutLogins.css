@@ -103,3 +103,21 @@ body > section {
 login-intro {
   overflow-y: scroll;
 }
+
+/* ================================================================
+ * W3Ai about:logins — Purple/Magenta Theme Override
+ * ================================================================ */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background-color-canvas:   #160d30 !important;
+    --background-color-box:      rgba(30, 18, 65, 0.88) !important;
+    --color-accent-primary:      #a855f7 !important;
+    --color-accent-primary-hover: #c084fc !important;
+    --border-color:              rgba(168, 85, 247, 0.22) !important;
+  }
+
+  body {
+    background: linear-gradient(160deg, #160d30 0%, #1a0f3d 35%, #1e1550 65%, #160d30 100%) !important;
+  }
+}
