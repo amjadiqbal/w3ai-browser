@@ -17,10 +17,10 @@
 .ai-window-right-sidebar {
   width: var(--ai-window-sidebar-width-default);
 
-  /* W3Ai: premium right-rail glass treatment */
-  background: rgba(12, 18, 55, 0.90) !important;
+  /* W3Ai: premium right-rail glass treatment — purple palette */
+  background: rgba(22, 13, 48, 0.90) !important;
   backdrop-filter: blur(20px) saturate(180%) !important;
-  border-inline-start: 1px solid rgba(255, 255, 255, 0.10) !important;
+  border-inline-start: 1px solid rgba(168, 85, 247, 0.20) !important;
 }
 
 /* Splitter styling to match the left sidebar */
@@ -35,7 +35,7 @@
 }
 
 #ai-window-splitter:hover {
-  background-color: rgba(99, 102, 241, 0.15);
+  background-color: rgba(168, 85, 247, 0.15);
 }
 
 /* W3Ai: ensure the AI window content area has the right background */

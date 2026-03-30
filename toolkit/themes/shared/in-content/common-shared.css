@@ -1111,3 +1111,99 @@ xul|*.addons-icon {
 .back-button:dir(rtl) {
   transform: scaleX(-1);
 }
+
+/* ================================================================
+ * W3Ai In-Content Pages — Purple/Magenta Theme Override
+ * Applies to about:preferences, about:addons, and all in-content
+ * pages that use this shared stylesheet.
+ * Deep purple-navy backgrounds, luminous violet accents, frosted
+ * glass cards — matching the W3Ai design language.
+ * ================================================================ */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Page canvas: deep purple-navy gradient */
+    background: linear-gradient(
+      160deg,
+      #160d30 0%,
+      #1a0f3d 35%,
+      #1e1550 65%,
+      #160d30 100%
+    ) !important;
+
+    /* Accent: luminous purple replaces blue/cyan */
+    --in-content-primary-button-background:         #a855f7;
+    --in-content-primary-button-background-hover:   #c084fc;
+    --in-content-primary-button-background-active:  #d8b4fe;
+    --in-content-primary-button-text-color:         rgba(249, 240, 255, 0.95);
+
+    /* Links */
+    --in-content-link-color:         #c084fc;
+    --in-content-link-color-hover:   #d8b4fe;
+    --in-content-link-color-active:  #e9d5ff;
+    --in-content-link-color-visited: #a855f7;
+
+    /* Text */
+    --in-content-text-color:         rgba(249, 240, 255, 0.92);
+    --in-content-deemphasized-text:  rgba(229, 210, 255, 0.60);
+
+    /* Item/row hover */
+    --in-content-item-hover:         rgba(168, 85, 247, 0.18);
+    --in-content-item-selected:      rgba(168, 85, 247, 0.28);
+
+    /* Box/card background */
+    --in-content-box-background:           rgba(168, 85, 247, 0.10);
+    --in-content-box-background-hover:     rgba(168, 85, 247, 0.18);
+    --in-content-box-background-odd:       rgba(168, 85, 247, 0.06);
+    --in-content-box-border-color:         rgba(168, 85, 247, 0.22);
+
+    /* Sidebar */
+    --in-content-sidebar-background:      rgba(22, 13, 48, 0.88);
+
+    /* Header/focus */
+    --in-content-focus-outline-color:     rgba(168, 85, 247, 0.70);
+    --in-content-selected-text:           rgba(249, 240, 255, 0.95);
+    --in-content-header-border-color:     rgba(168, 85, 247, 0.18);
+  }
+
+  /* Sidebar navigation: frosted purple glass */
+  #categories,
+  .sidebar-footer-list,
+  richlistbox.paneSelector,
+  xul|richlistbox.paneSelector {
+    background: rgba(22, 13, 48, 0.88) !important;
+    border-inline-end: 1px solid rgba(168, 85, 247, 0.20) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+  }
+
+  /* Category items */
+  .category:hover,
+  richlistitem.category:hover {
+    background-color: rgba(168, 85, 247, 0.18) !important;
+    border-radius: 10px !important;
+  }
+
+  .category[selected],
+  richlistitem.category[selected] {
+    background-color: rgba(168, 85, 247, 0.28) !important;
+    border: 1px solid rgba(192, 132, 252, 0.40) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.28) !important;
+  }
+
+  /* Content sections / cards */
+  .main-content,
+  #main-content {
+    background: transparent !important;
+  }
+
+  /* Back button: purple glass */
+  .back-button {
+    background-color: rgba(168, 85, 247, 0.14) !important;
+    border-radius: 8px !important;
+  }
+
+  .back-button:hover {
+    background-color: rgba(168, 85, 247, 0.24) !important;
+  }
+}

@@ -1662,3 +1662,122 @@ setting-group[groupid="aiStatesDescription"] {
 .box-header-bold {
   --box-label-font-weight: var(--font-weight-heading);
 }
+
+/* ================================================================
+ * W3Ai about:preferences — Purple/Magenta Theme Override
+ * Deep purple-navy page background, luminous violet accents,
+ * frosted glass pane styling matching the W3Ai design language.
+ * ================================================================ */
+
+@media (prefers-color-scheme: dark) {
+  /* Page root: deep purple-to-indigo gradient */
+  :root {
+    background: linear-gradient(
+      160deg,
+      #160d30 0%,
+      #1a0f3d 35%,
+      #1e1550 65%,
+      #160d30 100%
+    ) !important;
+  }
+
+  /* Search bar / header strip: transparent to show gradient */
+  .search-header,
+  .main-search-container {
+    background: transparent !important;
+  }
+
+  /* Section headers */
+  .section-heading,
+  .heading-medium {
+    color: rgba(249, 240, 255, 0.95) !important;
+  }
+
+  .subsection-heading {
+    color: rgba(229, 210, 255, 0.75) !important;
+  }
+
+  /* Option groups / fieldsets: purple-tinted glass cards */
+  .options-container,
+  fieldset,
+  groupbox,
+  .pane-container > .subcategory {
+    background: rgba(168, 85, 247, 0.08) !important;
+    border: 1px solid rgba(168, 85, 247, 0.20) !important;
+    border-radius: 12px !important;
+    backdrop-filter: blur(10px) !important;
+  }
+
+  /* Individual option rows on hover */
+  .checkbox-row:hover,
+  .radio-item:hover,
+  .option-row:hover {
+    background-color: rgba(168, 85, 247, 0.15) !important;
+    border-radius: 8px !important;
+  }
+
+  /* Search input pill */
+  #searchInput {
+    background-color: rgba(168, 85, 247, 0.12) !important;
+    border: 1px solid rgba(168, 85, 247, 0.30) !important;
+    border-radius: 100px !important;
+    color: rgba(249, 240, 255, 0.92) !important;
+  }
+
+  #searchInput:focus {
+    background-color: rgba(168, 85, 247, 0.18) !important;
+    border-color: rgba(168, 85, 247, 0.55) !important;
+    box-shadow: 0 0 14px rgba(168, 85, 247, 0.35) !important;
+  }
+
+  /* Privacy/ETP banner: restyle for purple palette */
+  #etpBannerEl {
+    background-image:
+      url("chrome://browser/content/preferences/etp-advanced-banner.svg"),
+      radial-gradient(
+        151.822% 149.985% at 50% -42.53%,
+        rgba(168, 85, 247, 0.90),
+        rgba(15, 8, 32, 1)
+      ) !important;
+  }
+
+  /* Buttons: purple glass */
+  button,
+  .button,
+  xul|button {
+    background-color: rgba(168, 85, 247, 0.18) !important;
+    border: 1px solid rgba(168, 85, 247, 0.30) !important;
+    color: rgba(249, 240, 255, 0.92) !important;
+    border-radius: 8px !important;
+  }
+
+  button:hover,
+  .button:hover,
+  xul|button:hover {
+    background-color: rgba(168, 85, 247, 0.28) !important;
+    border-color: rgba(192, 132, 252, 0.45) !important;
+  }
+
+  button[type="submit"],
+  button.primary,
+  xul|button.primary {
+    background-color: #a855f7 !important;
+    border-color: #c084fc !important;
+    color: rgba(249, 240, 255, 0.98) !important;
+  }
+
+  button[type="submit"]:hover,
+  button.primary:hover,
+  xul|button.primary:hover {
+    background-color: #c084fc !important;
+  }
+
+  /* Select/dropdown: purple-tinted */
+  select,
+  menulist {
+    background-color: rgba(168, 85, 247, 0.12) !important;
+    border: 1px solid rgba(168, 85, 247, 0.28) !important;
+    border-radius: 8px !important;
+    color: rgba(249, 240, 255, 0.92) !important;
+  }
+}
