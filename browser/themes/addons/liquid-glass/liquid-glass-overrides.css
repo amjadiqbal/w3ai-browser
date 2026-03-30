@@ -4,7 +4,7 @@
   background-color: var(--background-color-canvas);
   color: var(--text-color);
   accent-color: var(--color-accent-primary);
-  --toolbox-bgcolor-inactive: red !important;
+  --toolbox-bgcolor-inactive: rgba(20, 12, 44, 0.72);
 }
 
 a:any-link {
