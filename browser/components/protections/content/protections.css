@@ -1153,3 +1153,49 @@ label[for="tab-cryptominer"]:hover ~ #highlight-hover {
 .vpn-card:not(.subscribed) #check-icon {
   display: none;
 }
+
+/* ================================================================
+ * W3Ai about:protections — Purple/Magenta Theme Override
+ * ================================================================ */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --social-color: #a855f7;
+    --social-highlight-color: #c084fc;
+    --cookie-color: #818cf8;
+    --cookie-highlight-color: #a5b4fc;
+    --tracker-color: #34d399;
+    --tracker-highlight-color: #6ee7b7;
+    --fingerprinter-color: #f472b6;
+    --fingerprinter-highlight-color: #f9a8d4;
+    --block-background-color: rgba(30, 18, 65, 0.88);
+  }
+
+  body {
+    background: linear-gradient(160deg, #0f0820 0%, #160d30 35%, #1a0f3d 65%, #221260 100%) !important;
+  }
+
+  .card {
+    background: rgba(30, 18, 65, 0.88) !important;
+    border: 1px solid rgba(168, 85, 247, 0.20) !important;
+    border-radius: 14px !important;
+    backdrop-filter: blur(14px) saturate(180%) !important;
+  }
+
+  .card:hover {
+    background: rgba(42, 24, 88, 0.92) !important;
+    border-color: rgba(192, 132, 252, 0.35) !important;
+    box-shadow: 0 4px 20px rgba(168, 85, 247, 0.18) !important;
+  }
+
+  .header-box {
+    background: linear-gradient(160deg, rgba(15, 8, 32, 0.96) 0%, rgba(22, 13, 48, 0.96) 100%) !important;
+    border-bottom: 1px solid rgba(168, 85, 247, 0.20) !important;
+  }
+
+  .lockwise-card.has-logins .wrapper div:nth-child(1),
+  .monitor-card.has-logins .header-content,
+  .card-header .wrapper {
+    color: rgba(221, 180, 255, 0.90) !important;
+  }
+}
