@@ -361,3 +361,71 @@ toolbarbutton[open="true"] {
   scrollbar-color: rgba(168, 85, 247, 0.30) transparent;
   scrollbar-width: thin;
 }
+
+/* ============================================================
+ * W3Ai SIDEBAR TOOL SHORTCUT BUTTONS (top-right toolbar)
+ * These buttons appear after the app menu (≡) and provide
+ * quick access to: AI Chat, History, Bookmarks, Sidebar Settings.
+ * ============================================================ */
+
+#w3ai-sidebar-tools {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  padding-inline: var(--w3ai-space-1);
+}
+
+.w3ai-tool-button {
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: var(--w3ai-radius-sm) !important;
+  padding: 6px !important;
+  transition: background 0.15s ease, box-shadow 0.15s ease, backdrop-filter 0.15s ease;
+  -moz-context-properties: fill, stroke;
+  fill: var(--w3ai-text-secondary);
+  stroke: var(--w3ai-text-secondary);
+}
+
+.w3ai-tool-button:hover {
+  background: var(--w3ai-theme-surface-hover, rgba(42, 24, 88, 0.94)) !important;
+  backdrop-filter: blur(14px) saturate(180%) !important;
+  box-shadow: 0 0 0 1px var(--w3ai-theme-border, rgba(168, 85, 247, 0.20)) !important;
+  fill: var(--w3ai-text-primary) !important;
+  stroke: var(--w3ai-text-primary) !important;
+}
+
+.w3ai-tool-button:active {
+  background: var(--w3ai-glass-surface-active, rgba(48, 28, 95, 0.96)) !important;
+  box-shadow: 0 0 0 1px var(--w3ai-theme-accent-glow, rgba(168, 85, 247, 0.45)) !important;
+}
+
+/* Icons for each W3Ai toolbar shortcut button */
+#w3ai-chatbot-button {
+  list-style-image: url("chrome://global/skin/icons/highlights.svg");
+}
+
+#w3ai-chatbot-button[aria-pressed="true"],
+#w3ai-chatbot-button[open="true"] {
+  background: var(--w3ai-theme-surface, rgba(30, 18, 65, 0.92)) !important;
+  box-shadow: 0 0 0 1px var(--w3ai-theme-accent-glow, rgba(168, 85, 247, 0.45)),
+              0 0 10px var(--w3ai-theme-accent-glow, rgba(168, 85, 247, 0.30)) !important;
+}
+
+#w3ai-history-button {
+  list-style-image: url("chrome://browser/skin/history.svg");
+}
+
+#w3ai-bookmarks-button {
+  list-style-image: url("chrome://browser/skin/bookmark-hollow.svg");
+}
+
+#w3ai-settings-button {
+  list-style-image: url("chrome://global/skin/icons/settings.svg");
+}
+
+/* Hide the sidebar bottom-actions since they are now in the top-right toolbar.
+ * The sidebar rail remains but with only the tools section (tabs, extensions). */
+sidebar-main .bottom-actions {
+  display: none !important;
+}

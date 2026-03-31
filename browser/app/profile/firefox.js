@@ -2160,7 +2160,8 @@ pref("pdfjs.previousHandler.alwaysAskBeforeHandling", false);
 pref("pdfjs.handleOctetStream", true);
 
 // Is the sidebar positioned ahead of the content browser
-pref("sidebar.position_start", true);
+// W3Ai: position sidebar on the RIGHT side so the chat panel appears to the right of content
+pref("sidebar.position_start", false);
 // W3Ai: sidebar revamp always enabled for premium shell
 pref("sidebar.revamp", true);
 pref("sidebar.revamp.round-content-area", true);
@@ -2201,7 +2202,7 @@ pref("browser.ml.chat.prompts.0", '{"id":"summarize","l10nId":"genai-prompts-sum
 pref("browser.ml.chat.prompts.1", '{"id":"explain","l10nId":"genai-prompts-explain","targeting":"contentType != \'page\'"}');
 pref("browser.ml.chat.prompts.3", '{"id":"quiz","l10nId":"genai-prompts-quiz","targeting":"(!provider|regExpMatch(\'gemini\') || region == \'US\') && contentType != \'page\'"}');
 pref("browser.ml.chat.prompts.4", '{"id":"proofread", "l10nId":"genai-prompts-proofread","targeting":"contentType != \'page\'"}');
-pref("browser.ml.chat.provider", "");
+pref("browser.ml.chat.provider", "https://chatgpt.com");
 pref("browser.ml.chat.shortcuts", true);
 pref("browser.ml.chat.shortcuts.custom", true);
 pref("browser.ml.chat.shortcuts.longPress", 60000);

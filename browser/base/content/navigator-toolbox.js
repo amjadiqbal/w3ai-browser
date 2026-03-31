@@ -202,7 +202,11 @@ document.addEventListener(
         #identity-permission-box,
         #translations-button,
         #split-view-button,
-        #smartwindow-ask-button
+        #smartwindow-ask-button,
+        #w3ai-chatbot-button,
+        #w3ai-history-button,
+        #w3ai-bookmarks-button,
+        #w3ai-settings-button
         `);
       if (!element) {
         return;
@@ -303,6 +307,30 @@ document.addEventListener(
           }
           break;
 
+        case "w3ai-chatbot-button":
+          if (isLeftClick) {
+            SidebarController.toggle("viewGenaiChatSidebar");
+          }
+          break;
+
+        case "w3ai-history-button":
+          if (isLeftClick) {
+            SidebarController.toggle("viewHistorySidebar");
+          }
+          break;
+
+        case "w3ai-bookmarks-button":
+          if (isLeftClick) {
+            SidebarController.toggle("viewBookmarksSidebar");
+          }
+          break;
+
+        case "w3ai-settings-button":
+          if (isLeftClick) {
+            SidebarController.toggle("viewCustomizeSidebar");
+          }
+          break;
+
         default:
           throw new Error(`Missing case for #${element.id}`);
       }
@@ -332,7 +360,11 @@ document.addEventListener(
         #unified-extensions-button,
         #library-button,
         #split-view-button,
-        #smartwindow-ask-button
+        #smartwindow-ask-button,
+        #w3ai-chatbot-button,
+        #w3ai-history-button,
+        #w3ai-bookmarks-button,
+        #w3ai-settings-button
       `);
       if (!element) {
         return;
@@ -427,6 +459,30 @@ document.addEventListener(
         case "smartwindow-ask-button":
           if (isLikeLeftClick) {
             AIWindowUI.toggleSidebar(window);
+          }
+          break;
+
+        case "w3ai-chatbot-button":
+          if (isLikeLeftClick) {
+            SidebarController.toggle("viewGenaiChatSidebar");
+          }
+          break;
+
+        case "w3ai-history-button":
+          if (isLikeLeftClick) {
+            SidebarController.toggle("viewHistorySidebar");
+          }
+          break;
+
+        case "w3ai-bookmarks-button":
+          if (isLikeLeftClick) {
+            SidebarController.toggle("viewBookmarksSidebar");
+          }
+          break;
+
+        case "w3ai-settings-button":
+          if (isLikeLeftClick) {
+            SidebarController.toggle("viewCustomizeSidebar");
           }
           break;
 

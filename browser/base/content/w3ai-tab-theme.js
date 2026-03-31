@@ -90,18 +90,44 @@ const W3AiTabTheme = {
 
   init() {
     gBrowser.tabContainer.addEventListener("TabSelect", this);
+    // Sync chatbot button pressed state with sidebar open state
+    const sidebarBox = document.getElementById("sidebar-box");
+    if (sidebarBox) {
+      sidebarBox.addEventListener("SidebarShown", this);
+      sidebarBox.addEventListener("sidebar-hide", this);
+    }
     // Apply the first palette on init to the current selected tab
     this._applyForTab(gBrowser.selectedTab);
   },
 
   uninit() {
     gBrowser.tabContainer.removeEventListener("TabSelect", this);
+    const sidebarBox = document.getElementById("sidebar-box");
+    if (sidebarBox) {
+      sidebarBox.removeEventListener("SidebarShown", this);
+      sidebarBox.removeEventListener("sidebar-hide", this);
+    }
   },
 
   handleEvent(event) {
     if (event.type === "TabSelect") {
       this._applyForTab(event.target);
+    } else if (event.type === "SidebarShown") {
+      this._syncChatbotButton();
+    } else if (event.type === "sidebar-hide") {
+      this._syncChatbotButton();
     }
+  },
+
+  _syncChatbotButton() {
+    const btn = document.getElementById("w3ai-chatbot-button");
+    if (!btn) {
+      return;
+    }
+    const isOpen =
+      window.SidebarController?.isOpen &&
+      window.SidebarController?.currentID === "viewGenaiChatSidebar";
+    btn.setAttribute("aria-pressed", isOpen ? "true" : "false");
   },
 
   _applyForTab(tab) {
