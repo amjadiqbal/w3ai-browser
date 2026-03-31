@@ -59,7 +59,7 @@ export const W3Ai = Object.freeze({
   // ============================================================
   WEB3_EXTENSIONS: [
     {
-      id: "metamask@metamask.io",
+      id: "webextension@metamask.io",
       name: "MetaMask",
       description: "A crypto wallet and gateway to blockchain apps.",
       category: "Web3 Wallet",
@@ -93,7 +93,7 @@ export const W3Ai = Object.freeze({
     },
     {
       id: "uniswap@uniswap.org",
-      name: "Uniswap Wallet",
+      name: "Uniswap Extension",
       description: "Swap, earn, and build on the leading decentralized exchange.",
       category: "DeFi",
       version: "2.0.0",
@@ -103,10 +103,10 @@ export const W3Ai = Object.freeze({
       tags: ["defi", "swap", "ethereum"],
     },
     {
-      id: "etherscan@etherscan.io",
+      id: "etherscan-gas@etherscan.io",
       name: "Etherscan Gas Tracker",
       description: "Real-time Ethereum gas price tracker in your browser.",
-      category: "Utilities",
+      category: "Developer Tools",
       version: "1.5.0",
       icon: "https://extensions.plato.ai/icons/etherscan.png",
       homepage: "https://etherscan.io",
@@ -147,8 +147,8 @@ export const W3Ai = Object.freeze({
       tags: ["wallet", "coinbase", "multichain"],
     },
     {
-      id: "ledger@ledger.com",
-      name: "Ledger Live",
+      id: "ledger-live@ledger.com",
+      name: "Ledger Live Connect",
       description: "Manage your Ledger hardware wallet and crypto assets.",
       category: "Hardware Wallet",
       version: "28.0.0",
@@ -159,9 +159,9 @@ export const W3Ai = Object.freeze({
     },
     {
       id: "debank@debank.com",
-      name: "DeBank DeFi Wallet",
+      name: "DeBank DeFi Portfolio",
       description: "Track and manage your DeFi portfolio across 30+ chains.",
-      category: "Portfolio",
+      category: "Portfolio Tracker",
       version: "1.12.0",
       icon: "https://extensions.plato.ai/icons/debank.png",
       homepage: "https://debank.com",
