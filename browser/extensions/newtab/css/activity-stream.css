@@ -10444,4 +10444,72 @@ hr {
     backdrop-filter: blur(14px) saturate(180%) !important;
     border-color: rgba(192, 132, 252, 0.30) !important;
   }
+
+  /* Discovery stream story cards */
+  .ds-card {
+    background: rgba(30, 18, 65, 0.88) !important;
+    border: 1px solid rgba(168, 85, 247, 0.18) !important;
+    border-radius: 14px !important;
+  }
+
+  .ds-card:hover {
+    background: rgba(42, 24, 88, 0.92) !important;
+    backdrop-filter: blur(14px) saturate(180%) !important;
+    border-color: rgba(192, 132, 252, 0.30) !important;
+    box-shadow: 0 4px 20px rgba(168, 85, 247, 0.20) !important;
+  }
+
+  .ds-card .card-stp-button-hover-background {
+    background: rgba(42, 24, 88, 0.96) !important;
+  }
+
+  /* Section/topic headings */
+  .ds-section-title .section-title,
+  .section-title-container .section-title,
+  .inline-selection-wrapper.ds-section .section-heading {
+    color: rgba(221, 180, 255, 0.90) !important;
+  }
+
+  /* Topic chips */
+  .topic-chip,
+  .inline-selection-wrapper.ds-section .topic-list li > label {
+    background: rgba(30, 18, 65, 0.90) !important;
+    border-color: rgba(168, 85, 247, 0.28) !important;
+    color: rgba(221, 180, 255, 0.85) !important;
+    border-radius: 100px !important;
+  }
+
+  .topic-chip:hover,
+  .inline-selection-wrapper.ds-section .topic-list li > label:hover {
+    background: rgba(42, 24, 88, 0.94) !important;
+    border-color: rgba(168, 85, 247, 0.55) !important;
+  }
+
+  .inline-selection-wrapper.ds-section .topic-list li > label:has(input:checked) {
+    background: rgba(168, 85, 247, 0.22) !important;
+    border-color: rgba(168, 85, 247, 0.60) !important;
+  }
+
+  /* Weather widget */
+  .weather-card,
+  .weatherCard,
+  [class*="weather"] .card {
+    background: rgba(30, 18, 65, 0.88) !important;
+    border: 1px solid rgba(168, 85, 247, 0.18) !important;
+    border-radius: 14px !important;
+    backdrop-filter: blur(14px) saturate(180%) !important;
+  }
+
+  /* Accent/primary action buttons */
+  .primary-btn,
+  .ds-dismiss-button,
+  .newtab-custom-wallpapers-button,
+  .wallpaper-list .wallpaper-item:focus-visible {
+    outline-color: rgba(168, 85, 247, 0.70) !important;
+  }
+
+  /* Wordmark */
+  .logo-and-wordmark .wordmark {
+    fill: rgba(221, 180, 255, 0.90) !important;
+  }
 }
