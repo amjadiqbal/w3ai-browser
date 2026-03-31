@@ -1529,7 +1529,8 @@ pref("browser.zoom.full", true);
 pref("browser.zoom.updateBackgroundTabs", true);
 
 // The breakpad report server to link to in about:crashes
-pref("breakpad.reportURL", "https://crash-stats.mozilla.org/report/index/");
+// W3Ai: point crash reporter to plato.ai
+pref("breakpad.reportURL", "https://crash.plato.ai/report/index/");
 
 // URL for "Learn More" for DataCollection
 pref("toolkit.datacollection.infoURL",
@@ -1805,7 +1806,8 @@ pref("browser.topsites.component.enabled", false);
 
 pref("browser.topsites.useRemoteSetting", true);
 // Fetch sponsored Top Sites from Mozilla Tiles Service (Contile)
-pref("browser.topsites.contile.enabled", true);
+// W3Ai: disable Mozilla's sponsored tiles
+pref("browser.topsites.contile.enabled", false);
 pref("browser.topsites.contile.endpoint", "https://contile.services.mozilla.com/v1/tiles");
 
 // The base URL for the Quick Suggest anonymizing proxy. To make a request to
@@ -1852,11 +1854,12 @@ pref("browser.newtabpage.activity-stream.mobileDownloadModal.variant-b", false);
 pref("browser.newtabpage.activity-stream.mobileDownloadModal.variant-c", false);
 
 // Mozilla Ad Routing Service (MARS) unified ads service
-pref("browser.newtabpage.activity-stream.unifiedAds.tiles.enabled", true);
-pref("browser.newtabpage.activity-stream.unifiedAds.spocs.enabled", true);
-pref("browser.newtabpage.activity-stream.unifiedAds.endpoint", "https://ads.mozilla.org/");
+// W3Ai: disable Mozilla ads on new tab
+pref("browser.newtabpage.activity-stream.unifiedAds.tiles.enabled", false);
+pref("browser.newtabpage.activity-stream.unifiedAds.spocs.enabled", false);
+pref("browser.newtabpage.activity-stream.unifiedAds.endpoint", "");
 pref("browser.newtabpage.activity-stream.unifiedAds.adsFeed.enabled", false);
-pref("browser.newtabpage.activity-stream.unifiedAds.ohttp.enabled", true);
+pref("browser.newtabpage.activity-stream.unifiedAds.ohttp.enabled", false);
 
 // Weather widget for newtab
 pref("browser.newtabpage.activity-stream.showWeather", true);
@@ -2553,20 +2556,20 @@ pref("browser.promo.cookiebanners.enabled", false);
 pref("browser.contentblocking.report.hide_vpn_banner", false);
 pref("browser.contentblocking.report.vpn_sub_id", "sub_HrfCZF7VPHzZkA");
 
-pref("browser.contentblocking.report.monitor.url", "https://monitor.firefox.com/?entrypoint=protection_report_monitor&utm_source=about-protections");
-pref("browser.contentblocking.report.monitor.how_it_works.url", "https://monitor.firefox.com/about");
-pref("browser.contentblocking.report.monitor.sign_in_url", "https://monitor.firefox.com/oauth/init?entrypoint=protection_report_monitor&utm_source=about-protections&email=");
-pref("browser.contentblocking.report.monitor.preferences_url", "https://monitor.firefox.com/user/preferences");
-pref("browser.contentblocking.report.monitor.home_page_url", "https://monitor.firefox.com/user/dashboard");
-pref("browser.contentblocking.report.manage_devices.url", "https://accounts.firefox.com/settings/clients");
-pref("browser.contentblocking.report.endpoint_url", "https://monitor.firefox.com/user/breach-stats?includeResolved=true");
-pref("browser.contentblocking.report.proxy_extension.url", "https://fpn.firefox.com/browser?utm_source=firefox-desktop&utm_medium=referral&utm_campaign=about-protections&utm_content=about-protections");
-pref("browser.contentblocking.report.mobile-ios.url", "https://apps.apple.com/app/firefox-private-safe-browser/id989804926");
-pref("browser.contentblocking.report.mobile-android.url", "https://play.google.com/store/apps/details?id=org.mozilla.firefox&referrer=utm_source%3Dprotection_report%26utm_content%3Dmobile_promotion");
-pref("browser.contentblocking.report.vpn.url", "https://vpn.mozilla.org/?utm_source=firefox-browser&utm_medium=firefox-browser&utm_campaign=about-protections-card");
-pref("browser.contentblocking.report.vpn-promo.url", "https://vpn.mozilla.org/?utm_source=firefox-browser&utm_medium=firefox-browser&utm_campaign=about-protections-top-promo");
-pref("browser.contentblocking.report.vpn-android.url", "https://play.google.com/store/apps/details?id=org.mozilla.firefox.vpn&referrer=utm_source%3Dfirefox-browser%26utm_medium%3Dfirefox-browser%26utm_campaign%3Dabout-protections-mobile-vpn%26anid%3D--");
-pref("browser.contentblocking.report.vpn-ios.url", "https://apps.apple.com/us/app/firefox-private-network-vpn/id1489407738");
+pref("browser.contentblocking.report.monitor.url", "https://privacy.plato.ai/?entrypoint=protection_report_monitor");
+pref("browser.contentblocking.report.monitor.how_it_works.url", "https://privacy.plato.ai/about");
+pref("browser.contentblocking.report.monitor.sign_in_url", "https://privacy.plato.ai/sign-in?entrypoint=protection_report_monitor&email=");
+pref("browser.contentblocking.report.monitor.preferences_url", "https://privacy.plato.ai/user/preferences");
+pref("browser.contentblocking.report.monitor.home_page_url", "https://privacy.plato.ai/user/dashboard");
+pref("browser.contentblocking.report.manage_devices.url", "https://www.plato.ai/account/settings/clients");
+pref("browser.contentblocking.report.endpoint_url", "https://privacy.plato.ai/user/breach-stats?includeResolved=true");
+pref("browser.contentblocking.report.proxy_extension.url", "https://vpn.plato.ai/?utm_source=w3ai-desktop&utm_campaign=about-protections");
+pref("browser.contentblocking.report.mobile-ios.url", "https://apps.apple.com/app/w3ai-browser/id989804926");
+pref("browser.contentblocking.report.mobile-android.url", "https://play.google.com/store/apps/details?id=ai.plato.w3ai");
+pref("browser.contentblocking.report.vpn.url", "https://vpn.plato.ai/?utm_source=w3ai-browser&utm_campaign=about-protections-card");
+pref("browser.contentblocking.report.vpn-promo.url", "https://vpn.plato.ai/?utm_source=w3ai-browser&utm_campaign=about-protections-top-promo");
+pref("browser.contentblocking.report.vpn-android.url", "https://play.google.com/store/apps/details?id=ai.plato.vpn");
+pref("browser.contentblocking.report.vpn-ios.url", "https://apps.apple.com/us/app/plato-vpn/id1489407738");
 
 // Protection Report's SUMO urls
 pref("browser.contentblocking.report.lockwise.how_it_works.url", "https://support.plato.ai/w3ai/%VERSION%/%OS%/%LOCALE%/password-manager-report");
@@ -2767,7 +2770,7 @@ pref("extensions.formautofill.creditCards.os-auth.locked.enabled", false);
 // where it is clicked). Be sure that if these two prefs are updated, that
 // the utm_creative param be last.
 pref("signon.management.page.breachAlertUrl",
-     "https://monitor.firefox.com/breach-details/");
+     "https://privacy.plato.ai/breach-details/");
 pref("signon.passwordEditCapture.enabled", true);
 pref("signon.relatedRealms.enabled", false);
 pref("signon.showAutoCompleteFooter", true);
@@ -3479,11 +3482,12 @@ pref("browser.backup.sqlite.pages_per_step", 50);
 pref("browser.backup.sqlite.step_delay_ms", 50);
 pref("browser.backup.scheduled.idle-threshold-seconds", 15);
 pref("browser.backup.scheduled.minimum-time-between-backups-seconds", 86400);
-pref("browser.backup.template.fallback-download.release", "https://www.firefox.com/?utm_medium=firefox-desktop&utm_source=html-backup");
-pref("browser.backup.template.fallback-download.beta", "https://www.firefox.com/channel/desktop/?utm_medium=firefox-desktop&utm_source=html-backup");
-pref("browser.backup.template.fallback-download.aurora", "https://www.firefox.com/channel/desktop/?utm_medium=firefox-desktop&utm_source=html-backup");
-pref("browser.backup.template.fallback-download.nightly", "https://www.firefox.com/channel/desktop/?utm_medium=firefox-desktop&utm_source=html-backup");
-pref("browser.backup.template.fallback-download.esr", " https://www.firefox.com/download/all/desktop-esr/?utm_medium=firefox-desktop&utm_source=html-backup");
+// W3Ai: backup fallback download URLs point to plato.ai
+pref("browser.backup.template.fallback-download.release", "https://www.plato.ai/w3ai/download/");
+pref("browser.backup.template.fallback-download.beta", "https://www.plato.ai/w3ai/download/beta/");
+pref("browser.backup.template.fallback-download.aurora", "https://www.plato.ai/w3ai/download/developer/");
+pref("browser.backup.template.fallback-download.nightly", "https://www.plato.ai/w3ai/download/nightly/");
+pref("browser.backup.template.fallback-download.esr", "https://www.plato.ai/w3ai/download/esr/");
 pref("browser.backup.errorCode", 0);
 pref("browser.backup.backup-retry-limit", 10);
 pref("browser.backup.disabled-on-idle-backup-retry", false);
