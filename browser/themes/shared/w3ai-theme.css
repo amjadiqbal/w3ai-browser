@@ -402,7 +402,7 @@ toolbarbutton[open="true"] {
 
 /* Icons for each W3Ai toolbar shortcut button */
 #w3ai-chatbot-button {
-  list-style-image: url("chrome://global/skin/icons/highlights.svg");
+  list-style-image: url("chrome://browser/content/aiwindow/assets/ask-icon.svg");
 }
 
 #w3ai-chatbot-button[aria-pressed="true"],
@@ -410,18 +410,6 @@ toolbarbutton[open="true"] {
   background: var(--w3ai-theme-surface, rgba(30, 18, 65, 0.92)) !important;
   box-shadow: 0 0 0 1px var(--w3ai-theme-accent-glow, rgba(168, 85, 247, 0.45)),
               0 0 10px var(--w3ai-theme-accent-glow, rgba(168, 85, 247, 0.30)) !important;
-}
-
-#w3ai-history-button {
-  list-style-image: url("chrome://browser/skin/history.svg");
-}
-
-#w3ai-bookmarks-button {
-  list-style-image: url("chrome://browser/skin/bookmark-hollow.svg");
-}
-
-#w3ai-settings-button {
-  list-style-image: url("chrome://global/skin/icons/settings.svg");
 }
 
 /* Hide the sidebar bottom-actions since they are now in the top-right toolbar.
