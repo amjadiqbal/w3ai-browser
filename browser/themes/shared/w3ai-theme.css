@@ -316,18 +316,41 @@ toolbarbutton[open="true"] {
 }
 
 /* ============================================================
- * W3Ai CONTENT AREA — floating card effect
- * The content panel sits to the right of the vertical tab sidebar.
- * A left-side radius creates the "card on sidebar" depth effect
- * (as in the reference design) without any border.
+ * W3Ai FULL-HEIGHT SIDEBAR + FLOATING CONTENT CARD
+ *
+ * Reference design (Setapp-style):
+ *   - Sidebar spans the full window height including behind the toolbar
+ *   - Toolbar (URL bar, nav buttons) sits only above the content area
+ *   - Content panel floats as a card with rounded left corners
+ *
+ * Technique — no layout changes needed, pure CSS:
+ *   1. Paint the toolbox with a hard-stop gradient:
+ *        LEFT  (0 → sidebar width): rgba(0,0,0,0.28)  ← matches sidebar overlay
+ *        RIGHT (sidebar width → end): rgba(0,0,0,0.14) ← lighter content zone
+ *      This makes the sidebar appear to extend full height behind the toolbar.
+ *   2. Indent all toolbar content to start after the sidebar via padding-inline-start.
+ *   3. Give #tabbrowser-tabbox the same rgba(0,0,0,0.14) background +
+ *      border-radius on its left edge so it forms one seamless card with the
+ *      toolbar's right zone above it.
+ *
+ * --sidebar-launcher-collapsed-width is set by Firefox's sidebar JS once the
+ * sidebar renders; the 36px fallback covers the initial paint.
  * ============================================================ */
 
 @media -moz-pref("sidebar.revamp") {
+  #navigator-toolbox[tabs-hidden]:not([lwtheme]) {
+    background: linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0.28) var(--sidebar-launcher-collapsed-width, 36px),
+      rgba(0, 0, 0, 0.14) var(--sidebar-launcher-collapsed-width, 36px)
+    ) !important;
+    padding-inline-start: var(--sidebar-launcher-collapsed-width, 36px) !important;
+  }
+
   #tabbrowser-tabbox {
     border-radius: var(--w3ai-radius-lg) 0 0 var(--w3ai-radius-lg) !important;
     overflow: hidden;
-    /* Slightly lighter opacity than sidebar to create depth without a border */
-    background: rgba(255, 255, 255, 0.03) !important;
+    background: rgba(0, 0, 0, 0.14) !important;
   }
 }
 
