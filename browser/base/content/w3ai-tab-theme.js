@@ -26,8 +26,7 @@ const W3AiTabTheme = {
       surfaceHover: "rgba(42, 24, 88, 0.94)",
       accent: "#a855f7",
       accentGlow: "rgba(168, 85, 247, 0.45)",
-      border: "rgba(168, 85, 247, 0.20)",
-      toolbar: "rgba(18, 10, 42, 0.92)",
+      toolbar: "rgba(0, 0, 0, 0.22)",
     },
     {
       // Midnight Blue
@@ -37,8 +36,7 @@ const W3AiTabTheme = {
       surfaceHover: "rgba(22, 32, 100, 0.94)",
       accent: "#60a5fa",
       accentGlow: "rgba(96, 165, 250, 0.45)",
-      border: "rgba(96, 165, 250, 0.22)",
-      toolbar: "rgba(10, 14, 50, 0.92)",
+      toolbar: "rgba(0, 0, 0, 0.22)",
     },
     {
       // Deep Teal
@@ -48,8 +46,7 @@ const W3AiTabTheme = {
       surfaceHover: "rgba(14, 55, 48, 0.94)",
       accent: "#34d399",
       accentGlow: "rgba(52, 211, 153, 0.45)",
-      border: "rgba(52, 211, 153, 0.22)",
-      toolbar: "rgba(8, 28, 24, 0.92)",
+      toolbar: "rgba(0, 0, 0, 0.22)",
     },
     {
       // Deep Rose
@@ -59,8 +56,7 @@ const W3AiTabTheme = {
       surfaceHover: "rgba(64, 16, 60, 0.94)",
       accent: "#f472b6",
       accentGlow: "rgba(244, 114, 182, 0.45)",
-      border: "rgba(244, 114, 182, 0.22)",
-      toolbar: "rgba(30, 8, 28, 0.92)",
+      toolbar: "rgba(0, 0, 0, 0.22)",
     },
     {
       // Dark Amber
@@ -70,8 +66,7 @@ const W3AiTabTheme = {
       surfaceHover: "rgba(66, 38, 12, 0.94)",
       accent: "#fbbf24",
       accentGlow: "rgba(251, 191, 36, 0.45)",
-      border: "rgba(251, 191, 36, 0.22)",
-      toolbar: "rgba(30, 18, 5, 0.92)",
+      toolbar: "rgba(0, 0, 0, 0.22)",
     },
     {
       // Slate Indigo
@@ -81,8 +76,7 @@ const W3AiTabTheme = {
       surfaceHover: "rgba(30, 30, 72, 0.94)",
       accent: "#818cf8",
       accentGlow: "rgba(129, 140, 248, 0.45)",
-      border: "rgba(129, 140, 248, 0.22)",
-      toolbar: "rgba(14, 14, 36, 0.92)",
+      toolbar: "rgba(0, 0, 0, 0.22)",
     },
   ],
 
@@ -134,7 +128,6 @@ const W3AiTabTheme = {
     root.style.setProperty("--w3ai-theme-surface-hover", palette.surfaceHover);
     root.style.setProperty("--w3ai-theme-accent", palette.accent);
     root.style.setProperty("--w3ai-theme-accent-glow", palette.accentGlow);
-    root.style.setProperty("--w3ai-theme-border", palette.border);
     root.style.setProperty("--w3ai-theme-toolbar", palette.toolbar);
   },
 };
