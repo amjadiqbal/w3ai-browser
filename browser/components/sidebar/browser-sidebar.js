@@ -2308,6 +2308,10 @@ var SidebarController = {
       "--sidebar-launcher-collapsed-width",
       `${collapsedWidth}px`
     );
+    document.documentElement.style.setProperty(
+      "--sidebar-launcher-collapsed-width",
+      `${collapsedWidth}px`
+    );
   },
 
   getMouseTargetRect() {

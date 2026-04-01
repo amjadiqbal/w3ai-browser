@@ -321,36 +321,50 @@ toolbarbutton[open="true"] {
  * Reference design (Setapp-style):
  *   - Sidebar spans the full window height including behind the toolbar
  *   - Toolbar (URL bar, nav buttons) sits only above the content area
- *   - Content panel floats as a card with rounded left corners
+ *   - Content panel floats as a card with rounded top-left + bottom-left
  *
- * Technique — no layout changes needed, pure CSS:
- *   1. Paint the toolbox with a hard-stop gradient:
- *        LEFT  (0 → sidebar width): rgba(0,0,0,0.28)  ← matches sidebar overlay
- *        RIGHT (sidebar width → end): rgba(0,0,0,0.14) ← lighter content zone
- *      This makes the sidebar appear to extend full height behind the toolbar.
- *   2. Indent all toolbar content to start after the sidebar via padding-inline-start.
- *   3. Give #tabbrowser-tabbox the same rgba(0,0,0,0.14) background +
- *      border-radius on its left edge so it forms one seamless card with the
- *      toolbar's right zone above it.
+ * Layout:
+ *   #navigator-toolbox spans full width above #browser (hbox).
+ *   Inside #browser: sidebar-main (left) + #tabbrowser-tabbox (right).
  *
- * --sidebar-launcher-collapsed-width is set by Firefox's sidebar JS once the
- * sidebar renders; the 36px fallback covers the initial paint.
+ *   To make the sidebar appear full-height, the toolbox is painted with a
+ *   hard-stop gradient — sidebar-dark on the left zone, content-lighter on
+ *   the right. Then #nav-bar is given a left margin equal to the sidebar
+ *   width so URL bar + nav buttons only appear above the content area.
+ *
+ *   NOTE: --sidebar-launcher-collapsed-width is set on #browser by Firefox's
+ *   sidebar JS. browser-sidebar.js is also patched to set it on :root so it
+ *   is accessible here from #navigator-toolbox (a sibling of #browser).
+ *   The 36px fallback covers the first paint before JS runs.
  * ============================================================ */
 
 @media -moz-pref("sidebar.revamp") {
+  /* Toolbox row: left zone = sidebar dark, right zone = content lighter */
   #navigator-toolbox[tabs-hidden]:not([lwtheme]) {
     background: linear-gradient(
       to right,
       rgba(0, 0, 0, 0.28) var(--sidebar-launcher-collapsed-width, 36px),
       rgba(0, 0, 0, 0.14) var(--sidebar-launcher-collapsed-width, 36px)
     ) !important;
-    padding-inline-start: var(--sidebar-launcher-collapsed-width, 36px) !important;
   }
 
+  /* Push nav-bar (URL bar, back/forward) to start after the sidebar width */
+  #navigator-toolbox[tabs-hidden] #nav-bar {
+    margin-inline-start: var(--sidebar-launcher-collapsed-width, 36px) !important;
+  }
+
+  /* Content card: lighter background + rounded left edge connects with the
+     toolbar's right zone above, creating one seamless floating panel. */
   #tabbrowser-tabbox {
     border-radius: var(--w3ai-radius-lg) 0 0 var(--w3ai-radius-lg) !important;
     overflow: hidden;
     background: rgba(0, 0, 0, 0.14) !important;
+  }
+
+  /* Sidebar must have no top margin so it truly spans full window height */
+  #sidebar-main,
+  sidebar-main {
+    margin-block-start: 0 !important;
   }
 }
 
