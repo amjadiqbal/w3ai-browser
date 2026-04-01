@@ -90,31 +90,21 @@ const W3AiTabTheme = {
 
   init() {
     gBrowser.tabContainer.addEventListener("TabSelect", this);
-    // Sync chatbot button pressed state with sidebar open state
-    const sidebarBox = document.getElementById("sidebar-box");
-    if (sidebarBox) {
-      sidebarBox.addEventListener("SidebarShown", this);
-      sidebarBox.addEventListener("sidebar-hide", this);
-    }
+    // Sync chatbot button pressed state with the right-side AI window open state
+    window.addEventListener("ai-window:sidebar-toggle", this);
     // Apply the first palette on init to the current selected tab
     this._applyForTab(gBrowser.selectedTab);
   },
 
   uninit() {
     gBrowser.tabContainer.removeEventListener("TabSelect", this);
-    const sidebarBox = document.getElementById("sidebar-box");
-    if (sidebarBox) {
-      sidebarBox.removeEventListener("SidebarShown", this);
-      sidebarBox.removeEventListener("sidebar-hide", this);
-    }
+    window.removeEventListener("ai-window:sidebar-toggle", this);
   },
 
   handleEvent(event) {
     if (event.type === "TabSelect") {
       this._applyForTab(event.target);
-    } else if (event.type === "SidebarShown") {
-      this._syncChatbotButton();
-    } else if (event.type === "sidebar-hide") {
+    } else if (event.type === "ai-window:sidebar-toggle") {
       this._syncChatbotButton();
     }
   },
@@ -124,9 +114,8 @@ const W3AiTabTheme = {
     if (!btn) {
       return;
     }
-    const isOpen =
-      window.SidebarController?.isOpen &&
-      window.SidebarController?.currentID === "viewGenaiChatSidebar";
+    const aiBox = document.getElementById("ai-window-box");
+    const isOpen = aiBox && !aiBox.collapsed;
     btn.setAttribute("aria-pressed", isOpen ? "true" : "false");
   },
 

@@ -2163,8 +2163,9 @@ pref("pdfjs.previousHandler.alwaysAskBeforeHandling", false);
 pref("pdfjs.handleOctetStream", true);
 
 // Is the sidebar positioned ahead of the content browser
-// W3Ai: position sidebar on the RIGHT side so the chat panel appears to the right of content
-pref("sidebar.position_start", false);
+// W3Ai: sidebar (tabs, history, bookmarks) stays on the LEFT; only the AI chat
+// panel opens on the RIGHT via #ai-window-box (see navigator-toolbox.js).
+pref("sidebar.position_start", true);
 // W3Ai: sidebar revamp always enabled for premium shell
 pref("sidebar.revamp", true);
 pref("sidebar.revamp.round-content-area", true);

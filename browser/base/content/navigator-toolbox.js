@@ -309,7 +309,7 @@ document.addEventListener(
 
         case "w3ai-chatbot-button":
           if (isLeftClick) {
-            SidebarController.toggle("viewGenaiChatSidebar");
+            AIWindowUI.toggleSidebar(window);
           }
           break;
 
@@ -464,7 +464,7 @@ document.addEventListener(
 
         case "w3ai-chatbot-button":
           if (isLikeLeftClick) {
-            SidebarController.toggle("viewGenaiChatSidebar");
+            AIWindowUI.toggleSidebar(window);
           }
           break;
 
