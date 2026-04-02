@@ -345,38 +345,49 @@ toolbarbutton[open="true"] {
  * ============================================================ */
 
 @media -moz-pref("sidebar.revamp") {
-  /* Toolbox: left zone = sidebar navy, right zone = normal toolbar color */
+  /* Toolbox: left zone = sidebar navy, right zone = transparent so nav-bar's own bg shows */
   #navigator-toolbox[tabs-hidden] {
     background: linear-gradient(
       to right,
       rgba(12, 18, 55, 0.92) var(--w3ai-sidebar-actual-width, 200px),
-      var(--w3ai-theme-toolbar, rgba(0, 0, 0, 0.22)) var(--w3ai-sidebar-actual-width, 200px)
+      transparent var(--w3ai-sidebar-actual-width, 200px)
     ) !important;
   }
 
-  /* Push URL bar + nav controls to start after the sidebar width */
+  /* Nav-bar: pushed right by sidebar width, has its own card background + rounded top-left */
   #navigator-toolbox[tabs-hidden] #nav-bar {
     margin-inline-start: var(--w3ai-sidebar-actual-width, 200px) !important;
+    position: relative !important;
+    background: var(--w3ai-theme-toolbar, rgba(20, 12, 48, 0.92)) !important;
+    border-radius: var(--w3ai-radius-lg) 0 0 0 !important;
+    overflow: visible !important;
   }
 
-  /* Content card: rounded left edge + matching background connects visually
-     with the toolbar's right zone above it, creating a floating panel. */
+  /* Sidebar-zone nav controls: absolutely positioned to the LEFT of the nav-bar,
+     landing in the toolbar's sidebar zone at the same height as the URL bar. */
+  #navigator-toolbox[tabs-hidden] #w3ai-sidebar-navctrl {
+    position: absolute !important;
+    inset-block: 0 !important;
+    inset-inline-start: calc(-1 * var(--w3ai-sidebar-actual-width, 200px)) !important;
+    width: var(--w3ai-sidebar-actual-width, 200px) !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    padding-inline: var(--space-small, 6px) !important;
+    gap: var(--space-xxsmall, 2px) !important;
+  }
+
+  /* Hide original back/forward in nav-bar (replaced by w3ai-sidebar-navctrl) */
+  #navigator-toolbox[tabs-hidden] #back-button,
+  #navigator-toolbox[tabs-hidden] #forward-button {
+    display: none !important;
+  }
+
+  /* Content card body: matching background, rounded bottom-left to complete the card */
   #tabbrowser-tabbox {
     border-radius: 0 0 0 var(--w3ai-radius-lg) !important;
     overflow: hidden;
     background: rgba(0, 0, 0, 0.14) !important;
-  }
-
-  /* Nav-bar gets top-left radius so it forms one unified card with #tabbrowser-tabbox */
-  #navigator-toolbox[tabs-hidden] #nav-bar {
-    border-radius: var(--w3ai-radius-lg) 0 0 0 !important;
-    overflow: hidden;
-  }
-
-  /* Hide back/forward from the toolbar — they now live in the sidebar */
-  #navigator-toolbox[tabs-hidden] #back-button,
-  #navigator-toolbox[tabs-hidden] #forward-button {
-    display: none !important;
   }
 
   /* Sidebar must have no top margin so it truly spans full window height */
@@ -393,6 +404,39 @@ toolbarbutton[open="true"] {
 :root {
   scrollbar-color: rgba(168, 85, 247, 0.30) transparent;
   scrollbar-width: thin;
+}
+
+/* ============================================================
+ * W3Ai SIDEBAR-ZONE NAV BUTTONS (back / forward in toolbar sidebar zone)
+ * ============================================================ */
+
+.w3ai-navctrl-btn {
+  -moz-context-properties: fill, stroke;
+  fill: rgba(255, 255, 255, 0.65);
+  stroke: rgba(255, 255, 255, 0.65);
+  width: 28px !important;
+  height: 28px !important;
+  padding: 5px !important;
+  border-radius: var(--w3ai-radius-sm) !important;
+  transition: background 0.12s ease;
+}
+
+.w3ai-navctrl-btn:hover {
+  background: rgba(255, 255, 255, 0.10) !important;
+  fill: rgba(255, 255, 255, 0.9) !important;
+  stroke: rgba(255, 255, 255, 0.9) !important;
+}
+
+.w3ai-navctrl-btn[disabled="true"] {
+  opacity: 0.3 !important;
+}
+
+#w3ai-back-btn {
+  list-style-image: url("chrome://browser/skin/back.svg");
+}
+
+#w3ai-forward-btn {
+  list-style-image: url("chrome://browser/skin/forward.svg");
 }
 
 /* ============================================================

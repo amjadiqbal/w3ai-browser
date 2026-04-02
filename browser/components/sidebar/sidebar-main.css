@@ -25,7 +25,7 @@
 
 .wrapper {
   display: grid;
-  grid-template-rows: min-content min-content min-content auto;
+  grid-template-rows: min-content min-content 1fr;
   box-sizing: border-box;
   height: 100%;
   max-width: 100%;
@@ -49,19 +49,7 @@
   }
 }
 
-/* Nav controls (back/forward) at top of sidebar */
-.sidebar-nav-controls {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding-inline: var(--space-small);
-  padding-block: var(--space-xsmall);
-  gap: var(--space-xxsmall);
-  flex-shrink: 0;
-  border-block-end: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* tabstrip slot takes all remaining space (flex mode) */
+/* tabstrip slot takes all remaining space in flex (vertical tabs) mode */
 slot[name="tabstrip"] {
   flex: 1;
   min-height: 0;
