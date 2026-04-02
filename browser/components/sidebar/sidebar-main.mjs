@@ -802,7 +802,22 @@ export default class SidebarMain extends MozLitElement {
         href="chrome://browser/content/sidebar/sidebar-main.css"
       />
       <div class="wrapper">
-        <slot name="tabstrip"></slot>
+        <div class="sidebar-nav-controls">
+          <moz-button
+            class="sidebar-nav-back"
+            type="icon ghost"
+            title="Back"
+            .iconSrc=${"chrome://browser/skin/back.svg"}
+            @click=${() => window.BrowserBack?.() ?? document.getElementById("back-button")?.doCommand()}
+          ></moz-button>
+          <moz-button
+            class="sidebar-nav-forward"
+            type="icon ghost"
+            title="Forward"
+            .iconSrc=${"chrome://browser/skin/forward.svg"}
+            @click=${() => window.BrowserForward?.() ?? document.getElementById("forward-button")?.doCommand()}
+          ></moz-button>
+        </div>
         ${when(
           ((enabledToolsAndExtensionsCount > 2 && !this.expanded) ||
             this.expanded) &&
@@ -873,6 +888,7 @@ export default class SidebarMain extends MozLitElement {
             </moz-button>
           </button-group>
         </div>
+        <slot name="tabstrip"></slot>
       </div>
     `;
   }

@@ -362,9 +362,21 @@ toolbarbutton[open="true"] {
   /* Content card: rounded left edge + matching background connects visually
      with the toolbar's right zone above it, creating a floating panel. */
   #tabbrowser-tabbox {
-    border-radius: var(--w3ai-radius-lg) 0 0 var(--w3ai-radius-lg) !important;
+    border-radius: 0 0 0 var(--w3ai-radius-lg) !important;
     overflow: hidden;
     background: rgba(0, 0, 0, 0.14) !important;
+  }
+
+  /* Nav-bar gets top-left radius so it forms one unified card with #tabbrowser-tabbox */
+  #navigator-toolbox[tabs-hidden] #nav-bar {
+    border-radius: var(--w3ai-radius-lg) 0 0 0 !important;
+    overflow: hidden;
+  }
+
+  /* Hide back/forward from the toolbar — they now live in the sidebar */
+  #navigator-toolbox[tabs-hidden] #back-button,
+  #navigator-toolbox[tabs-hidden] #forward-button {
+    display: none !important;
   }
 
   /* Sidebar must have no top margin so it truly spans full window height */
