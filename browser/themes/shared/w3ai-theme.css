@@ -316,45 +316,51 @@ toolbarbutton[open="true"] {
 }
 
 /* ============================================================
- * W3Ai FULL-HEIGHT SIDEBAR + FLOATING CONTENT CARD
+ * W3Ai FULL-HEIGHT SIDEBAR + FLOATING CONTENT CARD (Setapp-style)
  *
- * Reference design (Setapp-style):
- *   - Sidebar spans the full window height including behind the toolbar
- *   - Toolbar (URL bar, nav buttons) sits only above the content area
- *   - Content panel floats as a card with rounded top-left + bottom-left
+ * Goal: sidebar spans full window height; URL bar + nav controls
+ *       appear only above the right content panel.
  *
- * Layout:
- *   #navigator-toolbox spans full width above #browser (hbox).
- *   Inside #browser: sidebar-main (left) + #tabbrowser-tabbox (right).
+ * Root cause of previous broken attempts:
+ *   --sidebar-launcher-collapsed-width ≈ 36px (icon-only state), but the
+ *   W3Ai sidebar is always expanded (≈200px wide). The gradient hard-stop
+ *   at 36px was invisible, so the full-width toolbar appearance remained.
  *
- *   To make the sidebar appear full-height, the toolbox is painted with a
- *   hard-stop gradient — sidebar-dark on the left zone, content-lighter on
- *   the right. Then #nav-bar is given a left margin equal to the sidebar
- *   width so URL bar + nav buttons only appear above the content area.
+ * Fix:
+ *   browser-sidebar.js _handleLauncherResize now also sets
+ *   --w3ai-sidebar-actual-width on document.documentElement, tracking the
+ *   live rendered width of the sidebar-main element via ResizeObserver.
+ *   This variable is always the actual visible sidebar width.
+ *   The 200px fallback covers the first paint before the observer fires.
  *
- *   NOTE: --sidebar-launcher-collapsed-width is set on #browser by Firefox's
- *   sidebar JS. browser-sidebar.js is also patched to set it on :root so it
- *   is accessible here from #navigator-toolbox (a sibling of #browser).
- *   The 36px fallback covers the first paint before JS runs.
+ * Technique:
+ *   1. Paint #navigator-toolbox with a hard-stop gradient:
+ *        LEFT  (0 → sidebar width): sidebar navy rgba(12,18,55,0.92)
+ *        RIGHT (sidebar width → end): normal toolbar overlay
+ *      Sidebar appears to extend full height behind the toolbox.
+ *   2. Offset #nav-bar inline-start by the sidebar width so URL bar and
+ *      nav controls only appear above the content area.
+ *   3. #tabbrowser-tabbox gets matching background + rounded left edge,
+ *      forming one seamless floating card with the toolbar right zone.
  * ============================================================ */
 
 @media -moz-pref("sidebar.revamp") {
-  /* Toolbox row: left zone = sidebar dark, right zone = content lighter */
-  #navigator-toolbox[tabs-hidden]:not([lwtheme]) {
+  /* Toolbox: left zone = sidebar navy, right zone = normal toolbar color */
+  #navigator-toolbox[tabs-hidden] {
     background: linear-gradient(
       to right,
-      rgba(0, 0, 0, 0.28) var(--sidebar-launcher-collapsed-width, 36px),
-      rgba(0, 0, 0, 0.14) var(--sidebar-launcher-collapsed-width, 36px)
+      rgba(12, 18, 55, 0.92) var(--w3ai-sidebar-actual-width, 200px),
+      var(--w3ai-theme-toolbar, rgba(0, 0, 0, 0.22)) var(--w3ai-sidebar-actual-width, 200px)
     ) !important;
   }
 
-  /* Push nav-bar (URL bar, back/forward) to start after the sidebar width */
+  /* Push URL bar + nav controls to start after the sidebar width */
   #navigator-toolbox[tabs-hidden] #nav-bar {
-    margin-inline-start: var(--sidebar-launcher-collapsed-width, 36px) !important;
+    margin-inline-start: var(--w3ai-sidebar-actual-width, 200px) !important;
   }
 
-  /* Content card: lighter background + rounded left edge connects with the
-     toolbar's right zone above, creating one seamless floating panel. */
+  /* Content card: rounded left edge + matching background connects visually
+     with the toolbar's right zone above it, creating a floating panel. */
   #tabbrowser-tabbox {
     border-radius: var(--w3ai-radius-lg) 0 0 var(--w3ai-radius-lg) !important;
     overflow: hidden;

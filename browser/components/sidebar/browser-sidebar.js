@@ -602,6 +602,10 @@ var SidebarController = {
     if (this._state.visibilitySetting === "expand-on-hover") {
       this.setLauncherCollapsedWidth();
     }
+    document.documentElement.style.setProperty(
+      "--w3ai-sidebar-actual-width",
+      `${entry.contentBoxSize[0].inlineSize}px`
+    );
   },
 
   getUIState() {
