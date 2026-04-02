@@ -363,17 +363,18 @@ toolbarbutton[open="true"] {
     overflow: visible !important;
   }
 
-  /* Sidebar-zone nav controls: absolutely positioned to the LEFT of the nav-bar,
-     landing in the toolbar's sidebar zone at the same height as the URL bar. */
+  /* Sidebar-zone nav controls: sit at the RIGHT edge of the sidebar
+     (inset-inline-end:100% places right edge at nav-bar's left edge = sidebar-width).
+     Traffic lights (●●●) remain at window x=0 naturally in #titlebar. */
   #navigator-toolbox[tabs-hidden] #w3ai-sidebar-navctrl {
     position: absolute !important;
     inset-block: 0 !important;
-    inset-inline-start: calc(-1 * var(--w3ai-sidebar-actual-width, 200px)) !important;
-    width: var(--w3ai-sidebar-actual-width, 200px) !important;
+    inset-inline-end: 100% !important;
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
-    padding-inline: var(--space-small, 6px) !important;
+    justify-content: flex-end !important;
+    padding-inline-end: var(--space-small, 6px) !important;
     gap: var(--space-xxsmall, 2px) !important;
   }
 
@@ -381,6 +382,17 @@ toolbarbutton[open="true"] {
   #navigator-toolbox[tabs-hidden] #back-button,
   #navigator-toolbox[tabs-hidden] #forward-button {
     display: none !important;
+  }
+
+  /* Bookmarks bar: pushed into right area, matching nav-bar */
+  #navigator-toolbox[tabs-hidden] #PersonalToolbar {
+    margin-inline-start: var(--w3ai-sidebar-actual-width, 200px) !important;
+    background: var(--w3ai-theme-toolbar, rgba(20, 12, 48, 0.92)) !important;
+  }
+
+  /* Notification bar: pushed into right area */
+  #navigator-toolbox[tabs-hidden] #notifications-toolbar {
+    margin-inline-start: var(--w3ai-sidebar-actual-width, 200px) !important;
   }
 
   /* Content card body: matching background, rounded bottom-left to complete the card */
