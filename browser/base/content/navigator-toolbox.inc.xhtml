@@ -136,18 +136,6 @@
     <hbox class="titlebar-spacer" type="pre-tabs"/>
     <toolbartabstop/>
 
-    <!-- W3Ai: sidebar-zone back/forward — CSS positions this over the toolbar's left zone -->
-    <toolbaritem id="w3ai-sidebar-navctrl" removable="false" overflows="false">
-      <toolbarbutton id="w3ai-back-btn" class="toolbarbutton-1 w3ai-navctrl-btn"
-                     command="Browser:BackOrBackDuplicate"
-                     tooltip="back-button-tooltip"
-                     context="backForwardMenu"/>
-      <toolbarbutton id="w3ai-forward-btn" class="toolbarbutton-1 w3ai-navctrl-btn"
-                     command="Browser:ForwardOrForwardDuplicate"
-                     tooltip="forward-button-tooltip"
-                     context="backForwardMenu"/>
-    </toolbaritem>
-
     <hbox id="nav-bar-customization-target" flex="1">
       <toolbarbutton id="back-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
                      data-l10n-id="toolbar-button-back-2"
@@ -539,7 +527,6 @@
     <hbox class="titlebar-spacer" type="post-tabs"/>
 #include private-browsing-indicator.inc.xhtml
     <toolbarbutton class="content-analysis-indicator toolbarbutton-1 content-analysis-indicator-icon"/>
-#include titlebar-items.inc.xhtml
   </toolbar>
 
   <toolbar id="PersonalToolbar"

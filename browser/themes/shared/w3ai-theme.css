@@ -316,96 +316,60 @@ toolbarbutton[open="true"] {
 }
 
 /* ============================================================
- * W3Ai FULL-HEIGHT SIDEBAR + FLOATING CONTENT CARD (Setapp-style)
+ * W3Ai LAYOUT SHELL — two-column structure
  *
- * Goal: sidebar spans full window height; URL bar + nav controls
- *       appear only above the right content panel.
+ * #browser is an hbox (flex row) containing:
+ *   Left:  #w3ai-sidebar-shell (vbox) — window controls + sidebar-main
+ *   Right: #w3ai-main-panel   (vbox) — navigator-toolbox + content
  *
- * Root cause of previous broken attempts:
- *   --sidebar-launcher-collapsed-width ≈ 36px (icon-only state), but the
- *   W3Ai sidebar is always expanded (≈200px wide). The gradient hard-stop
- *   at 36px was invisible, so the full-width toolbar appearance remained.
- *
- * Fix:
- *   browser-sidebar.js _handleLauncherResize now also sets
- *   --w3ai-sidebar-actual-width on document.documentElement, tracking the
- *   live rendered width of the sidebar-main element via ResizeObserver.
- *   This variable is always the actual visible sidebar width.
- *   The 200px fallback covers the first paint before the observer fires.
- *
- * Technique:
- *   1. Paint #navigator-toolbox with a hard-stop gradient:
- *        LEFT  (0 → sidebar width): sidebar navy rgba(12,18,55,0.92)
- *        RIGHT (sidebar width → end): normal toolbar overlay
- *      Sidebar appears to extend full height behind the toolbox.
- *   2. Offset #nav-bar inline-start by the sidebar width so URL bar and
- *      nav controls only appear above the content area.
- *   3. #tabbrowser-tabbox gets matching background + rounded left edge,
- *      forming one seamless floating card with the toolbar right zone.
+ * Because #navigator-toolbox lives INSIDE #w3ai-main-panel, all its
+ * child toolbars (#nav-bar, #PersonalToolbar, #notifications-toolbar)
+ * are naturally bounded to the right panel — no margin or offset
+ * hacks are required.
  * ============================================================ */
 
+/* Sidebar shell: full-height navy column on the left */
+#w3ai-sidebar-shell {
+  background: rgba(12, 18, 55, 0.92);
+}
+
+/* Window controls row: hidden by default (TabsToolbar handles it in non-revamp mode) */
+#w3ai-sidebar-window-controls {
+  display: none;
+}
+
 @media -moz-pref("sidebar.revamp") {
-  /* Toolbox: left zone = sidebar navy, right zone = transparent so nav-bar's own bg shows */
-  #navigator-toolbox[tabs-hidden] {
-    background: linear-gradient(
-      to right,
-      rgba(12, 18, 55, 0.92) var(--w3ai-sidebar-actual-width, 200px),
-      transparent var(--w3ai-sidebar-actual-width, 200px)
-    ) !important;
+  /* Show sidebar window controls in revamp mode (TabsToolbar is hidden) */
+  #w3ai-sidebar-window-controls {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    min-height: calc(var(--urlbar-min-height) + 2 * var(--urlbar-padding-block));
+    padding-block: var(--space-xxsmall, 2px);
   }
 
-  /* Nav-bar: pushed right by sidebar width, has its own card background + rounded top-left */
+  /* Main panel: right-side color matching the toolbar */
+  #w3ai-main-panel {
+    background: var(--w3ai-theme-toolbar, rgba(20, 12, 48, 0.92));
+  }
+
+  /* Nav-bar: rounded top-left to form the card corner */
   #navigator-toolbox[tabs-hidden] #nav-bar {
-    margin-inline-start: var(--w3ai-sidebar-actual-width, 200px) !important;
-    position: relative !important;
-    background: var(--w3ai-theme-toolbar, rgba(20, 12, 48, 0.92)) !important;
-    border-radius: var(--w3ai-radius-lg) 0 0 0 !important;
-    overflow: visible !important;
+    background: var(--w3ai-theme-toolbar, rgba(20, 12, 48, 0.92));
+    border-radius: var(--w3ai-radius-lg) 0 0 0;
   }
 
-  /* Sidebar-zone nav controls: sit at the RIGHT edge of the sidebar
-     (inset-inline-end:100% places right edge at nav-bar's left edge = sidebar-width).
-     Traffic lights (●●●) remain at window x=0 naturally in #titlebar. */
-  #navigator-toolbox[tabs-hidden] #w3ai-sidebar-navctrl {
-    position: absolute !important;
-    inset-block: 0 !important;
-    inset-inline-end: 100% !important;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: flex-end !important;
-    padding-inline-end: var(--space-small, 6px) !important;
-    gap: var(--space-xxsmall, 2px) !important;
-  }
-
-  /* Hide original back/forward in nav-bar (replaced by w3ai-sidebar-navctrl) */
-  #navigator-toolbox[tabs-hidden] #back-button,
-  #navigator-toolbox[tabs-hidden] #forward-button {
+  /* Hide the original back/forward buttons; sidebar controls replace them */
+  #back-button,
+  #forward-button {
     display: none !important;
   }
 
-  /* Bookmarks bar: pushed into right area, matching nav-bar */
-  #navigator-toolbox[tabs-hidden] #PersonalToolbar {
-    margin-inline-start: var(--w3ai-sidebar-actual-width, 200px) !important;
-    background: var(--w3ai-theme-toolbar, rgba(20, 12, 48, 0.92)) !important;
-  }
-
-  /* Notification bar: pushed into right area */
-  #navigator-toolbox[tabs-hidden] #notifications-toolbar {
-    margin-inline-start: var(--w3ai-sidebar-actual-width, 200px) !important;
-  }
-
-  /* Content card body: matching background, rounded bottom-left to complete the card */
+  /* Content card: rounded bottom-left, seamless with nav-bar */
   #tabbrowser-tabbox {
-    border-radius: 0 0 0 var(--w3ai-radius-lg) !important;
+    border-radius: 0 0 0 var(--w3ai-radius-lg);
     overflow: hidden;
-    background: rgba(0, 0, 0, 0.14) !important;
-  }
-
-  /* Sidebar must have no top margin so it truly spans full window height */
-  #sidebar-main,
-  sidebar-main {
-    margin-block-start: 0 !important;
+    background: rgba(0, 0, 0, 0.14);
   }
 }
 
@@ -419,7 +383,7 @@ toolbarbutton[open="true"] {
 }
 
 /* ============================================================
- * W3Ai SIDEBAR-ZONE NAV BUTTONS (back / forward in toolbar sidebar zone)
+ * W3Ai SIDEBAR NAV BUTTONS (back / forward in sidebar window controls)
  * ============================================================ */
 
 .w3ai-navctrl-btn {
