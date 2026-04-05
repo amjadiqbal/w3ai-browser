@@ -2844,15 +2844,14 @@ toolbar:not(#TabsToolbar) #firefox-view-button {
   @media (prefers-color-scheme: dark) {
     /* Selected tab: indigo glass with glow */
     .tabbrowser-tab[selected] .tab-background {
-      background-color: rgba(99, 102, 241, 0.25) !important;
-      border: 1px solid rgba(139, 92, 246, 0.50) !important;
-      box-shadow: 0 0 12px rgba(99, 102, 241, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
+      background-color: hsl(220 20% 7%) !important;
+      border: 1px solid hsl(250 30% 20%) !important;
       border-radius: 10px !important;
     }
 
     /* Hovered tab: subtle glass lift */
     .tabbrowser-tab:not([selected]):hover .tab-background {
-      background-color: rgba(255, 255, 255, 0.08) !important;
+      background-color: hsl(220 20% 7%) !important;
       border-radius: 10px !important;
     }
 

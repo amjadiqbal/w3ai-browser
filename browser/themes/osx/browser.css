@@ -12,7 +12,7 @@
   @media not (prefers-contrast) {
     :root:not([lwtheme]) {
       /* W3Ai: solid purple glass for macOS — text must be readable */
-      --urlbar-box-bgcolor: rgba(30, 18, 65, 0.92);
+      --urlbar-box-bgcolor: rgba(31, 23, 69, 1);
       --tab-selected-bgcolor: rgba(168, 85, 247, 0.28);
       --toolbox-bgcolor: rgba(20, 12, 44, 0.90);
     }
@@ -182,19 +182,6 @@
   margin-top: -14px;
 }
 
-/* W3Ai: macOS window vibrancy and rounded corners for the app shell */
-@media (-moz-platform: macos) {
-  :root:not([lwtheme]) {
-    #navigator-toolbox {
-      background-color: rgba(20, 12, 44, 0.88);
-      backdrop-filter: blur(20px) saturate(180%);
-    }
-
-    #TabsToolbar {
-      background: transparent;
-    }
-  }
-}
 
 @media (-moz-native-theme) {
   @media not (prefers-contrast) {

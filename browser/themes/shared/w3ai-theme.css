@@ -2,220 +2,247 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/*
- * W3Ai Premium Browser Theme
- * Design principles:
- *   1. ONE gradient color — all components share the same hue family,
- *      differentiated only by opacity (darker = more opaque overlay).
- *   2. No visible borders — separation comes from opacity depth alone.
- *   3. Content area gets left-side radius (floating card effect like the
- *      reference design with sidebar on the left).
- */
+@import url("chrome://browser/skin/browser-shared.css");
 
 :root {
-  /* ============================================================
-   * W3Ai SINGLE COLOR PALETTE
-   * One gradient is shared by the entire browser shell.
-   * Components are differentiated only through opacity layers —
-   * NO separate hue values per component.
-   * ============================================================ */
+  --w3ai-font-family: "Inter", "Segoe UI", "SF Pro Text", sans-serif;
 
-  /* Glass surface fills — all share the same base purple hue */
-  --w3ai-glass-surface:        rgba(30, 18, 65, 0.85);
-  --w3ai-glass-surface-hover:  rgba(38, 22, 80, 0.92);
-  --w3ai-glass-surface-active: rgba(48, 28, 95, 0.97);
-  --w3ai-glass-panel:          rgba(22, 13, 48, 0.94);
+  --w3ai-bg-dark: hsl(220 20% 4%);
+  --w3ai-bg-light: hsl(0 0% 100%);
+  --w3ai-fg-dark: hsl(0 0% 95%);
+  --w3ai-fg-light: hsl(220 20% 10%);
 
-  /* Primary accent: luminous purple */
-  --w3ai-accent-primary:    #a855f7;
-  --w3ai-accent-hover:      #c084fc;
-  --w3ai-accent-active:     #d8b4fe;
-  --w3ai-accent-glow:       rgba(168, 85, 247, 0.40);
-  --w3ai-accent-glow-strong: rgba(168, 85, 247, 0.60);
+  --w3ai-card-dark: hsl(220 20% 7%);
+  --w3ai-card-light: hsl(0 0% 98%);
+  --w3ai-border-dark: hsl(220 14% 16%);
+  --w3ai-border-light: hsl(220 13% 91%);
 
-  /* Selected / active states */
-  --w3ai-selected-bg:       rgba(168, 85, 247, 0.22);
-  --w3ai-selected-bg-hover: rgba(168, 85, 247, 0.32);
+  --w3ai-accent-neon: hsl(82 85% 55%);
+  --w3ai-accent-violet: hsl(275 85% 55%);
+  --w3ai-accent-pink: hsl(330 100% 55%);
+  --w3ai-accent-blue: hsl(220 100% 55%);
+  --w3ai-accent-cyan: hsl(200 100% 55%);
 
-  /* Text */
-  --w3ai-text-primary:      rgba(249, 240, 255, 0.95);
-  --w3ai-text-secondary:    rgba(229, 210, 255, 0.70);
-  --w3ai-text-muted:        rgba(209, 180, 255, 0.45);
-  --w3ai-text-accent:       #c084fc;
+  --w3ai-gradient-rainbow: linear-gradient(
+    270deg,
+    hsl(275 85% 55%),
+    hsl(330 100% 55%),
+    hsl(0 90% 55%),
+    hsl(50 95% 55%),
+    hsl(120 100% 50%),
+    hsl(220 100% 55%),
+    hsl(275 85% 55%)
+  );
 
-  /* ============================================================
-   * W3Ai SHADOWS AND GLOWS
-   * ============================================================ */
+  --w3ai-gradient-cool: linear-gradient(
+    270deg,
+    hsl(220 100% 55%),
+    hsl(275 85% 55%),
+    hsl(330 100% 55%),
+    hsl(275 85% 55%),
+    hsl(220 100% 55%)
+  );
 
-  --w3ai-shadow-sm:    0 1px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.45);
-  --w3ai-shadow-md:    0 4px 14px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.35);
-  --w3ai-shadow-lg:    0 8px 28px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.45);
-  --w3ai-shadow-xl:    0 16px 48px rgba(0, 0, 0, 0.65), 0 8px 24px rgba(0, 0, 0, 0.50);
-  --w3ai-glow-button:  0 0 14px rgba(168, 85, 247, 0.55);
+  --w3ai-surface: color-mix(in srgb, var(--w3ai-bg-dark) 84%, white);
+  --w3ai-surface-hover: color-mix(in srgb, var(--w3ai-bg-dark) 72%, var(--w3ai-accent-blue));
+  --w3ai-surface-active: color-mix(in srgb, var(--w3ai-bg-dark) 66%, var(--w3ai-accent-violet));
+  --w3ai-panel: color-mix(in srgb, var(--w3ai-card-dark) 90%, black);
+  --w3ai-toolbar: color-mix(in srgb, var(--w3ai-bg-dark) 84%, var(--w3ai-accent-blue));
 
-  /* ============================================================
-   * W3Ai GEOMETRY
-   * ============================================================ */
+  --w3ai-text-primary: var(--w3ai-fg-dark);
+  --w3ai-text-secondary: color-mix(in srgb, var(--w3ai-fg-dark) 72%, var(--w3ai-accent-cyan));
+  --w3ai-text-muted: color-mix(in srgb, var(--w3ai-fg-dark) 45%, transparent);
 
-  --w3ai-radius-xs:   4px;
-  --w3ai-radius-sm:   8px;
-  --w3ai-radius-md:   12px;
-  --w3ai-radius-lg:   16px;
-  --w3ai-radius-xl:   20px;
-  --w3ai-radius-2xl:  24px;
-  --w3ai-radius-pill: 100px;
+  --w3ai-glow: color-mix(in srgb, var(--w3ai-accent-violet) 46%, transparent);
+  --w3ai-glow-strong: color-mix(in srgb, var(--w3ai-accent-pink) 40%, transparent);
 
-  --w3ai-space-1:  4px;
-  --w3ai-space-2:  8px;
+  --w3ai-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --w3ai-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --w3ai-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
+
+  --w3ai-radius-sm: 8px;
+  --w3ai-radius-md: 12px;
+  --w3ai-radius-lg: 16px;
+  --w3ai-radius-xl: 22px;
+  --w3ai-radius-pill: 999px;
+
+  --w3ai-space-1: 4px;
+  --w3ai-space-2: 8px;
   --w3ai-space-3: 12px;
-  --w3ai-space-4: 16px;
-  --w3ai-space-5: 20px;
-  --w3ai-space-6: 24px;
-  --w3ai-space-8: 32px;
 
-  --w3ai-sidebar-rail-width:      56px;
-  --w3ai-sidebar-expanded-width: 240px;
-  --w3ai-toolbar-height:          48px;
-  --w3ai-urlbar-height:           36px;
-  --w3ai-tab-height:              36px;
-  --w3ai-tab-min-width:           32px;
-  --w3ai-icon-size:               20px;
+  --w3ai-blur-sm: blur(12px) saturate(140%);
+  --w3ai-blur-md: blur(20px) saturate(170%);
 
-  /* ============================================================
-   * W3Ai TRANSLUCENCY / BACKDROP
-   * ============================================================ */
+  --w3ai-speed-fast: 140ms;
+  --w3ai-speed-base: 220ms;
+  --w3ai-speed-slow: 360ms;
+  --w3ai-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  --w3ai-backdrop-blur:    blur(24px) saturate(200%);
-  --w3ai-backdrop-blur-sm: blur(14px) saturate(170%);
-  --w3ai-backdrop-blur-lg: blur(36px) saturate(220%);
+  --color-accent-primary: var(--w3ai-accent-neon);
+  --color-accent-primary-hover: color-mix(in srgb, var(--w3ai-accent-neon) 85%, white);
+  --color-accent-primary-active: color-mix(in srgb, var(--w3ai-accent-neon) 75%, black);
+  --color-accent-primary-selected: var(--w3ai-accent-neon);
 
-  /* ============================================================
-   * OVERRIDE FIREFOX DESIGN TOKENS
-   * ============================================================ */
+  --sidebar-background-color: var(--w3ai-surface);
+  --sidebar-text-color: var(--w3ai-text-primary);
+  --sidebar-border-color: color-mix(in srgb, var(--w3ai-border-dark) 80%, transparent);
 
-  --color-accent-primary:          var(--w3ai-accent-primary);
-  --color-accent-primary-hover:    var(--w3ai-accent-hover);
-  --color-accent-primary-active:   var(--w3ai-accent-active);
-  --color-accent-primary-selected: var(--w3ai-accent-primary);
+  --button-background-color: var(--w3ai-surface);
+  --button-background-color-hover: var(--w3ai-surface-hover);
+  --button-background-color-active: var(--w3ai-surface-active);
+  --button-text-color: var(--w3ai-text-primary);
 
-  --sidebar-background-color: var(--w3ai-glass-surface);
-  --sidebar-text-color:       var(--w3ai-text-primary);
-  --sidebar-border-color:     transparent;
+  --urlbar-box-bgcolor: var(--w3ai-surface);
+  --urlbar-box-focus-bgcolor: var(--w3ai-surface-hover);
+  --urlbar-box-hover-bgcolor: var(--w3ai-surface-hover);
+  --urlbar-box-text-color: var(--w3ai-text-primary);
 
-  --button-background-color:        var(--w3ai-glass-surface);
-  --button-background-color-hover:  var(--w3ai-glass-surface-hover);
-  --button-background-color-active: var(--w3ai-glass-surface-active);
-  --button-text-color:              var(--w3ai-text-primary);
+  --arrowpanel-background: var(--w3ai-panel);
+  --arrowpanel-color: var(--w3ai-text-primary);
+  --arrowpanel-border-color: color-mix(in srgb, var(--w3ai-border-dark) 65%, transparent);
 
-  --urlbar-box-bgcolor:       var(--w3ai-glass-surface);
-  --urlbar-box-focus-bgcolor: rgba(168, 85, 247, 0.14);
-  --urlbar-box-hover-bgcolor: var(--w3ai-glass-surface-hover);
-  --urlbar-box-text-color:    var(--w3ai-text-primary);
-
-  --arrowpanel-background:    var(--w3ai-glass-panel);
-  --arrowpanel-color:         var(--w3ai-text-primary);
-  --arrowpanel-border-color:  transparent;
-
-  --tab-selected-bgcolor:  var(--w3ai-selected-bg);
+  --tab-selected-bgcolor: color-mix(in srgb, var(--w3ai-accent-blue) 22%, var(--w3ai-surface));
   --tab-selected-textcolor: var(--w3ai-text-primary);
 
-  --toolbox-bgcolor:    var(--w3ai-glass-surface);
-  --toolbox-textcolor:  var(--w3ai-text-primary);
+  --toolbox-bgcolor: var(--w3ai-toolbar);
+  --toolbox-textcolor: var(--w3ai-text-primary);
+
+  scrollbar-color: color-mix(in srgb, var(--w3ai-accent-cyan) 45%, transparent) transparent;
+  scrollbar-width: thin;
 }
 
-/* ============================================================
- * W3Ai BROWSER SHELL BACKGROUND
- * Single gradient — set by w3ai-tab-theme.js, falls back to
- * deep purple. All components layer on top of this ONE gradient.
- * ============================================================ */
-
-:root {
-  --w3ai-theme-bg-base:     #0f0820;
-  --w3ai-theme-bg-gradient: linear-gradient(160deg, #0f0820 0%, #160d30 30%, #1a0f3d 60%, #221260 100%);
-  --w3ai-theme-surface:     rgba(30, 18, 65, 0.92);
-  --w3ai-theme-surface-hover: rgba(42, 24, 88, 0.94);
-  --w3ai-theme-accent:      #a855f7;
-  --w3ai-theme-accent-glow: rgba(168, 85, 247, 0.45);
-  --w3ai-theme-toolbar:     rgba(0, 0, 0, 0.22);
-}
-
-@media (-moz-platform: macos) {
+@media (prefers-color-scheme: light) {
   :root:not([lwtheme]) {
-    background-color: var(--w3ai-theme-bg-base);
-    background: var(--w3ai-theme-bg-gradient);
+    --w3ai-surface: color-mix(in srgb, var(--w3ai-bg-light) 92%, var(--w3ai-accent-blue));
+    --w3ai-surface-hover: color-mix(in srgb, var(--w3ai-bg-light) 84%, var(--w3ai-accent-cyan));
+    --w3ai-surface-active: color-mix(in srgb, var(--w3ai-bg-light) 76%, var(--w3ai-accent-violet));
+    --w3ai-panel: color-mix(in srgb, var(--w3ai-card-light) 94%, var(--w3ai-accent-cyan));
+    --w3ai-toolbar: color-mix(in srgb, var(--w3ai-bg-light) 88%, var(--w3ai-accent-blue));
+    --w3ai-text-primary: var(--w3ai-fg-light);
+    --w3ai-text-secondary: color-mix(in srgb, var(--w3ai-fg-light) 72%, var(--w3ai-accent-violet));
+    --w3ai-text-muted: color-mix(in srgb, var(--w3ai-fg-light) 52%, transparent);
   }
+}
+
+@keyframes w3ai-shell-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes w3ai-gradient-drift {
+  from {
+    background-position: 0% 50%;
+  }
+
+  to {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes w3ai-soft-pulse {
+  0% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+
+  50% {
+    box-shadow: 0 0 0 3px var(--w3ai-glow);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+:root:not([lwtheme]) {
+  font-family: var(--w3ai-font-family);
+  background:
+    radial-gradient(circle at 14% 12%, color-mix(in srgb, var(--w3ai-accent-blue) 26%, transparent) 0%, transparent 36%),
+    radial-gradient(circle at 82% -8%, color-mix(in srgb, var(--w3ai-accent-violet) 26%, transparent) 0%, transparent 42%),
+    var(--w3ai-bg-dark);
 }
 
 #browser,
 #appcontent {
-  background: var(--w3ai-theme-bg-gradient);
+  background: #0f0f11;
 }
 
-:root:not([lwtheme]) #navigator-toolbox {
-  background: var(--w3ai-theme-toolbar);
+#w3ai-sidebar-shell,
+#w3ai-main-panel,
+#navigator-toolbox {
+  animation: w3ai-shell-enter var(--w3ai-speed-slow) var(--w3ai-ease-out);
 }
 
-/* ============================================================
- * W3Ai TOOLBAR / NAV-BAR
- * ============================================================ */
 
-#nav-bar:not([lwtheme]) {
+
+#w3ai-main-panel {
+  background: hsl(220 20% 7%);
+}
+
+
+
+#nav-bar {
   background: transparent;
   padding-block: var(--w3ai-space-2);
   padding-inline: var(--w3ai-space-3);
 }
 
-/* ============================================================
- * W3Ai URLBAR — rounded pill, solid glass (text always readable)
- * No border — the glass surface background provides visual presence.
- * ============================================================ */
-
-#urlbar {
-  border-radius: var(--w3ai-radius-pill) !important;
-  background-color: var(--w3ai-theme-surface) !important;
-  border: none !important;
-  color: var(--w3ai-text-primary) !important;
-  transition: background-color 0.15s ease, box-shadow 0.15s ease;
-}
-
 #urlbar[focused] {
-  background-color: var(--w3ai-theme-surface-hover) !important;
-  box-shadow: 0 0 0 2px var(--w3ai-theme-accent-glow), 0 0 22px var(--w3ai-theme-accent-glow) !important;
+  background: var(--w3ai-surface-hover) !important;
+  border-color: color-mix(in srgb, var(--w3ai-accent-cyan) 56%, transparent) !important;
+  box-shadow: 0 0 0 2px var(--w3ai-glow), 0 0 22px var(--w3ai-glow-strong) !important;
+  transform: translateY(-1px);
 }
 
-#urlbar-background {
-  border-radius: var(--w3ai-radius-pill) !important;
-  background: transparent !important;
-}
-
+#urlbar-background,
 #urlbar-input-container {
   border-radius: var(--w3ai-radius-pill) !important;
 }
 
-#urlbar-input {
-  color: var(--w3ai-text-primary) !important;
-}
-
+#urlbar-input,
 .urlbar-input-box {
   color: var(--w3ai-text-primary) !important;
 }
 
 .urlbar-placeholder {
-  color: var(--w3ai-text-secondary) !important;
+  color: var(--w3ai-text-muted) !important;
 }
 
-/* URL bar dropdown/results panel */
 #urlbar-results,
-.urlbarView {
-  background: var(--w3ai-glass-panel) !important;
-  border: none !important;
+.urlbarView,
+panel,
+menupopup,
+#appMenu-popup,
+#PanelUI-popup {
+  --panel-background: var(--w3ai-panel) !important;
+  --panel-color: var(--w3ai-text-primary) !important;
+  --panel-border-color: color-mix(in srgb, var(--w3ai-border-dark) 65%, transparent) !important;
   border-radius: var(--w3ai-radius-lg) !important;
-  backdrop-filter: var(--w3ai-backdrop-blur) !important;
+  backdrop-filter: var(--w3ai-blur-md) !important;
+  box-shadow: var(--w3ai-shadow-lg) !important;
+  transition:
+    transform var(--w3ai-speed-base) var(--w3ai-ease-out),
+    box-shadow var(--w3ai-speed-base) var(--w3ai-ease-out);
 }
 
-/* ============================================================
- * W3Ai TAB STRIP — liquid glass with dynamic palette
- * ============================================================ */
+menupopup > menuitem,
+panel menuitem {
+  transition:
+    background-color var(--w3ai-speed-fast) var(--w3ai-ease-out),
+    color var(--w3ai-speed-fast) var(--w3ai-ease-out);
+}
+
+menupopup > menuitem:hover,
+panel menuitem:hover {
+  background: color-mix(in srgb, var(--w3ai-surface-hover) 82%, transparent) !important;
+  border-radius: var(--w3ai-radius-sm) !important;
+}
 
 #tabbrowser-tabs {
   background: transparent;
@@ -223,188 +250,102 @@
 
 .tabbrowser-tab .tab-background {
   border-radius: var(--w3ai-radius-md) !important;
-  transition: background-color 0.15s ease, box-shadow 0.15s ease, backdrop-filter 0.15s ease;
+  transition:
+    background-color var(--w3ai-speed-base) var(--w3ai-ease-out),
+    box-shadow var(--w3ai-speed-base) var(--w3ai-ease-out),
+    transform var(--w3ai-speed-fast) var(--w3ai-ease-out);
 }
 
 .tabbrowser-tab:hover .tab-background {
-  background: var(--w3ai-theme-surface-hover) !important;
-  backdrop-filter: blur(16px) saturate(200%) !important;
+  background: color-mix(in srgb, var(--w3ai-surface-hover) 88%, transparent) !important;
+  transform: translateY(-1px);
 }
 
 .tabbrowser-tab[selected] .tab-background {
-  background: var(--w3ai-theme-surface) !important;
-  box-shadow: 0 0 18px var(--w3ai-theme-accent-glow) !important;
-  backdrop-filter: blur(20px) saturate(200%) !important;
+  background-color: hsl(220 20% 7%) !important;
 }
 
 .tab-label {
   color: var(--w3ai-text-primary);
-  font-size: 13px;
 }
 
-/* ============================================================
- * W3Ai SIDEBAR — same-hue opacity overlay on top of the gradient.
- * No borders — the darker opacity layer creates visual separation.
- * ============================================================ */
-
 #sidebar-main {
-  background: rgba(0, 0, 0, 0.28) !important;
-  backdrop-filter: var(--w3ai-backdrop-blur) !important;
+  /*background: color-mix(in srgb, var(--w3ai-bg-dark) 80%, var(--w3ai-accent-blue)) !important;*/
+  overflow: auto !important;
 }
 
 #sidebar-box {
-  background: rgba(0, 0, 0, 0.20) !important;
+  background: color-mix(in srgb, var(--w3ai-bg-dark) 76%, black) !important;
 }
 
 #sidebar {
   border-radius: var(--w3ai-radius-lg) !important;
   box-shadow: var(--w3ai-shadow-md) !important;
-  background-color: rgba(0, 0, 0, 0.18) !important;
-  overflow: hidden;
+  background: color-mix(in srgb, var(--w3ai-bg-dark) 82%, black) !important;
 }
 
-/* ============================================================
- * W3Ai PANELS AND POPOVERS
- * ============================================================ */
-
-panel,
-menupopup,
-#appMenu-popup,
-#PanelUI-popup {
-  --panel-background: var(--w3ai-glass-panel) !important;
-  --panel-color: var(--w3ai-text-primary) !important;
-  --panel-border-color: transparent !important;
-  border-radius: var(--w3ai-radius-lg) !important;
-  backdrop-filter: var(--w3ai-backdrop-blur) !important;
-  box-shadow: var(--w3ai-shadow-xl) !important;
-  overflow: hidden;
+toolbarbutton {
+  transition:
+    background-color var(--w3ai-speed-fast) var(--w3ai-ease-out),
+    box-shadow var(--w3ai-speed-fast) var(--w3ai-ease-out),
+    transform var(--w3ai-speed-fast) var(--w3ai-ease-out),
+    color var(--w3ai-speed-fast) var(--w3ai-ease-out),
+    fill var(--w3ai-speed-fast) var(--w3ai-ease-out),
+    stroke var(--w3ai-speed-fast) var(--w3ai-ease-out);
 }
 
-menupopup > menuitem:hover,
-panel menuitem:hover {
-  background: var(--w3ai-theme-surface-hover) !important;
-  backdrop-filter: blur(10px) !important;
-  border-radius: var(--w3ai-radius-sm) !important;
-}
 
-/* ============================================================
- * W3Ai TOOLBAR BUTTONS — liquid glass hover effect
- * ============================================================ */
-
-toolbarbutton:not([disabled]):hover {
-  background: var(--w3ai-theme-surface-hover) !important;
-  backdrop-filter: blur(16px) saturate(200%) !important;
-  border-radius: var(--w3ai-radius-sm) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.30) !important;
-}
-
-toolbarbutton:not([disabled]):active,
-toolbarbutton[open="true"] {
-  background: var(--w3ai-glass-surface-active) !important;
-  backdrop-filter: blur(20px) saturate(220%) !important;
-  border-radius: var(--w3ai-radius-sm) !important;
-  box-shadow: var(--w3ai-glow-button) !important;
-}
-
-/* ============================================================
- * W3Ai RIGHT-RAIL AI WINDOW
- * ============================================================ */
-
-#ai-window-sidebar-box {
-  background: rgba(0, 0, 0, 0.22) !important;
-  backdrop-filter: var(--w3ai-backdrop-blur) !important;
-}
-
-/* ============================================================
- * W3Ai LAYOUT SHELL — two-column structure
- *
- * #browser is an hbox (flex row) containing:
- *   Left:  #w3ai-sidebar-shell (vbox) — window controls + sidebar-main
- *   Right: #w3ai-main-panel   (vbox) — navigator-toolbox + content
- *
- * Because #navigator-toolbox lives INSIDE #w3ai-main-panel, all its
- * child toolbars (#nav-bar, #PersonalToolbar, #notifications-toolbar)
- * are naturally bounded to the right panel — no margin or offset
- * hacks are required.
- * ============================================================ */
-
-/* Sidebar shell: full-height navy column on the left */
-#w3ai-sidebar-shell {
-  background: rgba(12, 18, 55, 0.92);
-}
-
-/* Window controls row: hidden by default (TabsToolbar handles it in non-revamp mode) */
 #w3ai-sidebar-window-controls {
   display: none;
 }
 
 @media -moz-pref("sidebar.revamp") {
-  /* Show sidebar window controls in revamp mode (TabsToolbar is hidden) */
   #w3ai-sidebar-window-controls {
     display: flex;
     flex-direction: row;
+    justify-content: space-between;
     align-items: center;
-    min-height: calc(var(--urlbar-min-height) + 2 * var(--urlbar-padding-block));
-    padding-block: var(--space-xxsmall, 2px);
+    min-height: 65px;
+    padding-block: var(--w3ai-space-1);
+    padding-inline: var(--w3ai-space-2);
   }
 
-  /* Main panel: right-side color matching the toolbar */
   #w3ai-main-panel {
-    background: var(--w3ai-theme-toolbar, rgba(20, 12, 48, 0.92));
+    border-radius: var(--w3ai-radius-md);
+    overflow: clip;
+    margin-block: 5px;
+    margin-inline-end: 5px;
   }
 
-  /* Nav-bar: rounded top-left to form the card corner */
   #navigator-toolbox[tabs-hidden] #nav-bar {
-    background: var(--w3ai-theme-toolbar, rgba(20, 12, 48, 0.92));
-    border-radius: var(--w3ai-radius-lg) 0 0 0;
+    background: transparent;
+    border-start-start-radius: var(--w3ai-radius-lg);
   }
 
-  /* Hide the original back/forward buttons; sidebar controls replace them */
   #back-button,
   #forward-button {
     display: none !important;
   }
-
-  /* Content card: rounded bottom-left, seamless with nav-bar */
-  #tabbrowser-tabbox {
-    border-radius: 0 0 0 var(--w3ai-radius-lg);
-    overflow: hidden;
-    background: rgba(0, 0, 0, 0.14);
-  }
 }
-
-/* ============================================================
- * W3Ai SCROLLBARS — slim purple
- * ============================================================ */
-
-:root {
-  scrollbar-color: rgba(168, 85, 247, 0.30) transparent;
-  scrollbar-width: thin;
-}
-
-/* ============================================================
- * W3Ai SIDEBAR NAV BUTTONS (back / forward in sidebar window controls)
- * ============================================================ */
 
 .w3ai-navctrl-btn {
   -moz-context-properties: fill, stroke;
-  fill: rgba(255, 255, 255, 0.65);
-  stroke: rgba(255, 255, 255, 0.65);
-  width: 28px !important;
-  height: 28px !important;
-  padding: 5px !important;
+  width: 30px !important;
+  height: 30px !important;
+  padding: 6px !important;
   border-radius: var(--w3ai-radius-sm) !important;
-  transition: background 0.12s ease;
+  fill: var(--w3ai-text-secondary);
+  stroke: var(--w3ai-text-secondary);
 }
 
 .w3ai-navctrl-btn:hover {
-  background: rgba(255, 255, 255, 0.10) !important;
-  fill: rgba(255, 255, 255, 0.9) !important;
-  stroke: rgba(255, 255, 255, 0.9) !important;
+  background: color-mix(in srgb, var(--w3ai-accent-blue) 28%, transparent) !important;
+  fill: var(--w3ai-text-primary) !important;
+  stroke: var(--w3ai-text-primary) !important;
 }
 
 .w3ai-navctrl-btn[disabled="true"] {
-  opacity: 0.3 !important;
+  opacity: 0.35 !important;
 }
 
 #w3ai-back-btn {
@@ -415,10 +356,6 @@ toolbarbutton[open="true"] {
   list-style-image: url("chrome://browser/skin/forward.svg");
 }
 
-/* ============================================================
- * W3Ai AI CHAT BUTTON (top-right toolbar)
- * ============================================================ */
-
 #w3ai-sidebar-tools {
   display: flex;
   flex-direction: row;
@@ -428,26 +365,24 @@ toolbarbutton[open="true"] {
 }
 
 .w3ai-tool-button {
-  width: 30px !important;
-  height: 30px !important;
+  width: 32px !important;
+  height: 32px !important;
   border-radius: var(--w3ai-radius-sm) !important;
   padding: 6px !important;
-  transition: background 0.15s ease, box-shadow 0.15s ease, backdrop-filter 0.15s ease;
   -moz-context-properties: fill, stroke;
   fill: var(--w3ai-text-secondary);
   stroke: var(--w3ai-text-secondary);
 }
 
 .w3ai-tool-button:hover {
-  background: var(--w3ai-theme-surface-hover, rgba(42, 24, 88, 0.94)) !important;
-  backdrop-filter: blur(14px) saturate(180%) !important;
+  background: color-mix(in srgb, var(--w3ai-accent-cyan) 24%, transparent) !important;
   fill: var(--w3ai-text-primary) !important;
   stroke: var(--w3ai-text-primary) !important;
 }
 
 .w3ai-tool-button:active {
-  background: var(--w3ai-glass-surface-active, rgba(48, 28, 95, 0.96)) !important;
-  box-shadow: var(--w3ai-glow-button) !important;
+  background: color-mix(in srgb, var(--w3ai-accent-violet) 30%, transparent) !important;
+  box-shadow: 0 0 14px var(--w3ai-glow) !important;
 }
 
 #w3ai-chatbot-button {
@@ -456,10 +391,44 @@ toolbarbutton[open="true"] {
 
 #w3ai-chatbot-button[aria-pressed="true"],
 #w3ai-chatbot-button[open="true"] {
-  background: var(--w3ai-theme-surface, rgba(30, 18, 65, 0.92)) !important;
-  box-shadow: 0 0 10px var(--w3ai-theme-accent-glow, rgba(168, 85, 247, 0.30)) !important;
+  background-image: var(--w3ai-gradient-cool) !important;
+  background-size: 220% 220% !important;
+  animation: w3ai-gradient-drift 2.6s linear infinite;
+  box-shadow: 0 0 16px var(--w3ai-glow-strong) !important;
+}
+
+.tabbrowser-tab[selected] .tab-background,
+#urlbar[focused],
+#w3ai-chatbot-button[aria-pressed="true"],
+#w3ai-chatbot-button[open="true"] {
+ /* animation: w3ai-soft-pulse 1.6s ease-in-out infinite; */
+}
+
+#ai-window-box {
+  background: color-mix(in srgb, var(--w3ai-bg-dark) 80%, var(--w3ai-accent-violet)) !important;
+  border-inline-start: 1px solid color-mix(in srgb, var(--w3ai-border-dark) 64%, transparent);
 }
 
 sidebar-main .bottom-actions {
   display: none !important;
+}
+
+.browserContainer {
+  border-radius: 0 !important;
+}
+
+:focus-visible {
+  outline: 2px solid var(--w3ai-accent-neon) !important;
+  outline-offset: 2px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
