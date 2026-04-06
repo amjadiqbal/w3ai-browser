@@ -10,6 +10,18 @@ Always enforce this order before implementing tasks:
 2. Confirm target files from `tools/release/CODING.md`.
 3. Execute merge, tag, and deployment steps only from release docs.
 
+## Mandatory Preflight Workflow
+Run this before any implementation:
+1. Classify request intent: `new-feature`, `existing-feature-change`, `release-or-deploy`, `docs-or-meta`.
+2. Inspect git context:
+	- `git rev-parse --abbrev-ref HEAD`
+	- `git status --short`
+3. Branch routing:
+	- For `new-feature` outside `feature/*`, ask to create a new feature branch.
+	- Build branch name dynamically as `feature/<slug>` from user request text.
+	- If user says no, continue on current branch.
+4. Validate applicable release document before action.
+
 ## Required Branch Selection
 - `feature/*`: new feature development from `w3ai/develop`.
 - `w3ai/develop`: integration branch for ongoing work.
@@ -30,3 +42,11 @@ Always enforce this order before implementing tasks:
 - Never skip manifest hash/size validation when publishing updates.
 - Never improvise deployment flow when documented steps exist.
 - If request and branch policy conflict, ask and realign first.
+
+## Default Commit/Push Requirement
+Unless user opts out, complete tasks with automatic commit and push:
+1. `git add -A`
+2. `git commit -m "<type>(<scope>): <summary>"`
+3. `git push -u origin "$(git rev-parse --abbrev-ref HEAD)"` (or `git push`)
+
+Use conventional commit types (`feat`, `fix`, `refactor`, `docs`, `style`, `chore`, `test`, `build`, `ci`).

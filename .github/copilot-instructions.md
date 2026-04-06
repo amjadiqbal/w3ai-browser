@@ -2,6 +2,38 @@
 
 These instructions are mandatory for all Copilot-assisted work in this repository.
 
+## Default Preflight (Run On Every Task)
+Before writing or changing any code, run this preflight flow every time:
+1. Classify user intent:
+   - `new-feature`: user is adding net-new functionality.
+   - `existing-feature-change`: bug fix, enhancement, refactor, or style update in existing behavior.
+   - `release-or-deploy`: branch promotion, tagging, manifests, server, rollout.
+   - `docs-or-meta`: documentation, instructions, or non-runtime changes.
+2. Detect current branch and state:
+   - `git rev-parse --abbrev-ref HEAD`
+   - `git status --short`
+3. Decide branch action and ask user before switching/creating when needed.
+4. Confirm target files using `tools/release/CODING.md`.
+5. Proceed only after branch policy is satisfied.
+
+## Intent-Aware Branch Decision
+- If intent is `new-feature` and current branch is not `feature/*`, ask:
+  - "This looks like a new feature. Should I create a feature branch now?"
+  - Suggested dynamic branch format: `feature/<slug>`
+- Build `<slug>` from user request summary:
+  - lowercase
+  - spaces/underscores to `-`
+  - keep `[a-z0-9-]` only
+  - collapse repeated dashes
+  - trim leading/trailing dash
+- Branch command:
+  - `git checkout w3ai/develop && git pull && git checkout -b feature/<slug>`
+- If user declines branch creation, continue on the current branch.
+
+- If intent is `existing-feature-change`, use current working branch unless user requests a new one.
+- If intent is `release-or-deploy`, require `release/*`, `production`, or `hotfix/*` according to release docs.
+- If intent is `docs-or-meta`, current branch is acceptable unless user asks for strict branching.
+
 ## Source Of Truth
 - Always treat these documents as authoritative before making workflow decisions:
   - `tools/release/README.md`
@@ -51,3 +83,14 @@ These instructions are mandatory for all Copilot-assisted work in this repositor
 - If the branch or target workflow is ambiguous, ask for confirmation before editing.
 - If a request conflicts with these rules, propose the compliant branch/workflow and proceed only after alignment.
 - When asked to release or deploy, provide the exact checklist and commands from `tools/release/DEPLOYMENT.md` and `tools/release/SERVER_SETUP.md`.
+
+## Auto Commit And Push (Default)
+After completing each code task, automatically commit and push by default.
+- Use this command sequence:
+  - `git add -A`
+  - `git commit -m "<type>(<scope>): <short summary>"`
+  - `git push -u origin "$(git rev-parse --abbrev-ref HEAD)"` (first push on branch) or `git push`
+- Conventional commit types: `feat`, `fix`, `refactor`, `docs`, `style`, `chore`, `test`, `build`, `ci`.
+- If there are no changes, skip commit/push.
+- If push fails, report the error and retry once.
+- If user explicitly says not to commit or not to push, follow user instruction.
