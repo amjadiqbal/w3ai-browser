@@ -8,6 +8,19 @@
     --button-size-icon: var(--tab-min-height);
     --button-min-height: var(--button-size-icon);
   }
+
+  slot[name="tabstrip"] {
+    order: 1;
+  }
+
+  #sidebar-tools-and-extensions-splitter {
+    order: 2;
+  }
+
+  .buttons-wrapper {
+    order: 3;
+    margin-block-start: auto;
+  }
 }
 
 [hidden] {

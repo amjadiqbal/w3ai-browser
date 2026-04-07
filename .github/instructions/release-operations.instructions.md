@@ -48,6 +48,14 @@ Run this before any implementation:
 - Never improvise deployment flow when documented steps exist.
 - If request and branch policy conflict, ask and realign first.
 
+## Edit Graph Requirement (Rollback Map)
+For every task that edits files, report an `Edit Graph` in the final response:
+1. List each edited file with exact changed line ranges from diff hunks.
+2. Use format: `<path>: <fromLine>-<toLine> | <short change summary>`.
+3. Provide a quick revert command for each file: `git checkout -- <path>`.
+4. Mention `git restore -p <path>` when partial hunk-level revert is more appropriate.
+5. Keep entries limited to files changed in the current task.
+
 ## Default Commit/Push Requirement
 Unless user opts out, complete tasks with automatic commit and push:
 1. `git add -A`
@@ -55,3 +63,4 @@ Unless user opts out, complete tasks with automatic commit and push:
 3. `git push -u origin "$(git rev-parse --abbrev-ref HEAD)"` (or `git push`)
 
 Use conventional commit types (`feat`, `fix`, `refactor`, `docs`, `style`, `chore`, `test`, `build`, `ci`).
+If the user requests including prior uncommitted work from the same active task, include those files in the same commit.

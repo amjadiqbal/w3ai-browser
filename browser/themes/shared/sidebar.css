@@ -6,6 +6,10 @@
   max-width: 75vw;
   min-width: 14em;
   width: 18em;
+  transition:
+    width 180ms ease,
+    min-width 180ms ease,
+    max-width 180ms ease;
 
   :root[lwt-sidebar="light"] & {
     color-scheme: light;
@@ -107,9 +111,15 @@
     border: 0 solid;
     border-color: var(--sidebar-border-color);
     border-inline-end-width: 1px;
-    #sidebar-box[sidebar-positionend] + & {
+    & + #sidebar-box[sidebar-positionend] {
       border-inline-width: 1px 0;
     }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #sidebar-box {
+    transition: none;
   }
 }
 

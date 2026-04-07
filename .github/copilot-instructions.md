@@ -92,6 +92,17 @@ Before writing or changing any code, run this preflight flow every time:
 - If a request conflicts with these rules, propose the compliant branch/workflow and proceed only after alignment.
 - When asked to release or deploy, provide the exact checklist and commands from `tools/release/DEPLOYMENT.md` and `tools/release/SERVER_SETUP.md`.
 
+## Edit Graph Requirement (Rollback Map)
+After every editing task, include an `Edit Graph` section in the final response.
+- Output one line per edited file in this format:
+  - `<path>: <fromLine>-<toLine> | <summary>`
+- Derive line ranges from actual diff hunks (not estimates).
+- If a file has multiple hunks, list each range on its own line.
+- Include one `Quick revert` command per file:
+  - `git checkout -- <path>`
+- If a partial revert is needed, include a `git restore -p <path>` note.
+- Keep this map scoped to files changed in the current task only.
+
 ## Auto Commit And Push (Default)
 After completing each code task, automatically commit and push by default.
 - Use this command sequence:
@@ -102,3 +113,4 @@ After completing each code task, automatically commit and push by default.
 - If there are no changes, skip commit/push.
 - If push fails, report the error and retry once.
 - If user explicitly says not to commit or not to push, follow user instruction.
+- If user asks to also include prior uncommitted work from the same active task, include those files in the same commit.
