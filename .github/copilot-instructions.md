@@ -79,6 +79,14 @@ Before writing or changing any code, run this preflight flow every time:
 - Server structure, Nginx, TLS, DNS, and rollout guidance must follow `tools/release/SERVER_SETUP.md`.
 - Do not invent ad-hoc deployment commands when documented steps already exist.
 
+## Default Release Build Command (macOS)
+- For `release-or-deploy` work, prefer this command as the default release pipeline:
+  - `./tools/release/macos/release-build-notarize.sh --keychain-profile <profile>`
+- If keychain profile is not configured, use Apple ID mode without password flags:
+  - `./tools/release/macos/release-build-notarize.sh --apple-id <id> --team-id <team-id>`
+  - The script securely prompts for the app-specific password.
+- The script performs: `./mach build` -> `./mach package` -> notarization flow.
+
 ## Copilot Behavior Requirements
 - If the branch or target workflow is ambiguous, ask for confirmation before editing.
 - If a request conflicts with these rules, propose the compliant branch/workflow and proceed only after alignment.

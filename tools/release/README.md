@@ -443,7 +443,7 @@ spctl -a -v browser.app                   # Verify signature
 | Tests | `browser/base/content/test/` |
 | Release docs | `tools/release/` |
 | Update manifests | `tools/release/update-host/updates/*/macos/update.xml` |
-| Signing scripts | `tools/release/macos/sign-and-notarize-dev.sh` |
+| Signing scripts | `tools/release/macos/release-build-notarize.sh`, `tools/release/macos/sign-and-notarize-dev.sh` |
 
 ---
 

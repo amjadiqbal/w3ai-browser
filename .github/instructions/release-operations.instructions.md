@@ -37,6 +37,11 @@ Run this before any implementation:
 - `tools/release/SERVER_SETUP.md`
 - `tools/release/DEPLOYMENT.md`
 
+## Default macOS Release Command
+- Use `./tools/release/macos/release-build-notarize.sh --keychain-profile <profile>` as the default release build command.
+- The command runs build, package, and notarization in one flow.
+- If keychain profile is unavailable, use `--apple-id` and `--team-id`; the script prompts securely for password input.
+
 ## Safety Requirements
 - Never perform feature development directly on `production`.
 - Never skip manifest hash/size validation when publishing updates.

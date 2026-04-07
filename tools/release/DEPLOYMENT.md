@@ -65,19 +65,24 @@ ls -lh obj-x86_64-apple-darwin*/dist/W3Ai\ Browser.app/
 ### Step 1.3: Code Signing
 
 ```bash
-# Run signing script (DRY_RUN=0 for real signing)
-export DEVELOPER_ID="K9B6ZLA9M4"
-export APPLE_ID="zephyr@platodata.io"
-export APPLE_TEAM="K9B6ZLA9M4"
+# Default release command: build + package + notarize in one flow
+./tools/release/macos/release-build-notarize.sh \
+  --keychain-profile <profile>
 
-./tools/release/macos/sign-and-notarize-dev.sh \
-  --dmg obj-x86_64-apple-darwin25.3.0/dist/W3AiBrowser-v151.0.0-dev.dmg \
-  --dry-run  # Remove for actual signing
+# Alternative (without keychain profile)
+./tools/release/macos/release-build-notarize.sh \
+  --apple-id <id> \
+  --team-id <team-id>
+
+# The script prompts securely for app-specific password
+
+# Optional validation-only mode
+./tools/release/macos/release-build-notarize.sh --dry-run
 
 # Output should include:
 # ✅ Code signature valid
 # ✅ Notarization ticket: [ticket-id]
-# ✅ Developer ID: K9B6ZLA9M4
+# ✅ Stapling completed
 ```
 
 ### Step 1.4: Publish Release Candidate Tag
@@ -254,7 +259,7 @@ Production release based on Firefox 151.0.0a1
 - Updated preference interface
 
 ## Infrastructure
-- Signed with Developer ID K9B6ZLA9M4
+- Signed with Developer ID <TEAM_ID>
 - Notarized by Apple
 - Update manifest configured
 
@@ -298,7 +303,7 @@ git tag -a v151.0.0 -m "W3Ai Browser v151.0.0 - Production Release
 ## Installation
 - macOS 12.6.3+
 - Apple Notarized: YES
-- Code Signed: YES (K9B6ZLA9M4)
+- Code Signed: YES (<TEAM_ID>)
 
 Download: https://github.com/amjadiqbal/w3ai-browser/releases/tag/v151.0.0"
 

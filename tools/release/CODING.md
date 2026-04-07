@@ -311,6 +311,7 @@ tools/release/
 ├── branching/
 │   └── setup-branch-strategy.sh
 ├── macos/
+│   ├── release-build-notarize.sh
 │   └── sign-and-notarize-dev.sh
 └── update-host/
     ├── channel-map.json
