@@ -1916,6 +1916,9 @@ var SidebarController = {
     if (!this._canShow(commandID)) {
       return false;
     }
+    if (this._animationEnabled && !window.gReduceMotion && this.sidebarRevampEnabled) {
+      this._animateSidebarMain();
+    }
     return this._show(commandID).then(() => {
       this._loadSidebarExtension(commandID);
 
@@ -2100,6 +2103,9 @@ var SidebarController = {
 
     this._box.removeAttribute("checked");
     this._box.removeAttribute("context");
+    if (this._animationEnabled && !window.gReduceMotion && this.sidebarRevampEnabled) {
+      this._animateSidebarMain();
+    }
     this._box.hidden = this._splitter.hidden = true;
 
     let selBrowser = gBrowser.selectedBrowser;
