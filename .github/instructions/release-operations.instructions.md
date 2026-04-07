@@ -56,6 +56,15 @@ For every task that edits files, report an `Edit Graph` in the final response:
 4. Mention `git restore -p <path>` when partial hunk-level revert is more appropriate.
 5. Keep entries limited to files changed in the current task.
 
+## Change Tree Requirement (Visual Audit Log)
+After every commit, run the change tree generator and display its output in the response:
+```
+python3 tools/changelog/change-tree.py --recent
+```
+- `--recent` shows the last 10 commits.
+- Full history is always written to `tools/changelog/CHANGE_TREE.md`.
+- Never skip this step after a commit.
+
 ## Default Commit/Push Requirement
 Unless user opts out, complete tasks with automatic commit and push:
 1. `git add -A`

@@ -103,6 +103,18 @@ After every editing task, include an `Edit Graph` section in the final response.
 - If a partial revert is needed, include a `git restore -p <path>` note.
 - Keep this map scoped to files changed in the current task only.
 
+## Change Tree Requirement (Visual Audit Log)
+After every commit, run the change tree generator and display its output in the response:
+```
+python3 tools/changelog/change-tree.py --recent
+```
+- `--recent` shows the last 10 commits — enough context without flooding the response.
+- The full history tree is always persisted to `tools/changelog/CHANGE_TREE.md`.
+- To regenerate the full all-time log: `python3 tools/changelog/change-tree.py`
+- To filter by date: `python3 tools/changelog/change-tree.py --since "2026-01-01"`
+- The tree file location is always `tools/changelog/CHANGE_TREE.md` relative to the repo root.
+- Never skip this step after a commit — it keeps the audit log current.
+
 ## Auto Commit And Push (Default)
 After completing each code task, automatically commit and push by default.
 - Use this command sequence:
