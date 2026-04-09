@@ -62,7 +62,7 @@ fi
 PLATFORM="$1"
 shift
 
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "$0")/../release/" && pwd)"
 
 case "$PLATFORM" in
   macos-dev)
