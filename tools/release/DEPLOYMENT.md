@@ -19,6 +19,245 @@ Before starting, ensure:
 
 ---
 
+## Building W3Ai
+
+W3Ai can be built for macOS, Android, and iOS with different release modes. Choose the appropriate build command for your use case.
+
+### Quick Start: Unified Build Command
+
+Use the unified release builder for any platform:
+
+```bash
+# View all available build commands
+./tools/release/release-build.sh --help
+
+# Examples:
+./tools/release/release-build.sh macos-dev              # Fast dev build for testing
+./tools/release/release-build.sh macos-prod --keychain-profile my-profile  # Release build
+./tools/release/release-build.sh android --dev          # Android dev build
+./tools/release/release-build.sh ios --prod             # iOS production build
+```
+
+### macOS Development Build (Unsigned)
+
+Use this for **rapid development and testing** on your own machine.
+
+```bash
+./tools/release/macos/build-dev.sh
+```
+
+**What it does:**
+- Builds W3Ai application with full branding (W3Ai logo, theme)
+- Creates an unsigned .dmg installer
+- **No code signing** — suitable only for development
+- Includes all W3Ai branding assets (icons, application name)
+- Output: `obj-x86_64-apple-darwin*/dist/W3AiBrowser-*.dmg`
+
+**When to use:**
+- Testing new features locally
+- Verifying branding and UI changes
+- Quick iteration during development
+- Running on your own development machine
+
+**Installation:**
+```bash
+# Mount the DMG
+open obj-x86_64-apple-darwin*/dist/W3AiBrowser-*.dmg
+
+# Drag W3Ai Browser to Applications folder
+# Or run directly without installing
+
+# Clear macOS app cache (if updating):
+rm -rf ~/Library/Caches/com.apple.nsurlsessiond  # May need this
+```
+
+**Next steps:**
+Use `./mach run` to run directly from the build directory.
+
+---
+
+### macOS Production Build (Signed + Notarized)
+
+Use this for **official distribution** and App Store / website releases.
+
+```bash
+# With keychain profile (recommended)
+./tools/release/macos/build-prod.sh \
+  --keychain-profile my-notarization-profile
+
+# Or with Apple ID (will prompt for password)
+./tools/release/macos/build-prod.sh \
+  --apple-id your-email@example.com \
+  --team-id ABCDEFG123
+```
+
+**What it does:**
+- Builds optimized W3Ai application
+- Creates .dmg installer
+- **Code signs** the DMG with your Developer ID
+- **Notarizes** with Apple (5-15 minutes)
+- **Staples** the notarization ticket to the DMG
+- Ready for distribution on website or App Store
+- Output: `obj-x86_64-apple-darwin*/dist/W3AiBrowser-*.dmg` (notarized)
+
+**Requirements:**
+- Apple Developer account
+- Valid Developer ID or signing certificate
+- Notarization credentials configured (keychain or Apple ID)
+- App-specific password (if using Apple ID)
+
+**When to use:**
+- Official releases for public distribution
+- App Store submission
+- Website downloads
+- Beta releases for testers outside your team
+
+**Progress:**
+The script will show:
+```
+[1/4] Building application
+[2/4] Packaging application
+[3/4] Repackaging for DMG
+[4/4] Signing and notarizing DMG
+```
+
+Notarization typically takes 5-15 minutes. The script waits and polls Apple's servers.
+
+**Verification:**
+```bash
+# Verify notarization was successful
+codesign -v --verbose=4 W3AiBrowser-*.dmg
+
+# Check stapled ticket
+stapler validate W3AiBrowser-*.dmg
+```
+
+---
+
+### macOS Build Without Notarization
+
+If you want to sign but skip notarization (useful for internal betas):
+
+```bash
+./tools/release/macos/build-prod.sh --no-notarize
+```
+
+---
+
+### Android Development Build
+
+Use this to **test on Android devices or emulators**.
+
+```bash
+./tools/release/android/build.sh --dev
+```
+
+**What it does:**
+- Builds debug APK with W3Ai branding
+- Includes debug symbols for troubleshooting
+- **Not signed** for distribution
+- Output: `obj-android*/dist/W3AiBrowser-debug.apk`
+
+**Installation on device:**
+```bash
+# If device is connected via USB with ADB debugging enabled
+adb install -r obj-android*/dist/W3AiBrowser-debug.apk
+
+# Or on emulator
+adb -e install -r obj-android*/dist/W3AiBrowser-debug.apk
+```
+
+---
+
+### Android Production Build
+
+Use this for **official distribution** on Google Play or other app stores.
+
+```bash
+./tools/release/android/build.sh --prod
+```
+
+**What it does:**
+- Builds optimized APK with W3Ai branding
+- Smaller file size
+- Ready for signing and store submission
+- Output: `obj-android*/dist/W3AiBrowser-release.apk`
+
+**Signing and distribution:**
+Requires separate signing setup. See Android documentation for app signing and Play Store submission.
+
+---
+
+### iOS Development Build
+
+Use this to **test on iOS devices**.
+
+```bash
+./tools/release/ios/build.sh --dev
+```
+
+**What it does:**
+- Builds debug IPA with W3Ai branding
+- Suitable for testing on development devices
+- Output: `obj-ios*/dist/W3AiBrowser-debug.ipa`
+
+**Installation:**
+```bash
+# Connect iOS device and authorize via Xcode
+# Then install the IPA:
+ios-deploy -b W3AiBrowser-debug.ipa
+
+# Or manually via Xcode's Devices window:
+# 1. Connect device
+# 2. Window > Devices and Simulators
+# 3. Select device
+# 4. Drag .ipa onto device window
+```
+
+---
+
+### iOS Production Build
+
+Use this for **App Store distribution**.
+
+```bash
+./tools/release/ios/build.sh --prod --team-id ABCDEFG123
+```
+
+**What it does:**
+- Builds optimized IPA with W3Ai branding
+- Code signed for App Store
+- Ready for submission
+- Output: `obj-ios*/dist/W3AiBrowser-prod.ipa`
+
+**App Store submission:**
+Use Xcode's App Store Connect integration to upload the IPA.
+
+---
+
+### Build Configuration Verification
+
+Before building, verify W3Ai branding is configured:
+
+```bash
+# Check mozconfig has W3Ai branding enabled
+grep "w3ai" mozconfig
+# Output should include: --with-branding=browser/branding/w3ai
+
+# Verify branding assets exist
+ls -la browser/branding/w3ai/firefox.icns
+ls -la browser/branding/w3ai/disk.icns
+```
+
+If branding is not configured, edit `mozconfig`:
+```
+ac_add_options --with-branding=browser/branding/w3ai
+```
+
+Then rebuild.
+
+---
+
 ## Phase 1: Preparation (Days 1-3)
 
 ### Step 1.1: Create Release Branch

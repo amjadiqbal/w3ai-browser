@@ -1,6 +1,20 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  W3Ai Change Tree  ·  2026-04-07  18:33  ·  branch: w3ai/develop
+  W3Ai Change Tree  ·  2026-04-07  18:34  ·  branch: w3ai/develop
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+◉  2026-04-07  [6cc363fe]  feat(changelog): add graphical change-tree generator and enforce in Copilot…
+   4 files changed  +459
+   │
+   ├── .github/
+   │   ├── instructions/
+   │   │   └── [M]  release-operations.instructions.md   +9
+   │   └── [M]  copilot-instructions.md   +12
+   └── tools/
+       └── changelog/
+           ├── [A]  CHANGE_TREE.md   +150
+           └── [A]  change-tree.py   +288
+
+──────────────────────────────────────────
 
 ◉  2026-04-07  [45aac362]  fix(sidebar): revert content area order and wire show/hide animation
    3 files changed  +11  −15
@@ -131,20 +145,3 @@
        └── themes/
            └── shared/
                └── [M]  w3ai-theme.css   +17 −5
-
-──────────────────────────────────────────
-
-◉  2026-04-02  [842934ae]  W3Ai: fix nav controls in toolbar sidebar zone, fix border-radius card, fix…
-   4 files changed  +82  −54
-   │
-   └── browser/
-       ├── base/
-       │   └── content/
-       │       └── [M]  navigator-toolbox.inc.xhtml   +12
-       ├── components/
-       │   └── sidebar/
-       │       ├── [M]  sidebar-main.css   +2 −14
-       │       └── [M]  sidebar-main.mjs   +8 −24
-       └── themes/
-           └── shared/
-               └── [M]  w3ai-theme.css   +60 −16

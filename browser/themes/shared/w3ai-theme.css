@@ -272,10 +272,11 @@ panel menuitem:hover {
 #sidebar-main {
   /*background: color-mix(in srgb, var(--w3ai-bg-dark) 80%, var(--w3ai-accent-blue)) !important;*/
   overflow: auto !important;
+  height: 100%;
 }
 
 #sidebar-box {
-  background: color-mix(in srgb, var(--w3ai-bg-dark) 76%, black) !important;
+  /* background: color-mix(in srgb, var(--w3ai-bg-dark) 76%, black) !important; */
 }
 
 #sidebar {
