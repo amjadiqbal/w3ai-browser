@@ -1,6 +1,30 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  W3Ai Change Tree  ·  2026-04-07  18:34  ·  branch: w3ai/develop
+  W3Ai Change Tree  ·  2026-04-09  13:23  ·  branch: w3ai/develop
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+◉  2026-04-09  [c33d65f2]  fix(branding): correct ROOT_DIR detection in mach-run-branded.sh
+   9 files changed  +1012  −19
+   │
+   ├── browser/
+   │   └── themes/
+   │       └── shared/
+   │           └── [M]  w3ai-theme.css   +2 −1
+   └── tools/
+       ├── changelog/
+       │   └── [M]  CHANGE_TREE.md   +15 −18
+       └── release/
+           ├── android/
+           │   └── [A]  build.sh   +131
+           ├── ios/
+           │   └── [A]  build.sh   +149
+           ├── macos/
+           │   ├── [A]  build-dev.sh   +104
+           │   ├── [A]  build-prod.sh   +181
+           │   └── [A]  mach-run-branded.sh   +102
+           ├── [M]  DEPLOYMENT.md   +239
+           └── [A]  release-build.sh   +89
+
+──────────────────────────────────────────
 
 ◉  2026-04-07  [6cc363fe]  feat(changelog): add graphical change-tree generator and enforce in Copilot…
    4 files changed  +459
@@ -135,13 +159,3 @@
        └── themes/
            └── shared/
                └── [M]  w3ai-theme.css   +39 −75
-
-──────────────────────────────────────────
-
-◉  2026-04-02  [003243ff]  W3Ai: fix nav arrows to right-edge of sidebar; push bookmarks/notification …
-   1 file changed  +17  −5
-   │
-   └── browser/
-       └── themes/
-           └── shared/
-               └── [M]  w3ai-theme.css   +17 −5
