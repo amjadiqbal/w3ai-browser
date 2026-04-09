@@ -41,6 +41,150 @@ Are you...?
 
 ---
 
+## Build Command Matrix
+
+Use these commands when you need an artifact you can copy directly from disk.
+
+### macOS
+
+Development DMG, unsigned:
+
+```bash
+./tools/release/release-build.sh macos-dev
+```
+
+Output:
+- `obj-*/dist/*.dmg`
+
+Production DMG, signed but not notarized:
+
+```bash
+./tools/release/release-build.sh macos-prod --no-notarize
+```
+
+Output:
+- `obj-*/dist/*.dmg`
+
+Production DMG, signed and notarized:
+
+```bash
+./tools/release/release-build.sh macos-prod --keychain-profile <profile>
+```
+
+Or:
+
+```bash
+./tools/release/release-build.sh macos-prod --apple-id <apple-id> --team-id <team-id>
+```
+
+Output:
+- `obj-*/dist/*.dmg`
+
+### Android
+
+Android development APK:
+
+```bash
+./tools/release/release-build.sh android --dev
+```
+
+Output:
+- `mobile/android/fenix/app/build/outputs/apk/debug/*.apk`
+
+Run on Android emulator (build + install + launch):
+
+```bash
+./tools/release/android/run-emulator.sh --build
+```
+
+Run on a specific AVD with an existing APK:
+
+```bash
+./tools/release/android/run-emulator.sh --avd Pixel_6a --apk /absolute/path/to/app-universal-debug.apk
+```
+
+Android release APK, unsigned:
+
+```bash
+./tools/release/release-build.sh android --prod
+```
+
+Output:
+- `mobile/android/fenix/app/build/outputs/apk/release/*release*.apk`
+
+Android release APK, signed:
+
+```bash
+export W3AI_ANDROID_STORE_PASSWORD='...'
+export W3AI_ANDROID_KEY_PASSWORD='...'
+
+./tools/release/release-build.sh android --prod \
+        --keystore /absolute/path/to/w3ai-release.keystore \
+        --key-alias w3ai-release \
+        --store-password-env W3AI_ANDROID_STORE_PASSWORD \
+        --key-password-env W3AI_ANDROID_KEY_PASSWORD
+```
+
+Signing data you must provide:
+- keystore path
+- key alias
+- keystore password environment variable
+- key password environment variable
+
+Output:
+- Unsigned APKs: `mobile/android/fenix/app/build/outputs/apk/release/`
+- Signed APK: same directory with `-signed.apk`
+
+### iOS
+
+iOS development IPA:
+
+```bash
+./tools/release/release-build.sh ios --dev --team-id <team-id>
+```
+
+iOS production IPA:
+
+```bash
+./tools/release/release-build.sh ios --prod --team-id <team-id>
+```
+
+Optional explicit export mode:
+
+```bash
+./tools/release/release-build.sh ios --prod --team-id <team-id> --export-method app-store
+```
+
+Output:
+- archive: `mobile/ios/build/*.xcarchive`
+- IPA: `mobile/ios/build/export-*/`
+
+Run on iOS simulator (build + install + launch):
+
+```bash
+./tools/release/ios/run-simulator.sh
+```
+
+Run on iOS simulator with explicit runtime:
+
+```bash
+./tools/release/ios/run-simulator.sh --runtime-id com.apple.CoreSimulator.SimRuntime.iOS-18-5
+```
+
+Important:
+- iOS uses IPA export via Xcode.
+- iOS does not use DMG packaging.
+- iOS does not use Apple notarization.
+- The in-tree iOS app is `mobile/ios/GeckoTestBrowser`, so mobile branding and bundle naming must be customized in that project if you want W3Ai-specific iOS assets.
+- iOS simulator execution requires an installed simulator runtime (`xcrun simctl list runtimes`).
+
+Important for Android and iOS:
+- Android builds come from `mobile/android/fenix`.
+- iOS builds come from `mobile/ios/GeckoTestBrowser`.
+- These mobile targets are separate from the desktop `browser/branding/w3ai` DMG branding flow.
+
+---
+
 ## Complete Development Workflow Timeline
 
 ### Week 1-2: Feature Development

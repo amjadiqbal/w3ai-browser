@@ -153,19 +153,47 @@ Use this to **test on Android devices or emulators**.
 ```
 
 **What it does:**
-- Builds debug APK with W3Ai branding
-- Includes debug symbols for troubleshooting
-- **Not signed** for distribution
-- Output: `obj-android*/dist/W3AiBrowser-debug.apk`
+- Generates a temporary Android `MOZCONFIG` if you are currently on a desktop build config
+- Runs `./mach configure`
+- Runs `./mach build`
+- Runs `./mach gradle -p mobile/android/fenix app:assembleDebug`
+- Produces debug APKs from the in-tree Android app project
+- Output directory: `mobile/android/fenix/app/build/outputs/apk/debug/`
+
+**What you must have installed:**
+- Android SDK
+- Java JDK
+- Android bootstrap completed with `./mach bootstrap`
+
+**Exact artifact location:**
+- `mobile/android/fenix/app/build/outputs/apk/debug/*.apk`
 
 **Installation on device:**
 ```bash
-# If device is connected via USB with ADB debugging enabled
-adb install -r obj-android*/dist/W3AiBrowser-debug.apk
+# Example with the generated universal debug APK
+adb install -r mobile/android/fenix/app/build/outputs/apk/debug/app-universal-debug.apk
 
-# Or on emulator
-adb -e install -r obj-android*/dist/W3AiBrowser-debug.apk
+# Emulator example
+adb -e install -r mobile/android/fenix/app/build/outputs/apk/debug/app-universal-debug.apk
 ```
+
+**Automated emulator run (build + install + launch):**
+```bash
+./tools/release/android/run-emulator.sh --build
+```
+
+**Automated emulator run with an existing APK:**
+```bash
+./tools/release/android/run-emulator.sh \
+  --avd Pixel_6a \
+  --apk mobile/android/fenix/app/build/outputs/apk/debug/app-universal-debug.apk
+```
+
+This helper script:
+- resolves Android SDK/adb/emulator paths
+- starts the selected AVD if it is not already running
+- installs the requested APK via `adb -e install -r`
+- launches the app using launcher activity fallbacks
 
 ---
 
@@ -178,13 +206,42 @@ Use this for **official distribution** on Google Play or other app stores.
 ```
 
 **What it does:**
-- Builds optimized APK with W3Ai branding
-- Smaller file size
-- Ready for signing and store submission
-- Output: `obj-android*/dist/W3AiBrowser-release.apk`
+- Generates a temporary Android `MOZCONFIG` if needed
+- Runs `./mach configure`
+- Runs `./mach build`
+- Runs `./mach gradle -p mobile/android/fenix app:assembleRelease`
+- Produces release APKs from `mobile/android/fenix`
+- Release APKs are unsigned unless you provide signing inputs
+
+**Unsigned output location:**
+- `mobile/android/fenix/app/build/outputs/apk/release/*.apk`
+
+**Signed release build:**
+
+```bash
+export W3AI_ANDROID_STORE_PASSWORD='...'
+export W3AI_ANDROID_KEY_PASSWORD='...'
+
+./tools/release/android/build.sh --prod \
+  --keystore /absolute/path/to/w3ai-release.keystore \
+  --key-alias w3ai-release \
+  --store-password-env W3AI_ANDROID_STORE_PASSWORD \
+  --key-password-env W3AI_ANDROID_KEY_PASSWORD
+```
+
+**Signing data you need to provide:**
+- keystore file path
+- key alias
+- environment variable containing keystore password
+- environment variable containing key password
+
+**Signed output location:**
+- `mobile/android/fenix/app/build/outputs/apk/release/*-signed.apk`
 
 **Signing and distribution:**
-Requires separate signing setup. See Android documentation for app signing and Play Store submission.
+- The script uses `zipalign` and `apksigner` from `$ANDROID_SDK_ROOT/build-tools`
+- If those tools are missing, the script fails early and tells you what is missing
+- The current in-tree Android app target is `mobile/android/fenix`; if you want W3Ai-specific mobile naming or icons, those assets must exist in that Android project
 
 ---
 
@@ -193,19 +250,28 @@ Requires separate signing setup. See Android documentation for app signing and P
 Use this to **test on iOS devices**.
 
 ```bash
-./tools/release/ios/build.sh --dev
+./tools/release/ios/build.sh --dev --team-id <team-id>
 ```
 
 **What it does:**
-- Builds debug IPA with W3Ai branding
-- Suitable for testing on development devices
-- Output: `obj-ios*/dist/W3AiBrowser-debug.ipa`
+- Generates a temporary iOS `MOZCONFIG` if needed
+- Builds Gecko for `mobile/ios`
+- Archives `mobile/ios/GeckoTestBrowser/GeckoTestBrowser.xcodeproj`
+- Exports a development IPA with `xcodebuild -exportArchive`
+
+**Exact artifact locations:**
+- archive: `mobile/ios/build/*.xcarchive`
+- IPA: `mobile/ios/build/export-*/`
+
+**Important:**
+- iOS uses IPA export, not DMG
+- iOS does not use notarization
+- The in-tree iOS app is `mobile/ios/GeckoTestBrowser`, so W3Ai-specific mobile branding must be added there if you want it reflected in the app bundle
 
 **Installation:**
 ```bash
-# Connect iOS device and authorize via Xcode
-# Then install the IPA:
-ios-deploy -b W3AiBrowser-debug.ipa
+# Example after export:
+ios-deploy -b mobile/ios/build/export-GeckoTestBrowser-debug/GeckoTestBrowser.ipa
 
 # Or manually via Xcode's Devices window:
 # 1. Connect device
@@ -213,6 +279,26 @@ ios-deploy -b W3AiBrowser-debug.ipa
 # 3. Select device
 # 4. Drag .ipa onto device window
 ```
+
+**Automated iOS simulator run (build + install + launch):**
+```bash
+./tools/release/ios/run-simulator.sh
+```
+
+**Automated iOS simulator run with explicit runtime:**
+```bash
+./tools/release/ios/run-simulator.sh --runtime-id com.apple.CoreSimulator.SimRuntime.iOS-18-5
+```
+
+This helper script:
+- builds `GeckoTestBrowser.app` for `iphonesimulator`
+- creates or reuses a simulator device
+- boots the simulator and waits for readiness
+- installs and launches the app with `xcrun simctl`
+
+If no runtime is installed, the script exits with guidance. Install one in Xcode:
+- Xcode -> Settings -> Platforms -> iOS Simulator runtime
+- verify with `xcrun simctl list runtimes`
 
 ---
 
@@ -225,13 +311,17 @@ Use this for **App Store distribution**.
 ```
 
 **What it does:**
-- Builds optimized IPA with W3Ai branding
-- Code signed for App Store
-- Ready for submission
-- Output: `obj-ios*/dist/W3AiBrowser-prod.ipa`
+- Builds Gecko for `mobile/ios`
+- Archives `GeckoTestBrowser` with Xcode
+- Exports a production IPA using `--export-method app-store` by default
+- Produces an `.xcarchive` plus exported `.ipa`
+
+**Output locations:**
+- archive: `mobile/ios/build/*.xcarchive`
+- IPA: `mobile/ios/build/export-*/`
 
 **App Store submission:**
-Use Xcode's App Store Connect integration to upload the IPA.
+Use Xcode Organizer or Transporter to upload the IPA.
 
 ---
 

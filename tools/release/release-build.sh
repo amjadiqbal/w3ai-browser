@@ -42,9 +42,27 @@ Platform-Specific Options:
     --objdir <path>             Object directory
     --dmg <path>                Explicit DMG path
 
-  android, ios:
+  android:
     --dev / --prod              Build type
+    --target <triple>           Android target triple
+    --sdk-root <path>           Android SDK root
     --objdir <path>             Object directory
+    --mozconfig <path>          Existing Android MOZCONFIG
+    --keystore <path>           Sign a release APK with this keystore
+    --key-alias <name>          Keystore alias
+    --store-password-env <env>  Env var containing keystore password
+    --key-password-env <env>    Env var containing key password
+
+  ios:
+    --dev / --prod              Build type
+    --team-id <id>              Apple Developer Team ID
+    --bundle-id <id>            Bundle identifier override
+    --scheme <name>             Xcode scheme (default: GeckoTestBrowser)
+    --export-method <method>    development, ad-hoc, app-store
+    --archive-path <path>       Destination .xcarchive path
+    --export-path <path>        Destination IPA export directory
+    --objdir <path>             Object directory
+    --mozconfig <path>          Existing iOS MOZCONFIG
 
 For detailed help on each platform:
   ./tools/release/macos/build-dev.sh --help
