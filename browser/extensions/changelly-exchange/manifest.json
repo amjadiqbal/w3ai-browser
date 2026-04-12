@@ -1,5 +1,5 @@
 {
-  "manifest_version": 3,
+  "manifest_version": 2,
   "name": "W3Ai Exchange",
   "description": "Swap crypto assets instantly via Changelly — built into W3Ai browser.",
   "version": "151.0.0",
@@ -21,7 +21,7 @@
     "128": "icons/icon-128.png"
   },
 
-  "action": {
+  "browser_action": {
     "default_popup": "popup/index.html",
     "default_icon": {
       "16": "icons/icon-16.png",
@@ -32,28 +32,20 @@
   },
 
   "background": {
-    "service_worker": "background/index.js",
-    "type": "module"
+    "scripts": ["background/index.js"],
+    "persistent": false
   },
 
   "permissions": [
     "storage",
     "alarms",
-    "notifications"
+    "notifications",
+    "https://proxy.w3ai.io/*",
+    "http://127.0.0.1:3000/*",
+    "http://localhost:3000/*"
   ],
 
-  "host_permissions": [
-    "https://proxy.w3ai.io/*"
-  ],
+  "content_security_policy": "default-src 'self'; connect-src https://proxy.w3ai.io http://127.0.0.1:3000 http://localhost:3000; img-src 'self' data: https://static.changelly.com https://raw.githubusercontent.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:",
 
-  "content_security_policy": {
-    "extension_pages": "default-src 'self'; connect-src https://proxy.w3ai.io; img-src 'self' data: https://static.changelly.com https://raw.githubusercontent.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:"
-  },
-
-  "web_accessible_resources": [
-    {
-      "resources": ["icons/*", "fonts/*"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  "web_accessible_resources": ["icons/*", "fonts/*"]
 }

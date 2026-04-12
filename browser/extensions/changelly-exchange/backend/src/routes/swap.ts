@@ -14,11 +14,6 @@ const CreateSwapBody = z.object({
 });
 
 const SwapStatusQuery = z.object({ id: z.string().min(1) });
-const HistoryQuery = z.object({
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
-  id: z.string().optional(),
-});
 
 export async function swapRoute(app: FastifyInstance) {
   app.post("/v1/swap", async (req: FastifyRequest, reply) => {
@@ -27,24 +22,43 @@ export async function swapRoute(app: FastifyInstance) {
     let result: unknown;
     if (body.rateType === "fixed") {
       if (!body.rateId) throw new Error("rateId is required for fixed-rate swaps");
-      result = await changelyExchangeClient.createFixTransaction({
+      const fixedReq: {
+        from: string;
+        to: string;
+        address: string;
+        amountFrom: number;
+        rateId: string;
+        extraId?: string;
+        refundAddress?: string;
+      } = {
         from: body.from,
         to: body.to,
         address: body.address,
         amountFrom: body.amount,
         rateId: body.rateId,
-        extraId: body.extraId,
-        refundAddress: body.refundAddress,
-      });
+      };
+      if (body.extraId) fixedReq.extraId = body.extraId;
+      if (body.refundAddress) fixedReq.refundAddress = body.refundAddress;
+
+      result = await changelyExchangeClient.createFixTransaction(fixedReq);
     } else {
-      result = await changelyExchangeClient.createTransaction({
+      const floatingReq: {
+        from: string;
+        to: string;
+        address: string;
+        amount: number;
+        extraId?: string;
+        refundAddress?: string;
+      } = {
         from: body.from,
         to: body.to,
         address: body.address,
         amount: body.amount,
-        extraId: body.extraId,
-        refundAddress: body.refundAddress,
-      });
+      };
+      if (body.extraId) floatingReq.extraId = body.extraId;
+      if (body.refundAddress) floatingReq.refundAddress = body.refundAddress;
+
+      result = await changelyExchangeClient.createTransaction(floatingReq);
     }
 
     return reply.send(result);
@@ -62,9 +76,4 @@ export async function swapRoute(app: FastifyInstance) {
     return reply.send(transactions[0] ?? null);
   });
 
-  app.get("/v1/history", async (req: FastifyRequest, reply) => {
-    const { limit, offset } = HistoryQuery.parse(req.query);
-    const transactions = await changelyExchangeClient.getTransactions({ limit, offset });
-    return reply.send(transactions);
-  });
 }

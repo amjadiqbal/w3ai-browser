@@ -1,15 +1,10 @@
-; This Source Code Form is subject to the terms of the Mozilla Public
-; License, v. 2.0. If a copy of the MPL was not distributed with this
-; file, You can obtain one at http://mozilla.org/MPL/2.0/.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-; Changelly Exchange — built-in system add-on assets
-; All paths below are relative to the extension's dist/ directory (webpack output)
-; The extension is packed into browser.xhtml as a system add-on
-
-[features/changelly-exchange@w3ai.io] (../../../browser/features/changelly-exchange@w3ai.io.xpi)
-% content changelly-exchange %content/
-  dist/manifest.json                              (../dist/manifest.json)
-  dist/background/index.js                        (../dist/background/index.js)
-  dist/popup.js                                   (../dist/popup.js)
-  dist/popup/index.html                           (../dist/popup/index.html)
-  dist/styles/globals.css                         (../dist/styles/globals.css)
+browser.jar:
+    builtin-addons/changelly-exchange/manifest.json (manifest.json)
+    builtin-addons/changelly-exchange/background/index.js (dist/background/index.js)
+    builtin-addons/changelly-exchange/popup.js (dist/popup.js)
+    builtin-addons/changelly-exchange/popup/index.html (dist/popup/index.html)
+    builtin-addons/changelly-exchange/styles/globals.css (dist/styles/globals.css)

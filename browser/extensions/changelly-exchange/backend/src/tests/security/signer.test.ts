@@ -1,4 +1,4 @@
-import { signRequest, buildHeaders } from "../../src/security/changelly-signer";
+import { signRequest, buildHeaders } from "../../security/changelly-signer";
 
 describe("changelly-signer", () => {
   const SECRET = "test-secret-key-abc";

@@ -1,6 +1,129 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  W3Ai Change Tree  ·  2026-04-09  13:23  ·  branch: w3ai/develop
+  W3Ai Change Tree  ·  2026-04-12  17:15  ·  branch: w3ai/develop
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+◉  2026-04-12  [d0462024]  feat(extension): add production-ready changelly-exchange system add-on
+   58 files changed  +4765
+   │
+   └── browser/
+       └── extensions/
+           ├── changelly-exchange/
+           │   ├── backend/
+           │   │   ├── src/
+           │   │   │   ├── clients/
+           │   │   │   │   ├── [A]  changelly-defi.ts   +52
+           │   │   │   │   └── [A]  changelly-exchange.ts   +74
+           │   │   │   ├── middleware/
+           │   │   │   │   └── [A]  error-handler.ts   +27
+           │   │   │   ├── routes/
+           │   │   │   │   ├── [A]  assets.ts   +17
+           │   │   │   │   ├── [A]  config.ts   +14
+           │   │   │   │   ├── [A]  defi.ts   +44
+           │   │   │   │   ├── [A]  history.ts   +16
+           │   │   │   │   ├── [A]  pairs.ts   +24
+           │   │   │   │   ├── [A]  quote.ts   +29
+           │   │   │   │   └── [A]  swap.ts   +70
+           │   │   │   ├── security/
+           │   │   │   │   └── [A]  changelly-signer.ts   +18
+           │   │   │   ├── tests/
+           │   │   │   │   ├── routes/
+           │   │   │   │   │   ├── [A]  quote.test.ts   +70
+           │   │   │   │   │   └── [A]  swap.test.ts   +85
+           │   │   │   │   └── security/
+           │   │   │   │       └── [A]  signer.test.ts   +31
+           │   │   │   ├── [A]  env.ts   +25
+           │   │   │   └── [A]  index.ts   +81
+           │   │   ├── [A]  .env.example   +43
+           │   │   ├── [A]  jest.config.json   +7
+           │   │   ├── [A]  package.json   +39
+           │   │   └── [A]  tsconfig.json   +21
+           │   ├── popup/
+           │   │   └── [A]  index.html   +17
+           │   ├── src/
+           │   │   ├── background/
+           │   │   │   └── [A]  index.ts   +289
+           │   │   ├── config/
+           │   │   │   └── [A]  env.ts   +52
+           │   │   ├── popup/
+           │   │   │   ├── components/
+           │   │   │   │   ├── [A]  CopyButton.tsx   +27
+           │   │   │   │   ├── [A]  FeeBreakdownRow.tsx   +18
+           │   │   │   │   ├── [A]  MaintenanceBanner.tsx   +13
+           │   │   │   │   ├── [A]  QuoteCountdown.tsx   +49
+           │   │   │   │   ├── [A]  Skeleton.tsx   +24
+           │   │   │   │   └── [A]  StatusChip.tsx   +44
+           │   │   │   ├── screens/
+           │   │   │   │   ├── [A]  ErrorScreen.tsx   +26
+           │   │   │   │   ├── [A]  HistoryScreen.tsx   +75
+           │   │   │   │   ├── [A]  OnboardingScreen.tsx   +99
+           │   │   │   │   ├── [A]  PendingScreen.tsx   +157
+           │   │   │   │   ├── [A]  ReceiptScreen.tsx   +50
+           │   │   │   │   ├── [A]  ReviewScreen.tsx   +220
+           │   │   │   │   ├── [A]  SettingsScreen.tsx   +78
+           │   │   │   │   ├── [A]  SwapScreen.tsx   +236
+           │   │   │   │   ├── [A]  TokenPickerScreen.tsx   +148
+           │   │   │   │   └── [A]  TransactionDetailScreen.tsx   +69
+           │   │   │   ├── state/
+           │   │   │   │   └── [A]  AppStore.tsx   +212
+           │   │   │   ├── styles/
+           │   │   │   │   └── [A]  globals.css   +564
+           │   │   │   ├── [A]  App.tsx   +99
+           │   │   │   ├── [A]  index.tsx   +18
+           │   │   │   └── [A]  messaging.ts   +22
+           │   │   ├── services/
+           │   │   │   └── [A]  proxy-client.ts   +223
+           │   │   ├── shared/
+           │   │   │   └── [A]  types.ts   +333
+           │   │   └── tests/
+           │   │       ├── [A]  AppStore.test.ts   +64
+           │   │       ├── [A]  jest.setup.ts   +21
+           │   │       └── [A]  proxy-client.test.ts   +88
+           │   ├── [A]  DESIGN.md   +389
+           │   ├── [A]  jar.mn   +15
+           │   ├── [A]  jest.config.json   +12
+           │   ├── [A]  manifest.json   +59
+           │   ├── [A]  moz.build   +13
+           │   ├── [A]  package.json   +39
+           │   ├── [A]  tsconfig.json   +26
+           │   └── [A]  webpack.config.js   +89
+           └── [M]  moz.build   +1
+
+──────────────────────────────────────────
+
+◉  2026-04-09  [45ead852]  feat(release): add android emulator and ios simulator workflows
+   7 files changed  +1248  −155
+   │
+   └── tools/
+       └── release/
+           ├── android/
+           │   ├── [M]  build.sh   +273 −61
+           │   └── [A]  run-emulator.sh   +269
+           ├── ios/
+           │   ├── [M]  build.sh   +189 −68
+           │   └── [A]  run-simulator.sh   +239
+           ├── [M]  DEPLOYMENT.md   +115 −25
+           ├── [M]  README.md   +144
+           └── [M]  release-build.sh   +19 −1
+
+──────────────────────────────────────────
+
+◉  2026-04-09  [593df89c]  fix(release-build): correct ROOT_DIR path for release directory
+   1 file changed  +1  −1
+   │
+   └── tools/
+       └── release/
+           └── [M]  release-build.sh   +1 −1
+
+──────────────────────────────────────────
+
+◉  2026-04-09  [5d1ea1d7]  chore(changelog): update change tree
+   1 file changed  +25  −11
+   │
+   └── tools/
+       └── changelog/
+           └── [M]  CHANGE_TREE.md   +25 −11
+
+──────────────────────────────────────────
 
 ◉  2026-04-09  [c33d65f2]  fix(branding): correct ROOT_DIR detection in mach-run-branded.sh
    9 files changed  +1012  −19
@@ -101,61 +224,3 @@
        ├── instructions/
        │   └── [M]  release-operations.instructions.md   +20
        └── [M]  copilot-instructions.md   +43
-
-──────────────────────────────────────────
-
-◉  2026-04-06  [2909de15]  W3Ai: add comprehensive Copilot instructions for branching, release, and de…
-   2 files changed  +85
-   │
-   └── .github/
-       ├── instructions/
-       │   └── [A]  release-operations.instructions.md   +32
-       └── [A]  copilot-instructions.md   +53
-
-──────────────────────────────────────────
-
-◉  2026-04-06  [f81253bf]  docs: comprehensive release + deployment guide (4000+ lines)
-   8 files changed  +4006
-   │
-   └── tools/
-       └── release/
-           ├── [A]  BRANCH_STRATEGY.md   +253
-           ├── [A]  CODING.md   +393
-           ├── [A]  DEPLOYMENT.md   +772
-           ├── [A]  MERGE_STRATEGY.md   +427
-           ├── [A]  README.md   +528
-           ├── [A]  SERVER_SETUP.md   +692
-           ├── [A]  UPDATE_MANIFESTS.md   +484
-           └── [A]  VERSIONING.md   +457
-
-──────────────────────────────────────────
-
-◉  2026-04-05  [d5f4cd94]  W3Ai: update theme styles for improved visual consistency and accessibility
-   4 files changed  +281  −331
-   │
-   └── browser/
-       ├── components/
-       │   └── sidebar/
-       │       └── [M]  sidebar-main.css   −5
-       └── themes/
-           ├── osx/
-           │   └── [M]  browser.css   +1 −14
-           └── shared/
-               ├── tabbrowser/
-               │   └── [M]  tabs.css   +3 −4
-               └── [M]  w3ai-theme.css   +277 −308
-
-──────────────────────────────────────────
-
-◉  2026-04-03  [89552435]  W3Ai: structural layout refactor — sidebar shell + main panel, no CSS hacks
-   4 files changed  +112  −120
-   │
-   └── browser/
-       ├── base/
-       │   └── content/
-       │       ├── [M]  browser-box.inc.xhtml   +73 −30
-       │       ├── [M]  browser.xhtml   −2
-       │       └── [M]  navigator-toolbox.inc.xhtml   −13
-       └── themes/
-           └── shared/
-               └── [M]  w3ai-theme.css   +39 −75

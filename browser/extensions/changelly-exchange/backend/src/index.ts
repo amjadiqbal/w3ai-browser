@@ -51,7 +51,7 @@ export async function buildApp() {
   await app.register(rateLimit, {
     max: env.RATE_LIMIT_MAX,
     timeWindow: env.RATE_LIMIT_WINDOW_MS,
-    redis,
+    ...(env.NODE_ENV === "test" ? {} : { redis }),
     keyGenerator: (req) => req.ip,
   });
 

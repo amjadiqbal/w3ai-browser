@@ -1,5 +1,6 @@
 import { reducer, initialState } from "../popup/state/AppStore";
 import type { AppAction, AppState } from "../popup/state/AppStore";
+import { describe, expect, it } from "@jest/globals";
 
 describe("AppStore reducer", () => {
   it("SET_SCREEN updates the screen", () => {
@@ -18,6 +19,7 @@ describe("AppStore reducer", () => {
       rate: 14.2,
       networkFee: 0.001,
       expiresAt: Date.now() + 30_000,
+      ttlSeconds: 30,
     };
     const next = reducer(withLoading, { type: "SET_QUOTE", payload: quote });
     expect(next.quote).toEqual(quote);

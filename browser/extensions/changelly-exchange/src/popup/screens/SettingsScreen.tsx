@@ -42,7 +42,7 @@ export default function SettingsScreen() {
         </div>
 
         {/* Slippage tolerance (for DeFi swaps) */}
-        {state.featureFlags.defiSwapEnabled && (
+        {state.featureFlags.defiEnabled && (
           <div>
             <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 600, marginBottom: "var(--space-3)" }}>
               Slippage Tolerance: {state.settings.slippageTolerance ?? 0.5}%

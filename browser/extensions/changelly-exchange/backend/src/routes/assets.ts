@@ -10,7 +10,7 @@ export async function assetsRoute(app: FastifyInstance) {
   app.get("/v1/feature-flags", async (_req, reply) => {
     return reply.send({
       fixedRateEnabled: true,
-      defiSwapEnabled: false,
+      defiEnabled: false,
       maintenanceMode: false,
     });
   });

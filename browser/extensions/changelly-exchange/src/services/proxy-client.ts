@@ -101,15 +101,35 @@ async function request<T>(
 // ---------------------------------------------------------------------------
 
 export async function fetchPublicConfig(): Promise<PublicRuntimeConfig> {
-  return request<PublicRuntimeConfig>("GET", "/config/public");
+  const cfg = await request<{
+    proxyVersion: string;
+    environment: "development" | "staging" | "production";
+    termsUrl: string;
+    privacyUrl: string;
+    changellySupportUrl: string;
+    maintenanceMode: boolean;
+  }>("GET", "/v1/config");
+
+  return {
+    ...DEFAULT_CONFIG,
+    proxyVersion: cfg.proxyVersion,
+    environment: cfg.environment,
+    termsUrl: cfg.termsUrl,
+    privacyUrl: cfg.privacyUrl,
+    changellySupportUrl: cfg.changellySupportUrl,
+    featureFlags: {
+      ...DEFAULT_CONFIG.featureFlags,
+      maintenanceMode: cfg.maintenanceMode,
+    },
+  };
 }
 
 export async function fetchAssets(): Promise<Currency[]> {
-  return request<Currency[]>("GET", "/assets");
+  return request<Currency[]>("GET", "/v1/assets");
 }
 
 export async function fetchPair(from: string, to: string): Promise<TradingPair> {
-  return request<TradingPair>("GET", `/pairs?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+  return request<TradingPair>("GET", `/v1/pairs?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
 }
 
 export interface FloatingQuoteRequest {
@@ -119,7 +139,7 @@ export interface FloatingQuoteRequest {
 }
 
 export async function fetchFloatingQuote(req: FloatingQuoteRequest): Promise<FloatingQuote> {
-  return request<FloatingQuote>("POST", "/quote/floating", req);
+  return request<FloatingQuote>("POST", "/v1/quote/floating", req);
 }
 
 export interface FixedQuoteRequest {
@@ -129,7 +149,7 @@ export interface FixedQuoteRequest {
 }
 
 export async function fetchFixedQuote(req: FixedQuoteRequest): Promise<FixedQuote> {
-  return request<FixedQuote>("POST", "/quote/fixed", req);
+  return request<FixedQuote>("POST", "/v1/quote/fixed", { from: req.from, to: req.to, amountFrom: req.amount });
 }
 
 export async function validateAddress(
@@ -137,7 +157,7 @@ export async function validateAddress(
   currency: string,
   extraId?: string
 ): Promise<AddressValidationResult> {
-  return request<AddressValidationResult>("POST", "/validate/address", {
+  return request<AddressValidationResult>("POST", "/v1/validate-address", {
     address,
     currency,
     extraId,
@@ -164,19 +184,20 @@ export interface CreateSwapResponse {
 }
 
 export async function createSwap(req: CreateSwapRequest): Promise<CreateSwapResponse> {
-  return request<CreateSwapResponse>("POST", "/swap/create", req);
+  return request<CreateSwapResponse>("POST", "/v1/swap", req);
 }
 
 export async function fetchSwapDetail(id: string): Promise<TransactionDetail> {
-  return request<TransactionDetail>("GET", `/swap/${encodeURIComponent(id)}`);
+  return request<TransactionDetail>("GET", `/v1/swap/detail?id=${encodeURIComponent(id)}`);
 }
 
 export async function fetchSwapStatus(id: string): Promise<TransactionStatus> {
-  return request<TransactionStatus>("GET", `/swap/${encodeURIComponent(id)}/status`);
+  return request<TransactionStatus>("GET", `/v1/swap/status?id=${encodeURIComponent(id)}`);
 }
 
 export async function fetchHistory(page = 1, limit = 20): Promise<TransactionDetail[]> {
-  return request<TransactionDetail[]>("GET", `/history?page=${page}&limit=${limit}`);
+  const offset = Math.max(0, (page - 1) * limit);
+  return request<TransactionDetail[]>("GET", `/v1/history?limit=${limit}&offset=${offset}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -193,7 +214,14 @@ export interface DefiQuoteRequest {
 }
 
 export async function fetchDefiQuote(req: DefiQuoteRequest): Promise<DefiQuoteRoute> {
-  return request<DefiQuoteRoute>("POST", "/defi/quote", req);
+  return request<DefiQuoteRoute>("POST", "/v1/defi/quote", {
+    fromTokenAddress: req.fromToken,
+    toTokenAddress: req.toToken,
+    amount: req.amount,
+    chainId: parseInt(req.fromNetwork, 10),
+    walletAddress: req.walletAddress,
+    slippage: 0.5,
+  });
 }
 
 export interface DefiIntentRequest {
@@ -206,18 +234,35 @@ export interface DefiIntentRequest {
 }
 
 export async function createDefiIntent(req: DefiIntentRequest): Promise<DefiIntent> {
-  return request<DefiIntent>("POST", "/defi/intent", req);
+  return request<DefiIntent>("POST", "/v1/defi/swap", req);
 }
 
 export interface DefiApprovalRequest {
-  intentId: string;
+  tokenAddress: string;
+  amount: string;
+  walletAddress: string;
+  chainId: number;
 }
 
 export async function fetchDefiApprovalContext(req: DefiApprovalRequest) {
-  return request("POST", "/defi/approval-context", req);
+  return request(
+    "GET",
+    `/v1/defi/approval?tokenAddress=${encodeURIComponent(req.tokenAddress)}&amount=${encodeURIComponent(req.amount)}&walletAddress=${encodeURIComponent(req.walletAddress)}&chainId=${req.chainId}`
+  );
 }
 
 export async function fetchFeatureFlags(): Promise<FeatureFlagSet> {
-  const config = await fetchPublicConfig();
-  return config.featureFlags;
+  const flags = await request<{
+    fixedRateEnabled: boolean;
+    defiEnabled?: boolean;
+    defiSwapEnabled?: boolean;
+    maintenanceMode: boolean;
+  }>("GET", "/v1/feature-flags");
+
+  return {
+    ...DEFAULT_CONFIG.featureFlags,
+    fixedRateEnabled: flags.fixedRateEnabled,
+    defiEnabled: flags.defiEnabled ?? flags.defiSwapEnabled ?? false,
+    maintenanceMode: flags.maintenanceMode,
+  };
 }

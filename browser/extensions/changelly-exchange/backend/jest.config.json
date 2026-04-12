@@ -1,6 +1,7 @@
 {
   "preset": "ts-jest",
   "testEnvironment": "node",
+  "setupFiles": ["<rootDir>/src/tests/jest.setup.ts"],
   "roots": ["<rootDir>/src/tests"],
   "testMatch": ["**/*.test.ts"],
   "moduleFileExtensions": ["ts", "js", "json"]
