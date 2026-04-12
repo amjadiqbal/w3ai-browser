@@ -1,0 +1,12 @@
+{
+  "preset": "ts-jest",
+  "testEnvironment": "jsdom",
+  "roots": ["<rootDir>/src/tests"],
+  "testMatch": ["**/*.test.ts", "**/*.test.tsx"],
+  "moduleNameMapper": {
+    "^@shared/(.*)$": "<rootDir>/src/shared/$1",
+    "^@config/(.*)$": "<rootDir>/src/config/$1",
+    "^@services/(.*)$": "<rootDir>/src/services/$1"
+  },
+  "setupFiles": ["<rootDir>/src/tests/jest.setup.ts"]
+}
