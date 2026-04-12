@@ -1,6 +1,51 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  W3Ai Change Tree  ·  2026-04-12  17:15  ·  branch: w3ai/develop
+  W3Ai Change Tree  ·  2026-04-12  20:15  ·  branch: w3ai/develop
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+◉  2026-04-12  [6e52abdc]  fix: align extension manifest (MV2) and proxy API contracts; add comprehens…
+   22 files changed  +564  −155
+   │
+   ├── browser/
+   │   └── extensions/
+   │       └── changelly-exchange/
+   │           ├── backend/
+   │           │   ├── scripts/
+   │           │   │   └── [A]  smoke-all-endpoints.sh   +55
+   │           │   ├── src/
+   │           │   │   ├── routes/
+   │           │   │   │   ├── [M]  assets.ts   +1 −1
+   │           │   │   │   └── [M]  swap.ts   +27 −18
+   │           │   │   ├── tests/
+   │           │   │   │   ├── routes/
+   │           │   │   │   │   └── [A]  all-endpoints.test.ts   +174
+   │           │   │   │   ├── security/
+   │           │   │   │   │   └── [M]  signer.test.ts   +1 −1
+   │           │   │   │   └── [A]  jest.setup.ts   +3
+   │           │   │   └── [M]  index.ts   +1 −1
+   │           │   ├── [A]  .gitignore   +5
+   │           │   ├── [A]  README.md   +46
+   │           │   └── [M]  jest.config.json   +1
+   │           ├── src/
+   │           │   ├── popup/
+   │           │   │   └── screens/
+   │           │   │       └── [M]  SettingsScreen.tsx   +1 −1
+   │           │   ├── services/
+   │           │   │   └── [M]  proxy-client.ts   +61 −16
+   │           │   ├── tests/
+   │           │   │   ├── [M]  AppStore.test.ts   +2
+   │           │   │   ├── [M]  jest.setup.ts   +6 −4
+   │           │   │   └── [M]  proxy-client.test.ts   +15 −14
+   │           │   └── [A]  globals.d.ts   +1
+   │           ├── [A]  .gitignore   +11
+   │           ├── [M]  jar.mn   +9 −14
+   │           ├── [M]  manifest.json   +10 −18
+   │           ├── [M]  package.json   +2 −2
+   │           └── [M]  tsconfig.json   +8 −6
+   └── tools/
+       └── changelog/
+           └── [M]  CHANGE_TREE.md   +124 −59
+
+──────────────────────────────────────────
 
 ◉  2026-04-12  [d0462024]  feat(extension): add production-ready changelly-exchange system add-on
    58 files changed  +4765
@@ -214,13 +259,3 @@
            ├── [M]  CODING.md   +1
            ├── [M]  DEPLOYMENT.md   +15 −10
            └── [M]  README.md   +1 −1
-
-──────────────────────────────────────────
-
-◉  2026-04-06  [209e8d4a]  enhance Copilot instructions with detailed preflight workflow and automatic…
-   2 files changed  +63
-   │
-   └── .github/
-       ├── instructions/
-       │   └── [M]  release-operations.instructions.md   +20
-       └── [M]  copilot-instructions.md   +43

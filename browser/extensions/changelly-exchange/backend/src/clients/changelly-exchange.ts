@@ -32,7 +32,7 @@ async function call<T>(method: string, params: unknown = {}): Promise<T> {
   const json = await resp.json() as { result?: T; error?: { code: number; message: string } };
 
   if (json.error) {
-    const err = new Error(json.error.message) as NodeJS.ErrnoException & { code?: number };
+    const err = new Error(json.error.message) as Error & { code?: number };
     err.code = json.error.code;
     throw err;
   }
