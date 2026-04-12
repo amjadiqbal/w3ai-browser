@@ -1,6 +1,27 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  W3Ai Change Tree  ·  2026-04-12  20:15  ·  branch: w3ai/develop
+  W3Ai Change Tree  ·  2026-04-12  20:58  ·  branch: w3ai/develop
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+◉  2026-04-12  [960876f5]  docs(changelly): add comprehensive development & setup guides
+   7 files changed  +1659  −12
+   │
+   ├── browser/
+   │   └── extensions/
+   │       └── changelly-exchange/
+   │           ├── backend/
+   │           │   └── src/
+   │           │       └── clients/
+   │           │           └── [M]  changelly-exchange.ts   +1 −1
+   │           ├── [A]  .startup-guide.sh   +51
+   │           ├── [A]  DEVELOPMENT.md   +671
+   │           ├── [A]  QUICK-START.md   +353
+   │           ├── [A]  README.md   +332
+   │           └── [A]  setup.sh   +205
+   └── tools/
+       └── changelog/
+           └── [M]  CHANGE_TREE.md   +46 −11
+
+──────────────────────────────────────────
 
 ◉  2026-04-12  [6e52abdc]  fix: align extension manifest (MV2) and proxy API contracts; add comprehens…
    22 files changed  +564  −155
@@ -241,21 +262,3 @@
        └── themes/
            └── shared/
                └── [M]  sidebar.css   +11 −1
-
-──────────────────────────────────────────
-
-◉  2026-04-07  [ee621f34]  W3Ai: add default release build command and notarization scripts for macOS
-   7 files changed  +250  −11
-   │
-   ├── .github/
-   │   ├── instructions/
-   │   │   └── [M]  release-operations.instructions.md   +5
-   │   └── [M]  copilot-instructions.md   +8
-   └── tools/
-       └── release/
-           ├── macos/
-           │   ├── [A]  release-build-notarize.sh   +81
-           │   └── [A]  sign-and-notarize-dev.sh   +139
-           ├── [M]  CODING.md   +1
-           ├── [M]  DEPLOYMENT.md   +15 −10
-           └── [M]  README.md   +1 −1
