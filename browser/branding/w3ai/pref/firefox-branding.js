@@ -84,3 +84,59 @@ pref("extensions.recommendations.privacyPolicyUrl", "about:blank#");
 pref("extensions.getAddons.discovery.api_url", "about:blank#");
 pref("extensions.htmlaboutaddons.recommendations.enabled", true);
 pref("extensions.recommendations.hideNotice", true);
+
+// --- Milestone 8: Privacy Hardening ---
+
+// Disable Glean/telemetry data submission and upload
+pref("datareporting.policy.dataSubmissionEnabled", false);
+pref("datareporting.healthreport.uploadEnabled", false);
+
+// Disable all classic telemetry pings
+pref("toolkit.telemetry.unified", false);
+pref("toolkit.telemetry.server", "");
+pref("toolkit.telemetry.archive.enabled", false);
+pref("toolkit.telemetry.shutdownPingSender.enabled", false);
+pref("toolkit.telemetry.firstShutdownPing.enabled", false);
+pref("toolkit.telemetry.newProfilePing.enabled", false);
+pref("toolkit.telemetry.updatePing.enabled", false);
+pref("toolkit.telemetry.bhrPing.enabled", false);
+pref("toolkit.telemetry.user_characteristics_ping.opt-out", true);
+
+// Disable DAP (Distributed Aggregation Protocol) privacy-preserving measurements
+pref("toolkit.telemetry.dap_enabled", false);
+pref("toolkit.telemetry.dap_task1_enabled", false);
+pref("toolkit.telemetry.dap_visit_counting_enabled", false);
+
+// Disable Normandy/Shield remote recipe execution and studies
+pref("app.normandy.enabled", false);
+pref("app.normandy.api_url", "");
+pref("app.shield.optoutstudies.enabled", false);
+pref("nimbus.telemetry.targetingContextEnabled", false);
+
+// Disable crash report auto-submission
+pref("browser.crashReports.unsubmittedCheck.enabled", false);
+pref("browser.crashReports.unsubmittedCheck.autoSubmit2", false);
+pref("browser.tabs.crashReporting.sendReport", false);
+
+// Zero out Mozilla analytics/suggestions service endpoints
+pref("browser.urlbar.merino.endpointURL", "");
+pref("browser.urlbar.merino.ohttpConfigURL", "");
+pref("browser.urlbar.merino.ohttpRelayURL", "");
+pref("browser.urlbar.merino.weather.reportEndpointURL", "");
+pref("browser.urlbar.merino.weather.hourlyEndpointURL", "");
+pref("browser.newtabpage.activity-stream.discoverystream.merino-provider.endpoint", "");
+pref("browser.newtabpage.trainhopAddon.xpiBaseURL", "");
+
+// Zero out Mozilla partner/attribution/coverage endpoints
+pref("browser.topsites.contile.endpoint", "");
+pref("browser.partnerlink.attributionURL", "");
+pref("toolkit.coverage.endpoint.base", "");
+pref("security.certerrors.mitm.priming.endpoint", "");
+pref("app.feedback.baseURL", "");
+pref("browser.ipProtection.guardian.endpoint", "");
+
+// Disable FxAccounts telemetry association ping
+pref("identity.fxaccounts.telemetry.clientAssociationPing.enabled", false);
+
+// Disable search SERP event telemetry
+pref("browser.search.serpEventTelemetryCategorization.enabled", false);
