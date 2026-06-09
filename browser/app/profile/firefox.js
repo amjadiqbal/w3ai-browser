@@ -1861,6 +1861,16 @@ pref("browser.newtabpage.activity-stream.unifiedAds.endpoint", "");
 pref("browser.newtabpage.activity-stream.unifiedAds.adsFeed.enabled", false);
 pref("browser.newtabpage.activity-stream.unifiedAds.ohttp.enabled", false);
 
+// W3Ai: disable Pocket / Discovery Stream — privacy by default, no Mozilla content
+pref("browser.newtabpage.activity-stream.feeds.system.topstories", false);
+pref("browser.newtabpage.activity-stream.feeds.section.topstories", false);
+pref("browser.newtabpage.activity-stream.showSponsored", false);
+pref("browser.newtabpage.activity-stream.showSponsoredTopSites", false);
+// W3Ai: disable newtab telemetry pings
+pref("browser.newtabpage.activity-stream.telemetry", false);
+// W3Ai: always show the W3Ai logo/wordmark on the new tab page
+pref("browser.newtabpage.activity-stream.logowordmark.alwaysVisible", true);
+
 // Weather widget for newtab
 pref("browser.newtabpage.activity-stream.showWeather", true);
 pref("browser.newtabpage.activity-stream.weather.query", "");
@@ -1878,7 +1888,8 @@ pref("browser.newtabpage.activity-stream.discoverystream.region-weather-config",
 pref("browser.newtabpage.activity-stream.discoverystream.locale-weather-config", "en-US,en-GB,en-CA");
 
 // Promo card visibility
-pref("browser.newtabpage.activity-stream.discoverystream.promoCard.visible", true);
+// W3Ai: hide the "Support W3Ai" promo card on new tab
+pref("browser.newtabpage.activity-stream.discoverystream.promoCard.visible", false);
 
 // Preference to enable wallpaper selection in the Customize Menu of new tab page
 pref("browser.newtabpage.activity-stream.newtabWallpapers.enabled", true);
@@ -2038,13 +2049,10 @@ pref("browser.newtabpage.activity-stream.discoverystream.merino-feed-experiment"
 // List of locales that get thumbs up/down on recommended stories by default.
 pref("browser.newtabpage.activity-stream.discoverystream.thumbsUpDown.locale-thumbs-config", "en-US, en-GB, en-CA");
 
-pref("browser.newtabpage.activity-stream.telemetry.privatePing.enabled", true);
-
-// Redacts content interaction ids from original New Tab ping once data processing migrated to the Newtab_content private ping
-pref("browser.newtabpage.activity-stream.telemetry.privatePing.redactNewtabPing.enabled", true);
+// W3Ai: no telemetry pings from new tab page
+pref("browser.newtabpage.activity-stream.telemetry.privatePing.enabled", false);
+pref("browser.newtabpage.activity-stream.telemetry.privatePing.redactNewtabPing.enabled", false);
 pref("browser.newtabpage.activity-stream.telemetry.privatePing.maxSubmissionDelayMs", 5000);
-
-  // Include differentialy private inferred New Tab interests with New Tab content Ping. Only used when user has enabled personalization.
 pref("browser.newtabpage.activity-stream.telemetry.privatePing.inferredInterests.enabled", false);
 
 // surface ID sent from merino to the client from the curated-recommendations request
