@@ -13,6 +13,7 @@ const { DeferredTask } = ChromeUtils.importESModule(
 );
 
 const toolsNameMap = {
+  viewAIWindowSidebar: "aiwindow",
   viewGenaiChatSidebar: "aichat",
   viewGenaiPageAssistSidebar: "aipageassist",
   viewTabsSidebar: "syncedtabs",
@@ -195,6 +196,18 @@ var SidebarController = {
         toolContextMenuId: "aichat",
         permissions: true,
         hideInAIWindow: true,
+      }
+    );
+
+    this.registerPrefSidebar(
+      "browser.smartwindow.enabled",
+      "viewAIWindowSidebar",
+      {
+        name: "aiwindow",
+        elementId: "sidebar-switcher-aiwindow",
+        url: "chrome://browser/content/aiwindow/aiWindow.html",
+        revampL10nId: "sidebar-menu-aiwindow-label",
+        iconUrl: "chrome://browser/content/aiwindow/assets/ask-icon.svg",
       }
     );
 
@@ -1916,6 +1929,10 @@ var SidebarController = {
     if (!this._canShow(commandID)) {
       return false;
     }
+    if (commandID === "viewAIWindowSidebar") {
+      this.AIWindowUI.toggleSidebar(window);
+      return true;
+    }
     if (this._animationEnabled && !window.gReduceMotion && this.sidebarRevampEnabled) {
       this._animateSidebarMain();
     }
@@ -2448,6 +2465,8 @@ var SidebarController = {
 ChromeUtils.defineESModuleGetters(SidebarController, {
   AIWindow:
     "moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs",
+  AIWindowUI:
+    "moz-src:///browser/components/aiwindow/ui/modules/AIWindowUI.sys.mjs",
   SidebarManager:
     "moz-src:///browser/components/sidebar/SidebarManager.sys.mjs",
   SidebarState: "moz-src:///browser/components/sidebar/SidebarState.sys.mjs",

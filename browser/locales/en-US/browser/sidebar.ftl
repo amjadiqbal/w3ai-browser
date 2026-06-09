@@ -2,6 +2,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+menu-view-aiwindow =
+  .label = W3Ai AI Agent
+
 menu-view-genai-chat =
   .label = AI Chatbot
 
@@ -123,6 +126,8 @@ sidebar-history-context-menu-delete-pages =
 
 ## Labels for sidebar menu items.
 
+sidebar-menu-aiwindow-label =
+  .label = AI Agent
 sidebar-menu-genai-chat-label =
   .label = AI chatbot
 sidebar-menu-history-label =

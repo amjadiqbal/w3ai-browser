@@ -2182,10 +2182,8 @@ pref("sidebar.animation.duration-ms", 200);
 pref("sidebar.animation.expand-on-hover.duration-ms", 400);
 pref("sidebar.animation.expand-on-hover.delay-duration-ms", 200);
 
-// This pref is used to store user customized tools in the sidebar launcher and shouldn't be changed.
-// See https://firefox-source-docs.mozilla.org/browser/components/sidebar/docs/index.html for ways
-// you can introduce a new tool to the sidebar launcher.
-pref("sidebar.main.tools", "");
+// W3Ai: AI Agent, History, Bookmarks in the sidebar launcher; no Firefox AI chat (replaced by AIWindow)
+pref("sidebar.main.tools", "aiwindow,history,bookmarks");
 pref("sidebar.installed.extensions", "");
 // W3Ai: vertical tabs enabled by default for left-rail navigation layout
 pref("sidebar.verticalTabs", true);
@@ -2202,7 +2200,7 @@ pref("sidebar.history.sortOption", "date");
 
 pref("sidebar.notification.badge.aichat", false);
 
-pref("browser.ml.chat.enabled", true);
+pref("browser.ml.chat.enabled", false);
 pref("browser.ml.chat.hideLocalhost", true);
 pref("browser.ml.chat.maxLength", 7000);
 pref("browser.ml.chat.menu", true);
@@ -2219,7 +2217,7 @@ pref("browser.ml.chat.shortcuts", true);
 pref("browser.ml.chat.shortcuts.custom", true);
 pref("browser.ml.chat.shortcuts.longPress", 60000);
 pref("browser.ml.chat.shortcut.onboardingMouseoverCount", 0);
-pref("browser.ml.chat.sidebar", true);
+pref("browser.ml.chat.sidebar", false);
 
 pref("browser.ml.linkPreview.allowedLanguages", "en");
 pref("browser.ml.linkPreview.blockListEnabled", true);
