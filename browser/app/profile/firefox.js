@@ -1392,8 +1392,8 @@ pref("accessibility.typeaheadfind.flashBar", 1);
 
 // Whether we had to hide the "Firefox Labs" section because it would be empty.
 pref("browser.preferences.experimental.hidden", false);
-// Whether we show the "More from Mozilla" section.
-pref("browser.preferences.moreFromMozilla", true);
+// W3Ai: "More from Mozilla" section is not relevant to this product.
+pref("browser.preferences.moreFromMozilla", false);
 // Whether we show the "AI Controls" pane.
 pref("browser.preferences.aiControls", true);
 // Whether to show unavailable AI controls regardless of region/locale

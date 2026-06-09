@@ -403,7 +403,7 @@ identity-connection-file = This page is stored on your computer.
 identity-connection-associated = This page is loaded from another page.
 identity-extension-page = This page is loaded from an extension.
 identity-active-blocked = { -brand-short-name } has blocked parts of this page that are not secure.
-identity-custom-root = Connection verified by a certificate issuer that is not recognized by Mozilla.
+identity-custom-root = Connection verified by a certificate issuer that is not recognized by { -vendor-short-name }.
 identity-passive-loaded = Parts of this page are not secure (such as images).
 identity-active-loaded = You have disabled protection on this page.
 identity-weak-encryption = This page uses weak encryption.
@@ -432,7 +432,7 @@ identity-connection-verified = You are securely connected to this site.
 identity-ev-owner-label = Certificate issued to:
 # "qualified" here refers to the qualified website authentication certificate presented by the site.
 identity-etsi = Qualified as specified in Regulation (EU) 2024/1183.
-identity-description-custom-root2 = Mozilla does not recognize this certificate issuer. It may have been added from your operating system or by an administrator.
+identity-description-custom-root2 = { -vendor-short-name } does not recognize this certificate issuer. It may have been added from your operating system or by an administrator.
 identity-remove-cert-exception =
     .label = Remove Exception
     .accesskey = R
