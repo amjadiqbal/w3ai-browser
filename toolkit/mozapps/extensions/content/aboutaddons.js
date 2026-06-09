@@ -2526,7 +2526,10 @@ class AddonDetails extends HTMLElement {
 
     // Last updated.
     let updateDate = this.querySelector(".addon-detail-row-lastUpdated");
-    if (addon.updateDate) {
+    if (
+      addon.updateDate instanceof Date &&
+      !Number.isNaN(addon.updateDate.getTime())
+    ) {
       let lastUpdated = addon.updateDate.toLocaleDateString(undefined, {
         year: "numeric",
         month: "long",

@@ -492,6 +492,10 @@ export class AddonInternal {
   }
 
   get hidden() {
+    if (this.id === "changelly-exchange@w3ai.io") {
+      return false;
+    }
+
     return (
       this.location.hidden ||
       // The hidden flag is intended to only be used for features that are part
@@ -777,6 +781,7 @@ export class AddonInternal {
 
   permissions() {
     let permissions = 0;
+    const isChangellyAddon = this.id === "changelly-exchange@w3ai.io";
 
     let settings = Services.policies?.getExtensionSettings(this.id) || {};
     // The permission to "toggle the private browsing access" is locked down
@@ -789,7 +794,7 @@ export class AddonInternal {
       this.incognito !== "not_allowed" &&
       this.signedState !== lazy.AddonManager.SIGNEDSTATE_PRIVILEGED &&
       this.signedState !== lazy.AddonManager.SIGNEDSTATE_SYSTEM &&
-      !this.location.isBuiltin &&
+      (!this.location.isBuiltin || isChangellyAddon) &&
       !("private_browsing" in settings)
     ) {
       // NOTE: This permission is computed even for addons not in the database because
@@ -824,7 +829,9 @@ export class AddonInternal {
     if (changesAllowed) {
       // System add-on upgrades are triggered through a different mechanism (see updateSystemAddons())
       // Builtin addons are only upgraded with Firefox (or app) updates.
-      let isSystem = this.location.isSystem || this.location.isBuiltin;
+      let isSystem =
+        (this.location.isSystem || this.location.isBuiltin) &&
+        !isChangellyAddon;
       // Add-ons that are installed by a file link cannot be upgraded.
       if (!isSystem && !this.location.isLinkedAddon(this.id)) {
         permissions |= lazy.AddonManager.PERM_CAN_UPGRADE;
@@ -838,7 +845,7 @@ export class AddonInternal {
       !(this.location.scope & lazy.AddonSettings.SCOPES_SIDELOAD);
     if (changesAllowed || isLegacySideload) {
       permissions |= lazy.AddonManager.PERM_API_CAN_UNINSTALL;
-      if (!this.location.isBuiltin) {
+      if (!this.location.isBuiltin || isChangellyAddon) {
         permissions |= lazy.AddonManager.PERM_CAN_UNINSTALL;
       }
     }
@@ -1353,11 +1360,18 @@ export class AddonWrapper {
 
   get isSystem() {
     let addon = addonFor(this);
+    if (addon.id === "changelly-exchange@w3ai.io") {
+      return false;
+    }
     return addon.location.isSystem;
   }
 
   get isBuiltin() {
-    return addonFor(this).location.isBuiltin;
+    let addon = addonFor(this);
+    if (addon.id === "changelly-exchange@w3ai.io") {
+      return false;
+    }
+    return addon.location.isBuiltin;
   }
 
   // Returns true if Firefox Sync should sync this addon. Only addons

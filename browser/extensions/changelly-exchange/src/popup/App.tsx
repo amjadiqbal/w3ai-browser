@@ -6,6 +6,7 @@ import React, { useEffect } from "react";
 import { AppProvider, useAppState, useDispatch } from "./state/AppStore";
 import { sendMessage } from "./messaging";
 import type { Currency, FeatureFlagSet, PublicRuntimeConfig, UserSetting } from "../shared/types";
+import { DEFAULT_CONFIG } from "../config/env";
 
 // Screens
 import OnboardingScreen from "./screens/OnboardingScreen";
@@ -28,34 +29,65 @@ function RouterInner() {
     let mounted = true;
 
     async function boot() {
-      try {
-        const [config, flags, assets, settings] = await Promise.all([
-          sendMessage<PublicRuntimeConfig>("GET_CONFIG"),
-          sendMessage<FeatureFlagSet>("GET_FEATURE_FLAGS"),
-          sendMessage<Currency[]>("GET_ASSETS"),
-          sendMessage<UserSetting>("GET_SETTINGS"),
-        ]);
+      const [configRes, flagsRes, assetsRes, settingsRes] = await Promise.allSettled([
+        sendMessage<PublicRuntimeConfig>("GET_CONFIG"),
+        sendMessage<FeatureFlagSet>("GET_FEATURE_FLAGS"),
+        sendMessage<Currency[]>("GET_ASSETS"),
+        sendMessage<UserSetting>("GET_SETTINGS"),
+      ]);
 
-        if (!mounted) return;
+      if (!mounted) return;
 
-        dispatch({ type: "SET_CONFIG", payload: config });
-        dispatch({ type: "SET_FEATURE_FLAGS", payload: flags });
-        dispatch({ type: "SET_ASSETS", payload: assets });
-        dispatch({ type: "SET_SETTINGS", payload: settings });
+      const failedSources: string[] = [];
 
-        if (flags.maintenanceMode) {
-          dispatch({ type: "SET_MAINTENANCE", payload: true });
-        }
+      if (configRes.status === "fulfilled") {
+        dispatch({ type: "SET_CONFIG", payload: configRes.value });
+      } else {
+        failedSources.push("config");
+      }
 
-        if (!settings.onboardingCompleted) {
+      const flags =
+        flagsRes.status === "fulfilled" ? flagsRes.value : DEFAULT_CONFIG.featureFlags;
+      dispatch({ type: "SET_FEATURE_FLAGS", payload: flags });
+      if (flagsRes.status !== "fulfilled") {
+        failedSources.push("feature flags");
+      }
+
+      if (assetsRes.status === "fulfilled") {
+        dispatch({ type: "SET_ASSETS", payload: assetsRes.value });
+      } else {
+        failedSources.push("assets");
+        dispatch({ type: "SET_ASSETS", payload: [] });
+      }
+
+      if (settingsRes.status === "fulfilled") {
+        dispatch({ type: "SET_SETTINGS", payload: settingsRes.value });
+        if (!settingsRes.value.onboardingCompleted) {
           dispatch({ type: "SET_SCREEN", payload: "onboarding" });
         }
-      } catch (err) {
-        if (!mounted) return;
+      } else {
+        failedSources.push("settings");
+      }
+
+      if (flags.maintenanceMode) {
+        dispatch({ type: "SET_MAINTENANCE", payload: true });
+      }
+
+      if (failedSources.length === 4) {
         dispatch({
           type: "SET_GLOBAL_ERROR",
-          payload: { code: "NETWORK_ERROR", message: "Unable to load extension data.", recoverable: true } as any,
+          payload: {
+            code: "NETWORK_ERROR",
+            message: "Unable to load extension data. Check proxy/backend connectivity.",
+            recoverable: true,
+          } as any,
         });
+        return;
+      }
+
+      dispatch({ type: "SET_GLOBAL_ERROR", payload: null });
+      if (failedSources.length > 0) {
+        console.warn(`[changelly] boot degraded, failed: ${failedSources.join(", ")}`);
       }
     }
 

@@ -4040,6 +4040,8 @@ var CustomizableUIInternal = {
     // If we're restoring the widget to it's old placement, fire off the
     // onWidgetAdded event - our own handler will take care of adding it to
     // any build areas.
+    const changellyToolbarMigrationPref =
+      "browser.w3ai.changellyToolbarPlacementMigrated";
     this.beginBatchUpdate();
     try {
       if (widget.currentArea) {
@@ -4079,6 +4081,15 @@ var CustomizableUIInternal = {
         ) {
           this.addWidgetToArea(widget.id, CustomizableUI.AREA_ADDONS);
         }
+      }
+
+      if (
+        widget.id == "changelly-exchange_w3ai_io-browser-action" &&
+        widget.currentArea == CustomizableUI.AREA_ADDONS &&
+        !Services.prefs.getBoolPref(changellyToolbarMigrationPref, false)
+      ) {
+        this.addWidgetToArea(widget.id, CustomizableUI.AREA_NAVBAR);
+        Services.prefs.setBoolPref(changellyToolbarMigrationPref, true);
       }
     } finally {
       // Ensure we always have this widget in gSeenWidgets, and save

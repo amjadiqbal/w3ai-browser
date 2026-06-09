@@ -85,8 +85,8 @@
 
 html, body {
   width: 100%;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -94,17 +94,31 @@ body {
   font-size: var(--font-size-base);
   color: var(--text-primary);
   background: var(--surface-bg);
+  display: flex;
+  justify-content: center;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
-  width: 380px;
-  min-height: 540px;
-  max-height: 600px;
+  width: min(100vw, 560px);
+  min-height: 100dvh;
+  max-height: 100dvh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+}
+
+@media (max-width: 420px) {
+  #root {
+    width: 100vw;
+  }
+}
+
+@media (min-width: 900px) {
+  .screen {
+    padding: var(--space-5) var(--space-6);
+  }
 }
 
 /* ---------------------------------------------------------------------------

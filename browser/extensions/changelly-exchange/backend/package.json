@@ -8,6 +8,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
+    "env:setup": "bash scripts/setup-env.sh",
     "test": "jest --forceExit",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit"

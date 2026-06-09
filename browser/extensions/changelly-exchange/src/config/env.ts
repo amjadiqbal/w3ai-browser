@@ -18,7 +18,7 @@ const env = (typeof __CHANGELLY_ENV__ !== "undefined" ? __CHANGELLY_ENV__ : "dev
 const proxyBaseUrl =
   typeof __PROXY_BASE_URL__ !== "undefined"
     ? __PROXY_BASE_URL__
-    : "https://proxy-dev.w3ai.io";
+    : "https://proxy.w3ai.io";
 
 const proxyVersion =
   typeof __PROXY_VERSION__ !== "undefined"

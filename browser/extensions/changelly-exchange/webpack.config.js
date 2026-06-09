@@ -77,7 +77,7 @@ module.exports = (env, argv) => {
       new (require("webpack").DefinePlugin)({
         "__CHANGELLY_ENV__": JSON.stringify(isDev ? "development" : "production"),
         "__PROXY_BASE_URL__": JSON.stringify(
-          process.env.PROXY_BASE_URL ?? "https://proxy.w3ai.io"
+          process.env.PROXY_BASE_URL ?? (isDev ? "http://127.0.0.1:3000" : "https://proxy.w3ai.io")
         ),
         "__PROXY_VERSION__": JSON.stringify("v1"),
       }),

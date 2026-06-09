@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "W3Ai Exchange",
   "description": "Swap crypto assets instantly via Changelly — built into W3Ai browser.",
-  "version": "151.0.0",
+  "version": "151.0.1",
   "author": "W3Ai Team",
 
   "browser_specific_settings": {
@@ -15,7 +15,9 @@
 
   "icons": {
     "16": "icons/icon-16.png",
+    "19": "icons/icon-19.png",
     "32": "icons/icon-32.png",
+    "38": "icons/icon-38.png",
     "48": "icons/icon-48.png",
     "96": "icons/icon-96.png",
     "128": "icons/icon-128.png"
@@ -23,12 +25,27 @@
 
   "browser_action": {
     "default_popup": "popup/index.html",
+    "default_area": "navbar",
     "default_icon": {
       "16": "icons/icon-16.png",
+      "19": "icons/icon-19.png",
       "32": "icons/icon-32.png",
+      "38": "icons/icon-38.png",
       "48": "icons/icon-48.png"
     },
     "default_title": "W3Ai Exchange"
+  },
+
+  "sidebar_action": {
+    "default_title": "W3Ai Exchange",
+    "default_panel": "popup/index.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "19": "icons/icon-19.png",
+      "32": "icons/icon-32.png",
+      "38": "icons/icon-38.png",
+      "48": "icons/icon-48.png"
+    }
   },
 
   "background": {

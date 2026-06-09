@@ -271,13 +271,23 @@ export const AIWindow = {
   _updateToolbarButtonPositions(win, { isToggling = false } = {}) {
     const modeSwitcherButton = win.document.getElementById("ai-window-toggle");
     const hamburgerMenu = win.document.getElementById("PanelUI-button");
+    if (!modeSwitcherButton || !hamburgerMenu) {
+      return;
+    }
 
     const targetToolbar = win.document.getElementById(
       this.verticalTabsEnabled ? "nav-bar" : "TabsToolbar"
     );
+    if (!targetToolbar) {
+      return;
+    }
+
     const titlebarContainer = targetToolbar.querySelector(
       ".titlebar-buttonbox-container"
     );
+    if (!titlebarContainer) {
+      return;
+    }
 
     titlebarContainer.after(modeSwitcherButton);
 
@@ -285,10 +295,13 @@ export const AIWindow = {
       modeSwitcherButton.after(hamburgerMenu);
     } else if (isToggling) {
       // Restore hamburger menu to its original position in nav-bar.
-      const postTabsSpacer = win.document
-        .getElementById("nav-bar")
-        .querySelector('.titlebar-spacer[type="post-tabs"]');
-      postTabsSpacer.before(hamburgerMenu);
+      const navBar = win.document.getElementById("nav-bar");
+      const postTabsSpacer = navBar?.querySelector(
+        '.titlebar-spacer[type="post-tabs"]'
+      );
+      if (postTabsSpacer) {
+        postTabsSpacer.before(hamburgerMenu);
+      }
     }
   },
 

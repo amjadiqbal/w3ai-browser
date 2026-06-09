@@ -4,10 +4,10 @@ This service holds Changelly credentials server-side and signs privileged API ca
 
 ## Secure API Key Setup (never commit)
 
-1. Copy `.env.example` to `.env`:
+1. Create `.env` from template:
 
 ```bash
-cp .env.example .env
+npm run env:setup
 ```
 
 2. Fill these required values in `.env`:

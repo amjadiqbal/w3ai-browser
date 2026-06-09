@@ -48,6 +48,6 @@ You can find the review identifier by inspecting the commit log with:
 - When running slow commands like `./mach test`, `./mach mochitest`, etc., NEVER pipe their output through `tail`, `grep`, `head`, or other filters. `./mach` automatically saves its output and you can get it with `./mach show-log` and then read/search it separately. For other commands redirect output to a temporary file. This avoids having to re-run slow commands multiple times to extract different pieces of information.
 - Do not run `./mach build faster` when only front-end test files (JS, HTML, etc.) were modified — they don't need compilation.
 - Ask if you should run a test. If you do, you probably want to run the test with `--headless`
-- Do not perform commits yourself, ever
+- You MUST perform git commits yourself after every set of changes. Stage the relevant files, write a clear conventional commit message (feat/fix/chore/docs/refactor), and commit. Do not wait for the user to ask. Also update CHANGELOG.md and VERSION as appropriate before committing.
 - When doing Android and Desktop front-end-only changes, use the special `./mach build faster` to skip all C++/Rust compilation.
 - Conversely, for C++/Rust only changes you can use the special `./mach build binaries` to skip all front-end-related tasks.

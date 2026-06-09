@@ -571,6 +571,32 @@ export class BrowserActionBase extends PanelActionBase {
       badgeTextColor: null,
       default_area,
     };
+
+    if (extension.id === "changelly-exchange@w3ai.io") {
+      try {
+        const migrationPref = "browser.w3ai.changellyToolbarPlacementMigrated";
+        if (!Services.prefs.getBoolPref(migrationPref, false)) {
+          const statePref = "browser.uiCustomization.state";
+          const stateRaw = Services.prefs.getStringPref(statePref, "");
+          if (stateRaw) {
+            const state = JSON.parse(stateRaw);
+            const widgetId = "changelly-exchange_w3ai_io-browser-action";
+            const addonsArea = state.placements?.["unified-extensions-area"];
+            const navBar = state.placements?.["nav-bar"];
+            if (Array.isArray(addonsArea) && Array.isArray(navBar)) {
+              const addonIndex = addonsArea.indexOf(widgetId);
+              if (addonIndex !== -1 && !navBar.includes(widgetId)) {
+                addonsArea.splice(addonIndex, 1);
+                navBar.unshift(widgetId);
+                Services.prefs.setStringPref(statePref, JSON.stringify(state));
+              }
+            }
+          }
+          Services.prefs.setBoolPref(migrationPref, true);
+        }
+      } catch (e) {}
+    }
+
     this.globals = Object.create(this.defaults);
 
     // eslint-disable-next-line mozilla/balanced-listeners
