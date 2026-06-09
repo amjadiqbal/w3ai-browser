@@ -249,6 +249,7 @@ export interface UserSetting {
 // ---------------------------------------------------------------------------
 
 export interface FeatureFlagSet {
+  fiatEnabled: boolean;
   defiEnabled: boolean;
   fixedRateEnabled: boolean;
   customTokensEnabled: boolean;
@@ -302,6 +303,15 @@ export type MessageType =
   | "DEFI_GET_QUOTE"
   | "DEFI_CREATE_INTENT"
   | "DEFI_GET_APPROVAL"
+  | "FIAT_GET_PROVIDERS"
+  | "FIAT_GET_CURRENCIES"
+  | "FIAT_GET_COUNTRIES"
+  | "FIAT_GET_OFFERS_ON_RAMP"
+  | "FIAT_GET_OFFERS_OFF_RAMP"
+  | "FIAT_CREATE_ORDER_ON_RAMP"
+  | "FIAT_CREATE_ORDER_OFF_RAMP"
+  | "FIAT_GET_ORDERS"
+  | "FIAT_VALIDATE_ADDRESS"
   | "BACKGROUND_READY";
 
 export interface ExtensionMessage<T = unknown> {
@@ -330,4 +340,152 @@ export interface PublicRuntimeConfig {
   privacyUrl: string;
   supportUrl: string;
   changellySupportUrl: string;
+}
+
+// ---------------------------------------------------------------------------
+// Fiat API
+// ---------------------------------------------------------------------------
+
+export interface FiatProvider {
+  code: string;
+  name: string;
+  trustPilotRating?: string;
+  iconUrl?: string;
+}
+
+export interface FiatCurrencyLimit {
+  min?: number;
+  max?: number;
+}
+
+export interface FiatCurrencyProvider {
+  providerCode: string;
+  supportedFlow: Array<"buy" | "sell">;
+  limits?: {
+    send?: FiatCurrencyLimit;
+    get?: FiatCurrencyLimit;
+  };
+}
+
+export interface FiatCurrency {
+  type: "crypto" | "fiat";
+  ticker: string;
+  name: string;
+  extraIdName?: string | null;
+  iconUrl?: string;
+  iconColoredUrl?: string;
+  precision?: string;
+  network?: string;
+  protocol?: string;
+  providers?: FiatCurrencyProvider[];
+}
+
+export interface FiatCountry {
+  code: string;
+  name: string;
+  states?: Array<{ code: string; name: string }>;
+  providers?: Array<{
+    providerCode: string;
+    supportedFlow: Array<"buy" | "sell">;
+  }>;
+}
+
+export interface FiatPaymentMethodOffer {
+  offerId?: string;
+  method: string;
+  methodName: string;
+  amountExpectedTo: string;
+  rate: string;
+  invertedRate: string;
+  fee: string;
+}
+
+export interface FiatOffer {
+  providerCode: string;
+  offerId?: string;
+  rate: string;
+  invertedRate: string;
+  fee: string;
+  amountFrom: string;
+  amountExpectedTo: string;
+  paymentMethodOffer: FiatPaymentMethodOffer[];
+}
+
+export interface FiatOffersResponse {
+  offers: FiatOffer[];
+}
+
+export interface FiatBaseOrder {
+  externalOrderId: string;
+  externalUserId: string;
+  providerCode: string;
+  currencyFrom: string;
+  currencyTo: string;
+  amountFrom: string | number;
+  country: string;
+  state?: string;
+  ip?: string;
+  paymentMethod?: string;
+  userAgent?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface FiatCreateOnRampOrderRequest extends FiatBaseOrder {
+  walletAddress: string;
+  walletExtraId?: string;
+  returnSuccessUrl?: string;
+  returnFailedUrl?: string;
+}
+
+export interface FiatCreateOffRampOrderRequest extends FiatBaseOrder {
+  refundAddress: string;
+}
+
+export interface FiatOrder {
+  redirectUrl: string;
+  orderId: string;
+  externalUserId: string;
+  externalOrderId: string;
+  type: "buy" | "sell";
+  providerCode: string;
+  currencyFrom: string;
+  currencyTo: string;
+  amountFrom: string;
+  country: string;
+  state?: string;
+  ip?: string;
+  walletAddress?: string;
+  walletExtraId?: string;
+  refundAddress?: string;
+  paymentMethod?: string;
+  userAgent?: string;
+  metadata?: Record<string, unknown> | null;
+  returnSuccessUrl?: string;
+  returnFailedUrl?: string;
+  payinAmount?: string;
+  payoutAmount?: string;
+  payinCurrency?: string;
+  payoutCurrency?: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  transactionHash?: string;
+}
+
+export interface FiatOrdersResponse {
+  orders: FiatOrder[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface FiatValidateAddressRequest {
+  currency: string;
+  walletAddress: string;
+  walletExtraId?: string;
+}
+
+export interface FiatValidateAddressResponse {
+  result: boolean;
+  cause?: "walletAddress" | "walletExtraId" | null;
 }

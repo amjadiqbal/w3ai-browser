@@ -12,6 +12,7 @@ import { quoteRoute } from "./routes/quote";
 import { swapRoute } from "./routes/swap";
 import { defiRoute } from "./routes/defi";
 import { historyRoute } from "./routes/history";
+import { fiatRoute } from "./routes/fiat";
 import { errorHandler } from "./middleware/error-handler";
 import { env } from "./env";
 
@@ -65,6 +66,7 @@ export async function buildApp() {
   await swapRoute(app);
   await defiRoute(app);
   await historyRoute(app);
+  await fiatRoute(app);
 
   return app;
 }

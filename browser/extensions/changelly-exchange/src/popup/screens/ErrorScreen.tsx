@@ -7,7 +7,7 @@ export default function ErrorScreen() {
 
   return (
     <div className="screen" style={{ alignItems: "center", justifyContent: "center", textAlign: "center" }}>
-      <div style={{ fontSize: 48 }}>⚠️</div>
+      <div style={{ fontSize: 12, letterSpacing: 1, color: "var(--accent-warning)", fontWeight: 700 }}>ERROR</div>
       <h2 style={{ fontSize: "var(--font-size-lg)", fontWeight: 700 }}>Something went wrong</h2>
       <p style={{ color: "var(--text-secondary)", fontSize: "var(--font-size-sm)", maxWidth: 280 }}>
         {state.error?.message ?? "An unexpected error occurred. Please try again."}

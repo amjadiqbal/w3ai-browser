@@ -19,6 +19,16 @@ import {
   createDefiIntent,
   fetchDefiApprovalContext,
   setRuntimeConfig,
+  fetchFeatureFlags,
+  fetchFiatProviders,
+  fetchFiatCurrencies,
+  fetchFiatCountries,
+  fetchFiatOnRampOffers,
+  fetchFiatOffRampOffers,
+  createFiatOnRampOrder,
+  createFiatOffRampOrder,
+  fetchFiatOrders,
+  validateFiatAddress,
 } from "../services/proxy-client";
 import { DEFAULT_CONFIG, STATUS_POLL_INTERVAL_MS } from "../config/env";
 import type {
@@ -46,6 +56,14 @@ let pollAlarmName: string | null = null;
 async function init(): Promise<void> {
   try {
     runtimeConfig = await fetchPublicConfig();
+    const liveFlags = await fetchFeatureFlags();
+    runtimeConfig = {
+      ...runtimeConfig,
+      featureFlags: {
+        ...runtimeConfig.featureFlags,
+        ...liveFlags,
+      },
+    };
     setRuntimeConfig(runtimeConfig);
     featureFlags = runtimeConfig.featureFlags;
     await browser.storage.local.set({ runtimeConfig, featureFlags });
@@ -239,6 +257,69 @@ const handlers: Partial<Record<MessageType, Handler>> = {
   DEFI_GET_APPROVAL: async (payload) => {
     return fetchDefiApprovalContext(payload as Parameters<typeof fetchDefiApprovalContext>[0]);
   },
+
+  FIAT_GET_PROVIDERS: async () => {
+    if (!featureFlags.fiatEnabled) {
+      throw { code: "PAIR_UNAVAILABLE", message: "Fiat API is not enabled.", recoverable: false };
+    }
+    return fetchFiatProviders();
+  },
+
+  FIAT_GET_CURRENCIES: async (payload) => {
+    if (!featureFlags.fiatEnabled) {
+      throw { code: "PAIR_UNAVAILABLE", message: "Fiat API is not enabled.", recoverable: false };
+    }
+    return fetchFiatCurrencies(payload as Parameters<typeof fetchFiatCurrencies>[0]);
+  },
+
+  FIAT_GET_COUNTRIES: async (payload) => {
+    if (!featureFlags.fiatEnabled) {
+      throw { code: "PAIR_UNAVAILABLE", message: "Fiat API is not enabled.", recoverable: false };
+    }
+    return fetchFiatCountries(payload as Parameters<typeof fetchFiatCountries>[0]);
+  },
+
+  FIAT_GET_OFFERS_ON_RAMP: async (payload) => {
+    if (!featureFlags.fiatEnabled) {
+      throw { code: "PAIR_UNAVAILABLE", message: "Fiat API is not enabled.", recoverable: false };
+    }
+    return fetchFiatOnRampOffers(payload as Parameters<typeof fetchFiatOnRampOffers>[0]);
+  },
+
+  FIAT_GET_OFFERS_OFF_RAMP: async (payload) => {
+    if (!featureFlags.fiatEnabled) {
+      throw { code: "PAIR_UNAVAILABLE", message: "Fiat API is not enabled.", recoverable: false };
+    }
+    return fetchFiatOffRampOffers(payload as Parameters<typeof fetchFiatOffRampOffers>[0]);
+  },
+
+  FIAT_CREATE_ORDER_ON_RAMP: async (payload) => {
+    if (!featureFlags.fiatEnabled) {
+      throw { code: "PAIR_UNAVAILABLE", message: "Fiat API is not enabled.", recoverable: false };
+    }
+    return createFiatOnRampOrder(payload as Parameters<typeof createFiatOnRampOrder>[0]);
+  },
+
+  FIAT_CREATE_ORDER_OFF_RAMP: async (payload) => {
+    if (!featureFlags.fiatEnabled) {
+      throw { code: "PAIR_UNAVAILABLE", message: "Fiat API is not enabled.", recoverable: false };
+    }
+    return createFiatOffRampOrder(payload as Parameters<typeof createFiatOffRampOrder>[0]);
+  },
+
+  FIAT_GET_ORDERS: async (payload) => {
+    if (!featureFlags.fiatEnabled) {
+      throw { code: "PAIR_UNAVAILABLE", message: "Fiat API is not enabled.", recoverable: false };
+    }
+    return fetchFiatOrders(payload as Parameters<typeof fetchFiatOrders>[0]);
+  },
+
+  FIAT_VALIDATE_ADDRESS: async (payload) => {
+    if (!featureFlags.fiatEnabled) {
+      throw { code: "PAIR_UNAVAILABLE", message: "Fiat API is not enabled.", recoverable: false };
+    }
+    return validateFiatAddress(payload as Parameters<typeof validateFiatAddress>[0]);
+  },
 };
 
 function getDefaultSettings(): UserSetting {
@@ -287,3 +368,4 @@ browser.runtime.onInstalled.addListener(async (details) => {
     await browser.storage.local.set({ firstInstall: true });
   }
 });
+

@@ -26,6 +26,20 @@ jest.mock("../../clients/changelly-defi", () => ({
   },
 }));
 
+jest.mock("../../clients/changelly-fiat", () => ({
+  changellyFiatClient: {
+    getProviders: jest.fn().mockResolvedValue([{ code: "moonpay", name: "MoonPay" }]),
+    getCurrencies: jest.fn().mockResolvedValue([{ type: "fiat", ticker: "USD", name: "US Dollar" }]),
+    getCountries: jest.fn().mockResolvedValue([{ code: "US", name: "United States" }]),
+    getOnRampOffers: jest.fn().mockResolvedValue({ offers: [{ providerCode: "moonpay", amountExpectedTo: "0.01", paymentMethodOffer: [] }] }),
+    getOffRampOffers: jest.fn().mockResolvedValue({ offers: [{ providerCode: "moonpay", amountExpectedTo: "120", paymentMethodOffer: [] }] }),
+    createOnRampOrder: jest.fn().mockResolvedValue({ orderId: "buy-1", redirectUrl: "https://provider/buy" }),
+    createOffRampOrder: jest.fn().mockResolvedValue({ orderId: "sell-1", redirectUrl: "https://provider/sell" }),
+    getOrders: jest.fn().mockResolvedValue({ orders: [], total: 0, limit: 20, offset: 0 }),
+    validateAddress: jest.fn().mockResolvedValue({ result: true, cause: null }),
+  },
+}));
+
 jest.mock("ioredis", () =>
   jest.fn().mockImplementation(() => ({
     defineCommand: jest.fn(),
@@ -39,6 +53,8 @@ describe("Backend /v1 routes", () => {
   beforeAll(async () => {
     process.env["CHANGELLY_API_KEY"] = "test-key";
     process.env["CHANGELLY_API_SECRET"] = "test-secret";
+    process.env["CHANGELLY_FIAT_API_PUBLIC_KEY"] = "fiat-pub";
+    process.env["CHANGELLY_FIAT_API_PRIVATE_KEY"] = Buffer.from("-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----").toString("base64");
     app = await buildApp();
   });
 
@@ -168,6 +184,92 @@ describe("Backend /v1 routes", () => {
       url: "/v1/defi/swap",
       headers: { origin: "moz-extension://test" },
       payload: { quoteId: "q1", walletAddress: "0xwallet" },
+    });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("GET /v1/fiat/providers", async () => {
+    const res = await app.inject({ method: "GET", url: "/v1/fiat/providers", headers: { origin: "moz-extension://test" } });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("GET /v1/fiat/currencies", async () => {
+    const res = await app.inject({ method: "GET", url: "/v1/fiat/currencies?type=fiat&supportedFlow=buy", headers: { origin: "moz-extension://test" } });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("GET /v1/fiat/countries", async () => {
+    const res = await app.inject({ method: "GET", url: "/v1/fiat/countries?supportedFlow=buy", headers: { origin: "moz-extension://test" } });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("GET /v1/fiat/offers/on-ramp", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/v1/fiat/offers/on-ramp?currencyFrom=USD&currencyTo=BTC&amountFrom=100&country=US",
+      headers: { origin: "moz-extension://test" },
+    });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("GET /v1/fiat/offers/off-ramp", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/v1/fiat/offers/off-ramp?currencyFrom=BTC&currencyTo=USD&amountFrom=0.01&country=US",
+      headers: { origin: "moz-extension://test" },
+    });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("POST /v1/fiat/orders/on-ramp", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/fiat/orders/on-ramp",
+      headers: { origin: "moz-extension://test" },
+      payload: {
+        externalOrderId: "ext-order-1",
+        externalUserId: "ext-user-1",
+        providerCode: "moonpay",
+        currencyFrom: "USD",
+        currencyTo: "BTC",
+        amountFrom: "100",
+        country: "US",
+        walletAddress: "bc1qtest",
+      },
+    });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("POST /v1/fiat/orders/off-ramp", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/fiat/orders/off-ramp",
+      headers: { origin: "moz-extension://test" },
+      payload: {
+        externalOrderId: "ext-order-2",
+        externalUserId: "ext-user-1",
+        providerCode: "moonpay",
+        currencyFrom: "BTC",
+        currencyTo: "USD",
+        amountFrom: "0.01",
+        country: "US",
+        refundAddress: "bc1qrefund",
+      },
+    });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("GET /v1/fiat/orders", async () => {
+    const res = await app.inject({ method: "GET", url: "/v1/fiat/orders?limit=20&offset=0", headers: { origin: "moz-extension://test" } });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("POST /v1/fiat/validate-address", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/fiat/validate-address",
+      headers: { origin: "moz-extension://test" },
+      payload: { currency: "XRP", walletAddress: "rTest" },
     });
     expect(res.statusCode).toBe(200);
   });

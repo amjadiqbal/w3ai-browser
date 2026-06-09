@@ -30,6 +30,7 @@ export const DEFAULT_CONFIG: PublicRuntimeConfig = {
   proxyVersion,
   environment: env,
   featureFlags: {
+    fiatEnabled: false,
     defiEnabled: false,
     fixedRateEnabled: true,
     customTokensEnabled: false,

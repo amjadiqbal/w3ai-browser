@@ -33,6 +33,7 @@ import { DEFAULT_CONFIG } from "../../config/env";
 export type Screen =
   | "onboarding"
   | "swap"
+  | "fiat"
   | "token-picker-from"
   | "token-picker-to"
   | "review"

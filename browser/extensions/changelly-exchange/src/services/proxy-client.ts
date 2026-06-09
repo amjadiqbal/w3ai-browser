@@ -16,6 +16,16 @@ import type {
   TransactionDetail,
   TransactionStatus,
   TradingPair,
+  FiatProvider,
+  FiatCurrency,
+  FiatCountry,
+  FiatOffersResponse,
+  FiatCreateOnRampOrderRequest,
+  FiatCreateOffRampOrderRequest,
+  FiatOrder,
+  FiatOrdersResponse,
+  FiatValidateAddressRequest,
+  FiatValidateAddressResponse,
 } from "../shared/types";
 import { ApiError, ApiErrorCode } from "../shared/types";
 import { DEFAULT_CONFIG } from "../config/env";
@@ -38,6 +48,15 @@ function base(): string {
   return _config.proxyBaseUrl;
 }
 
+function candidateBases(): string[] {
+  const primary = base().replace(/\/$/, "");
+  const fallbacks = ["http://127.0.0.1:3000", "http://localhost:3000"];
+  if (primary.startsWith("http://127.0.0.1") || primary.startsWith("http://localhost")) {
+    return [primary];
+  }
+  return [primary, ...fallbacks];
+}
+
 async function request<T>(
   method: "GET" | "POST",
   path: string,
@@ -54,38 +73,50 @@ async function request<T>(
   };
 
   try {
-    const response = await fetch(`${base()}${path}`, {
-      method,
-      headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeout);
-
-    if (response.status === 429) {
-      const retryAfter = response.headers.get("Retry-After");
-      const err = buildApiError("RATE_LIMITED", "Too many requests. Please wait.", true);
-      err.retryAfterMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : 60_000;
-      throw err;
-    }
-
-    if (response.status === 503) {
-      throw buildApiError("MAINTENANCE", "Service temporarily unavailable.", true);
-    }
-
-    if (!response.ok) {
-      let msg = `Server error ${response.status}`;
+    let lastError: unknown = null;
+    for (const baseUrl of candidateBases()) {
       try {
-        const errBody = await response.json();
-        if (errBody?.message) msg = errBody.message;
-      } catch {
-        /* ignore parse failures */
+        const response = await fetch(`${baseUrl}${path}`, {
+          method,
+          headers,
+          body: body !== undefined ? JSON.stringify(body) : undefined,
+          signal: controller.signal,
+        });
+
+        if (response.status === 429) {
+          const retryAfter = response.headers.get("Retry-After");
+          const err = buildApiError("RATE_LIMITED", "Too many requests. Please wait.", true);
+          err.retryAfterMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : 60_000;
+          throw err;
+        }
+
+        if (response.status === 503) {
+          throw buildApiError("MAINTENANCE", "Service temporarily unavailable.", true);
+        }
+
+        if (!response.ok) {
+          let msg = `Server error ${response.status}`;
+          try {
+            const errBody = await response.json();
+            if (errBody?.message) msg = errBody.message;
+          } catch {
+            /* ignore parse failures */
+          }
+          throw buildApiError("UNKNOWN", msg, false);
+        }
+
+        clearTimeout(timeout);
+        return response.json() as Promise<T>;
+      } catch (innerErr) {
+        lastError = innerErr;
+        const apiErr = innerErr as ApiError;
+        if (apiErr.code && apiErr.code !== "NETWORK_ERROR") {
+          throw innerErr;
+        }
       }
-      throw buildApiError("UNKNOWN", msg, false);
     }
 
-    return response.json() as Promise<T>;
+    throw lastError ?? buildApiError("NETWORK_ERROR", "Network error.", true);
   } catch (err) {
     clearTimeout(timeout);
     if ((err as ApiError).code) throw err;
@@ -261,8 +292,98 @@ export async function fetchFeatureFlags(): Promise<FeatureFlagSet> {
 
   return {
     ...DEFAULT_CONFIG.featureFlags,
+    fiatEnabled: (flags as any).fiatEnabled ?? DEFAULT_CONFIG.featureFlags.fiatEnabled,
     fixedRateEnabled: flags.fixedRateEnabled,
     defiEnabled: flags.defiEnabled ?? flags.defiSwapEnabled ?? false,
     maintenanceMode: flags.maintenanceMode,
   };
+}
+
+export async function fetchFiatProviders(): Promise<FiatProvider[]> {
+  return request<FiatProvider[]>("GET", "/v1/fiat/providers");
+}
+
+export async function fetchFiatCurrencies(query?: {
+  type?: "crypto" | "fiat";
+  providerCode?: string;
+  supportedFlow?: "buy" | "sell";
+}): Promise<FiatCurrency[]> {
+  const params = new URLSearchParams();
+  if (query?.type) params.set("type", query.type);
+  if (query?.providerCode) params.set("providerCode", query.providerCode);
+  if (query?.supportedFlow) params.set("supportedFlow", query.supportedFlow);
+  return request<FiatCurrency[]>("GET", `/v1/fiat/currencies${params.toString() ? `?${params}` : ""}`);
+}
+
+export async function fetchFiatCountries(query?: {
+  providerCode?: string;
+  supportedFlow?: "buy" | "sell";
+}): Promise<FiatCountry[]> {
+  const params = new URLSearchParams();
+  if (query?.providerCode) params.set("providerCode", query.providerCode);
+  if (query?.supportedFlow) params.set("supportedFlow", query.supportedFlow);
+  return request<FiatCountry[]>("GET", `/v1/fiat/countries${params.toString() ? `?${params}` : ""}`);
+}
+
+export async function fetchFiatOnRampOffers(query: {
+  providerCode?: string;
+  externalUserID?: string;
+  currencyFrom: string;
+  currencyTo: string;
+  amountFrom: string;
+  country: string;
+  state?: string;
+  ip?: string;
+}): Promise<FiatOffersResponse> {
+  const params = new URLSearchParams();
+  Object.entries(query).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      params.set(key, String(value));
+    }
+  });
+  return request<FiatOffersResponse>("GET", `/v1/fiat/offers/on-ramp?${params.toString()}`);
+}
+
+export async function fetchFiatOffRampOffers(query: {
+  providerCode?: string;
+  externalUserID?: string;
+  currencyFrom: string;
+  currencyTo: string;
+  amountFrom: string;
+  country: string;
+  state?: string;
+  ip?: string;
+  paymentMethodCode?: string;
+}): Promise<FiatOffersResponse> {
+  const params = new URLSearchParams();
+  Object.entries(query).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      params.set(key, String(value));
+    }
+  });
+  return request<FiatOffersResponse>("GET", `/v1/fiat/offers/off-ramp?${params.toString()}`);
+}
+
+export async function createFiatOnRampOrder(payload: FiatCreateOnRampOrderRequest): Promise<FiatOrder> {
+  return request<FiatOrder>("POST", "/v1/fiat/orders/on-ramp", payload);
+}
+
+export async function createFiatOffRampOrder(payload: FiatCreateOffRampOrderRequest): Promise<FiatOrder> {
+  return request<FiatOrder>("POST", "/v1/fiat/orders/off-ramp", payload);
+}
+
+export async function fetchFiatOrders(query?: {
+  limit?: number;
+  offset?: number;
+  status?: string;
+}): Promise<FiatOrdersResponse> {
+  const params = new URLSearchParams();
+  if (query?.limit !== undefined) params.set("limit", String(query.limit));
+  if (query?.offset !== undefined) params.set("offset", String(query.offset));
+  if (query?.status) params.set("status", query.status);
+  return request<FiatOrdersResponse>("GET", `/v1/fiat/orders${params.toString() ? `?${params}` : ""}`);
+}
+
+export async function validateFiatAddress(payload: FiatValidateAddressRequest): Promise<FiatValidateAddressResponse> {
+  return request<FiatValidateAddressResponse>("POST", "/v1/fiat/validate-address", payload);
 }

@@ -15,6 +15,7 @@ const config: PublicRuntimeConfig = {
   proxyVersion: "v1",
   environment: "production",
   featureFlags: {
+    fiatEnabled: true,
     defiEnabled: false,
     fixedRateEnabled: true,
     customTokensEnabled: false,

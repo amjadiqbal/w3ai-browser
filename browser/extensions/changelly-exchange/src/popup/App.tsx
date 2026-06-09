@@ -18,6 +18,7 @@ import ReceiptScreen from "./screens/ReceiptScreen";
 import HistoryScreen from "./screens/HistoryScreen";
 import TransactionDetailScreen from "./screens/TransactionDetailScreen";
 import SettingsScreen from "./screens/SettingsScreen";
+import FiatScreen from "./screens/FiatScreen";
 import MaintenanceBanner from "./components/MaintenanceBanner";
 import ErrorScreen from "./screens/ErrorScreen";
 
@@ -109,6 +110,7 @@ function RouterInner() {
       {state.maintenanceMode && <MaintenanceBanner />}
       {state.screen === "onboarding" && <OnboardingScreen />}
       {state.screen === "swap" && <SwapScreen />}
+      {state.screen === "fiat" && <FiatScreen />}
       {(state.screen === "token-picker-from" || state.screen === "token-picker-to") && (
         <TokenPickerScreen side={state.screen === "token-picker-from" ? "from" : "to"} />
       )}

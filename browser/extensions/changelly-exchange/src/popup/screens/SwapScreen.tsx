@@ -93,17 +93,24 @@ export default function SwapScreen() {
         <span className="screen-title">Exchange</span>
         <button
           className="btn btn-ghost"
+          aria-label="Open fiat buy and sell"
+          onClick={() => dispatch({ type: "SET_SCREEN", payload: "fiat" })}
+        >
+          Buy/Sell
+        </button>
+        <button
+          className="btn btn-ghost"
           aria-label="History"
           onClick={() => dispatch({ type: "SET_SCREEN", payload: "history" })}
         >
-          ⏱
+          History
         </button>
         <button
           className="btn btn-ghost"
           aria-label="Settings"
           onClick={() => dispatch({ type: "SET_SCREEN", payload: "settings" })}
         >
-          ⚙
+          Settings
         </button>
       </header>
 
@@ -126,6 +133,12 @@ export default function SwapScreen() {
           </button>
         )}
       </div>
+
+      {state.assets.length === 0 && (
+        <div className="banner banner-warning" role="alert">
+          Market data is unavailable. Ensure backend proxy is running on `http://127.0.0.1:3000` or reachable via configured proxy URL.
+        </div>
+      )}
 
       {/* From block */}
       <div className="swap-amount-block">
