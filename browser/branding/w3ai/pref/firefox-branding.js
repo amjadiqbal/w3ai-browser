@@ -5,7 +5,7 @@
 // This file contains branding-specific prefs.
 
 pref("startup.homepage_override_url", "");
-pref("startup.homepage_welcome_url", "about:welcome");
+pref("startup.homepage_welcome_url", "about:newtab");
 pref("startup.homepage_welcome_url.additional", "");
 // Interval: Time between checks for a new version (in seconds)
 pref("app.update.interval", 21600); // 6 hours
@@ -70,6 +70,12 @@ pref("browser.preferences.moreFromMozilla", false);
 
 // Point support links to a local blank page
 pref("app.support.baseURL", "about:blank#");
+
+// W3Ai firstrun: bypass all Firefox onboarding — AIWindow has its own firstrun flow
+pref("browser.aboutwelcome.enabled", false);
+pref("browser.preonboarding.enabled", false);
+pref("termsofuse.bypassNotification", true);
+pref("messaging-system.askForFeedback", false);
 
 // About:addons: disable AMO links and use local recommendations
 pref("extensions.getAddons.link.url", "about:blank#");
