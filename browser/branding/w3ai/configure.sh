@@ -5,3 +5,4 @@
 MOZ_APP_DISPLAYNAME="W3Ai Browser"
 MOZ_APP_REMOTINGNAME=w3ai
 MOZ_MACBUNDLE_ID=org.w3ai.browser
+MOZ_CRASHREPORTER_URL=https://crash-reports.plato.ai
