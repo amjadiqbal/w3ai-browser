@@ -20,10 +20,10 @@
 -mozmonitor-brand-name = Mozilla Monitor
 -pocket-brand-name = Pocket
 -send-brand-name = Firefox Send
--screenshots-brand-name = Firefox Screenshots
+-screenshots-brand-name = { -brand-short-name } Screenshots
 -mozilla-vpn-brand-name = Mozilla VPN
--profiler-brand-name = Firefox Profiler
--translations-brand-name = Firefox Translations
+-profiler-brand-name = { -brand-short-name } Profiler
+-translations-brand-name = { -brand-short-name } Translations
 -focus-brand-name = Firefox Focus
 -relay-brand-name = Firefox Relay
 -relay-brand-short-name = Relay
@@ -38,20 +38,10 @@
 # The particle "by" can be localized, "Fakespot" and "Mozilla" should not be localized or transliterated.
 -fakespot-brand-full-name = Fakespot by Mozilla
 
-# “Suggest” can be localized, “Firefox” must be treated as a brand
-# and kept in English.
--firefox-suggest-brand-name = Firefox Suggest
+-firefox-suggest-brand-name = { -brand-short-name } Suggest
 
-# ”Home" can be localized, “Firefox” must be treated as a brand
-# and kept in English.
--firefox-home-brand-name = Firefox Home
+-firefox-home-brand-name = { -brand-short-name } Home
 
-# View" can be localized, “Firefox” must be treated as a brand
-# and kept in English.
--firefoxview-brand-name = Firefox View
+-firefoxview-brand-name = { -brand-short-name } View
 
-# Firefox Labs is the name for a page in Settings to allow users to learn about
-# experimental and in-development features, and turn those features on and off.
-# The "Labs" portion can be localized, “Firefox” must be treated as a brand
-# and kept in English.
--firefoxlabs-brand-name = Firefox Labs
+-firefoxlabs-brand-name = { -brand-short-name } Labs
