@@ -56,10 +56,13 @@ pref("identity.fxaccounts.toolbar.pxiToolbarEnabled.monitorEnabled", false);
 pref("identity.fxaccounts.toolbar.pxiToolbarEnabled.relayEnabled", false);
 pref("identity.fxaccounts.toolbar.pxiToolbarEnabled.vpnEnabled", false);
 
-// Clear Mozilla-hosted endpoints; set your own later if needed
+// Zero out all Mozilla-hosted FxA and Sync endpoints
+pref("identity.fxaccounts.remote.root", "");
+pref("identity.fxaccounts.remote.profile.uri", "");
+pref("identity.fxaccounts.remote.oauth.uri", "");
 pref("identity.fxaccounts.remote.pairing.uri", "");
-pref("identity.sync.tokenserver.uri", "");
 pref("identity.fxaccounts.autoconfig.uri", "");
+pref("identity.sync.tokenserver.uri", "");
 pref("identity.sendtabpromo.url", "");
 pref("identity.mobilepromo.android", "");
 pref("identity.mobilepromo.ios", "");
