@@ -80,12 +80,9 @@ pref("browser.preonboarding.enabled", false);
 pref("termsofuse.bypassNotification", true);
 pref("messaging-system.askForFeedback", false);
 
-// About:addons: disable AMO links and use local recommendations
-pref("extensions.getAddons.link.url", "about:blank#");
-pref("extensions.getAddons.search.browseURL", "");
-pref("extensions.recommendations.privacyPolicyUrl", "about:blank#");
-pref("extensions.getAddons.discovery.api_url", "about:blank#");
-pref("extensions.htmlaboutaddons.recommendations.enabled", true);
+// About:addons: disable remote discovery API (server not live yet); hide data-sharing notice
+pref("extensions.getAddons.discovery.api_url", "");
+pref("extensions.htmlaboutaddons.recommendations.enabled", false);
 pref("extensions.recommendations.hideNotice", true);
 
 // --- Milestone 8: Privacy Hardening ---

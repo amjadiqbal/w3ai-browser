@@ -5,7 +5,7 @@
 addons-page-title = Add-ons Manager
 
 search-header =
-    .placeholder = Search addons.mozilla.org
+    .placeholder = Search for extensions
     .searchbuttonlabel = Search
 
 ## Variables
@@ -497,7 +497,7 @@ addon-badge-recommended4 =
 # We hard code "Mozilla" in the string below because the extensions are built
 # by Mozilla and we don't want forks to display "by Fork".
 addon-badge-line4 =
-  .title = Official extension built by Mozilla. Meets security and performance standards
+  .title = Official extension. Meets security and performance standards
 # This string needs to work in the context of other forks that are not Firefox
 # or built by Mozilla. In particular, we do not want to imply that an
 # organisation other than Mozilla or the Firefox team are performing the
@@ -529,7 +529,7 @@ addon-sitepermissions-required = Grants the following capabilities to <span data
 
 # A recommendation for the Firefox Color theme shown at the bottom of the theme
 # list view. The "Firefox Color" name itself should not be translated.
-recommended-theme-1 = Feeling creative? <a data-l10n-name="link">Build your own theme with Firefox Color.</a>
+recommended-theme-1 = Feeling creative? <a data-l10n-name="link">Explore themes for { -brand-short-name }.</a>
 
 ## Page headings
 
@@ -545,10 +545,10 @@ shortcuts-heading = Manage Extension Shortcuts
 
 default-heading-search-label = Find more add-ons
 addons-heading-search-input =
-    .placeholder = Search addons.mozilla.org
+    .placeholder = Search for extensions
 addons-heading-search-button =
-    .title = Search addons.mozilla.org
-    .aria-label = Search addons.mozilla.org
+    .title = Search for extensions
+    .aria-label = Search for extensions
 
 addon-page-options-button =
     .title = Tools for all add-ons
