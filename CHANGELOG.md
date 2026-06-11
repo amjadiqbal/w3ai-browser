@@ -9,6 +9,10 @@ W3Ai versioning: `MAJOR.MINOR.PATCH` (independent of upstream Firefox version).
 ## [Unreleased]
 
 ### Added
+- **Milestone 18** — Plugin-aware starter prompts in AI sidebar (`browser/components/aiwindow/ui/components/ai-window/ai-window.mjs`)
+  - `loadStarterPrompts` checks AgentPluginRegistry for the current tab URL
+  - Registered sites (CIP Concierge, W3Ai, Uniswap, GitHub) show their curated prompts instead of AI-generated ones
+  - Falls back to existing LLM-generated prompts on unregistered sites
 - **Milestone 17** — AgentPluginRegistry: site-specific agent personas (`browser/components/aiwindow/services/AgentPluginRegistry.sys.mjs`)
   - URL-pattern registry mapping sites to named agents (CIP Concierge, W3Ai Assistant, DeFi Analyst, Code Review Agent)
   - Each plugin carries a system-prompt suffix and suggested prompts; wired into PageAssist

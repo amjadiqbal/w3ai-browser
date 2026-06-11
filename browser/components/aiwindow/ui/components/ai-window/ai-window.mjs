@@ -44,6 +44,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///browser/components/aiwindow/models/memories/MemoriesManager.sys.mjs",
   MODELS:
     "moz-src:///browser/components/aiwindow/ui/modules/AIWindowConstants.sys.mjs",
+  AgentPluginRegistry:
+    "moz-src:///browser/components/aiwindow/services/AgentPluginRegistry.sys.mjs",
 });
 
 ChromeUtils.defineLazyGetter(lazy, "log", function () {
@@ -681,26 +683,48 @@ export class AIWindow extends MozLitElement {
       );
 
       if (this.mode === MODE.SIDEBAR && gBrowser) {
-        // Get tab context for LLM-generated prompts
-        // @todo bug 2015919 to use same context as visualized in smartbar
-        const contextTabs = [gBrowser.selectedTab].map(tab => ({
-          title: tab.label,
-          url: tab.linkedBrowser.currentURI.spec,
-        }));
+        const currentUrl =
+          gBrowser.selectedTab?.linkedBrowser?.currentURI?.spec ?? "";
+        const plugin =
+          lazy.AgentPluginRegistry.getPluginForUrl(currentUrl);
 
-        // Get memories setting from user preferences
-        const memoriesEnabled =
-          this.#memoriesToggled ?? this.#memoriesIconShown;
+        if (
+          plugin !== lazy.AgentPluginRegistry.DEFAULT_PLUGIN &&
+          plugin.suggestedPrompts?.length
+        ) {
+          starters = plugin.suggestedPrompts.map(text => ({
+            text,
+            type: "agent-plugin",
+          }));
+        } else {
+          // Get tab context for LLM-generated prompts
+          // @todo bug 2015919 to use same context as visualized in smartbar
+          const contextTabs = [gBrowser.selectedTab].map(tab => ({
+            title: tab.label,
+            url: tab.linkedBrowser.currentURI.spec,
+          }));
 
-        const sidebarStarters = await lazy
-          .generateConversationStartersSidebar(contextTabs, 2, memoriesEnabled)
-          .catch(e => {
-            lazy.log.error("[Prompts] Failed to generate sidebar starters:", e);
-            return null;
-          });
+          // Get memories setting from user preferences
+          const memoriesEnabled =
+            this.#memoriesToggled ?? this.#memoriesIconShown;
 
-        if (sidebarStarters?.length) {
-          starters = sidebarStarters;
+          const sidebarStarters = await lazy
+            .generateConversationStartersSidebar(
+              contextTabs,
+              2,
+              memoriesEnabled
+            )
+            .catch(e => {
+              lazy.log.error(
+                "[Prompts] Failed to generate sidebar starters:",
+                e
+              );
+              return null;
+            });
+
+          if (sidebarStarters?.length) {
+            starters = sidebarStarters;
+          }
         }
       }
     } catch (e) {
