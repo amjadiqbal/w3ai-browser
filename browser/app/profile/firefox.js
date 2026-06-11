@@ -887,7 +887,7 @@ pref("browser.helperApps.showOpenOptionForPdfJS", true);
 pref("browser.helperApps.showOpenOptionForViewableInternally", true);
 
 // search engines URL
-pref("browser.search.searchEnginesURL",      "https://extensions.plato.ai/search-engines/");
+pref("browser.search.searchEnginesURL",      "https://addons.mozilla.org/en-US/firefox/search-engines/");
 
 // search bar results always open in a new tab
 pref("browser.search.openintab", false);
@@ -2246,7 +2246,7 @@ pref("browser.smartwindow.memories.generateFromConversation", true);
 pref("browser.smartwindow.memories.hasSeenMemories", false);
 pref("browser.smartwindow.memoriesLogLevel", "Warn");
 pref("browser.smartwindow.firstrun.autoAdvanceMS", 3000);
-pref("browser.smartwindow.firstrun.hasCompleted", true);
+pref("browser.smartwindow.firstrun.hasCompleted", false);
 pref("browser.smartwindow.showThemesNotice", true);
 pref("browser.smartwindow.firstrun.modelChoice", "");
 pref("browser.smartwindow.model", "");

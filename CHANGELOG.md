@@ -9,6 +9,11 @@ W3Ai versioning: `MAJOR.MINOR.PATCH` (independent of upstream Firefox version).
 ## [Unreleased]
 
 ### Added
+- **Milestone 20** — Fix black content area, use existing W3Ai AI endpoint, fix search
+  - `w3ai-theme.css`: removed `overflow: clip` from `#w3ai-main-panel` — it was silently preventing the Gecko compositor from promoting browser-element layers, making the web content area black
+  - `browser-init.js`: reverted unconditional `ai-window` attribute on startup; FxA bypass in `AIWindowAccountAuth` is sufficient for the AI sidebar button to work on click
+  - `PageAssist.sys.mjs`: switched from hardcoded `api.anthropic.com` to `browser.smartwindow.endpoint` pref (`https://ai.plato.ai/v1`) — uses OpenAI-compatible `/chat/completions` format; API key from `browser.smartwindow.apiKey`
+  - `firefox.js`: fixed `browser.search.searchEnginesURL` pointing to unreachable `extensions.plato.ai` domain; pointed to AMO search engines
 - **Milestone 19** — Fix AI sidebar activation (FxA bypass + always-on AI Window mode)
   - `browser-init.js`: always sets `ai-window` attribute when `browser.smartwindow.enabled && !identity.fxaccounts.enabled`; activates `AIWindowTabStatesManager` on every startup without requiring FxAccounts auth
   - `AIWindowAccountAuth.sys.mjs`: `canAccessAIWindow` + `ensureAIWindowAccess` return `true` immediately when FxAccounts is disabled

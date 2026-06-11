@@ -10,13 +10,14 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///browser/components/aiwindow/services/AgentPluginRegistry.sys.mjs",
 });
 
+const ENDPOINT_PREF = "browser.smartwindow.endpoint";
 const APIKEY_PREF = "browser.smartwindow.apiKey";
-const CLAUDE_ENDPOINT = "https://api.anthropic.com/v1/messages";
 const DEFAULT_MODEL = "claude-opus-4-8";
 const MAX_CONTENT_CHARS = 100_000;
 
 /**
- * Page Assistant — calls Claude API with the current page as context.
+ * Page Assistant — sends page context to the configured W3Ai AI endpoint.
+ * Endpoint is read from browser.smartwindow.endpoint pref (OpenAI-compatible).
  */
 export const PageAssist = {
   /**
@@ -38,35 +39,40 @@ export const PageAssist = {
       return null;
     }
 
-    const apiKey = Services.prefs.getStringPref(APIKEY_PREF, "");
-    if (!apiKey) {
-      return "API key not configured. Add your Anthropic API key in browser settings.";
+    const endpoint = Services.prefs.getStringPref(ENDPOINT_PREF, "");
+    if (!endpoint) {
+      return "AI endpoint not configured. Set browser.smartwindow.endpoint in preferences.";
     }
+
+    const apiKey = Services.prefs.getStringPref(APIKEY_PREF, "");
 
     const plugin = lazy.AgentPluginRegistry.getPluginForUrl(pageData.url);
     const systemPrompt = _buildSystemPrompt(pageData, plugin);
 
+    // Build the messages endpoint URL — append /chat/completions if the endpoint
+    // looks like a base URL (e.g. https://ai.plato.ai/v1).
+    const messagesUrl = endpoint.endsWith("/messages")
+      ? endpoint
+      : endpoint.replace(/\/?$/, "") + "/chat/completions";
+
+    const headers = { "Content-Type": "application/json" };
+    if (apiKey) {
+      headers.Authorization = `Bearer ${apiKey}`;
+    }
+
     let response;
     try {
-      response = await fetch(CLAUDE_ENDPOINT, {
+      response = await fetch(messagesUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-        },
+        headers,
         body: JSON.stringify({
-          model: DEFAULT_MODEL,
+          model: plugin?.model ?? DEFAULT_MODEL,
           max_tokens: 1024,
-          stream: true,
-          system: [
-            {
-              type: "text",
-              text: systemPrompt,
-              cache_control: { type: "ephemeral" },
-            },
+          stream: false,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
           ],
-          messages: [{ role: "user", content: userPrompt }],
         }),
       });
     } catch (e) {
@@ -80,7 +86,14 @@ export const PageAssist = {
       return `API error ${response.status}`;
     }
 
-    return _drainStream(response.body);
+    let data;
+    try {
+      data = await response.json();
+    } catch (e) {
+      return "Could not parse AI response.";
+    }
+
+    return data?.choices?.[0]?.message?.content ?? null;
   },
 };
 
@@ -115,44 +128,4 @@ function _buildSystemPrompt(pageData, plugin) {
 
   parts.push("\nAnswer the user's question based on the page above. Be concise.");
   return parts.join("\n");
-}
-
-async function _drainStream(body) {
-  const decoder = new TextDecoder();
-  const reader = body.getReader();
-  let text = "";
-
-  try {
-    outer: while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        break;
-      }
-      for (const line of decoder.decode(value, { stream: true }).split("\n")) {
-        if (!line.startsWith("data: ")) {
-          continue;
-        }
-        const payload = line.slice(6).trim();
-        if (payload === "[DONE]") {
-          break outer;
-        }
-        let event;
-        try {
-          event = JSON.parse(payload);
-        } catch {
-          continue;
-        }
-        if (
-          event.type === "content_block_delta" &&
-          event.delta?.type === "text_delta"
-        ) {
-          text += event.delta.text;
-        }
-      }
-    }
-  } finally {
-    reader.releaseLock();
-  }
-
-  return text || null;
 }

@@ -313,7 +313,6 @@ toolbarbutton {
 
   #w3ai-main-panel {
     border-radius: var(--w3ai-radius-md);
-    overflow: clip;
     margin-block: 5px;
     margin-inline-end: 5px;
   }
