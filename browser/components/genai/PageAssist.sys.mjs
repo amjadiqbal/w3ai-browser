@@ -4,6 +4,12 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+const lazy = {};
+ChromeUtils.defineESModuleGetters(lazy, {
+  AgentPluginRegistry:
+    "moz-src:///browser/components/aiwindow/services/AgentPluginRegistry.sys.mjs",
+});
+
 const APIKEY_PREF = "browser.smartwindow.apiKey";
 const CLAUDE_ENDPOINT = "https://api.anthropic.com/v1/messages";
 const DEFAULT_MODEL = "claude-opus-4-8";
@@ -37,7 +43,8 @@ export const PageAssist = {
       return "API key not configured. Add your Anthropic API key in browser settings.";
     }
 
-    const systemPrompt = _buildSystemPrompt(pageData);
+    const plugin = lazy.AgentPluginRegistry.getPluginForUrl(pageData.url);
+    const systemPrompt = _buildSystemPrompt(pageData, plugin);
 
     let response;
     try {
@@ -77,7 +84,7 @@ export const PageAssist = {
   },
 };
 
-function _buildSystemPrompt(pageData) {
+function _buildSystemPrompt(pageData, plugin) {
   const parts = [
     "You are a helpful assistant embedded in the W3Ai Browser. " +
       "You have access to the web page the user is currently viewing.",
@@ -100,6 +107,10 @@ function _buildSystemPrompt(pageData) {
     parts.push(
       "\nNote: Page content could not be extracted (non-article page)."
     );
+  }
+
+  if (plugin?.systemSuffix) {
+    parts.push(`\n${plugin.systemSuffix}`);
   }
 
   parts.push("\nAnswer the user's question based on the page above. Be concise.");

@@ -9,6 +9,9 @@ W3Ai versioning: `MAJOR.MINOR.PATCH` (independent of upstream Firefox version).
 ## [Unreleased]
 
 ### Added
+- **Milestone 17** — AgentPluginRegistry: site-specific agent personas (`browser/components/aiwindow/services/AgentPluginRegistry.sys.mjs`)
+  - URL-pattern registry mapping sites to named agents (CIP Concierge, W3Ai Assistant, DeFi Analyst, Code Review Agent)
+  - Each plugin carries a system-prompt suffix and suggested prompts; wired into PageAssist
 - **Milestone 16** — PageAssist real Claude API integration (`browser/components/genai/PageAssist.sys.mjs`)
   - Replaced mock stub with live Anthropic API (`claude-opus-4-8`)
   - SSE stream parsing with `cache_control: {type: "ephemeral"}` on page context for prompt caching
