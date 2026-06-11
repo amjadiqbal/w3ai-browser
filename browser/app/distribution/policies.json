@@ -3,7 +3,9 @@
     "DisableAppUpdate": true,
     "SearchEngines": {
       "Default": "DuckDuckGo",
-      "PreventInstalls": false
+      "DefaultPrivate": "DuckDuckGo",
+      "PreventInstalls": false,
+      "Remove": ["Amazon.com"]
     }
   }
 }
