@@ -9,6 +9,11 @@ W3Ai versioning: `MAJOR.MINOR.PATCH` (independent of upstream Firefox version).
 ## [Unreleased]
 
 ### Added
+- **Milestone 19** — Fix AI sidebar activation (FxA bypass + always-on AI Window mode)
+  - `browser-init.js`: always sets `ai-window` attribute when `browser.smartwindow.enabled && !identity.fxaccounts.enabled`; activates `AIWindowTabStatesManager` on every startup without requiring FxAccounts auth
+  - `AIWindowAccountAuth.sys.mjs`: `canAccessAIWindow` + `ensureAIWindowAccess` return `true` immediately when FxAccounts is disabled
+  - `firefox.js`: default `browser.smartwindow.firstrun.hasCompleted = true` (skip AIWindow model-selection wizard; W3Ai uses its own onboarding)
+  - `./mach build faster` run: all Milestones 16-19 JS changes packaged into dist
 - **Milestone 18** — Plugin-aware starter prompts in AI sidebar (`browser/components/aiwindow/ui/components/ai-window/ai-window.mjs`)
   - `loadStarterPrompts` checks AgentPluginRegistry for the current tab URL
   - Registered sites (CIP Concierge, W3Ai, Uniswap, GitHub) show their curated prompts instead of AI-generated ones

@@ -68,6 +68,10 @@ export const AIWindowAccountAuth = {
   },
 
   async canAccessAIWindow() {
+    // W3Ai: FxAccounts disabled — no sign-in gate
+    if (!Services.prefs.getBoolPref("identity.fxaccounts.enabled", true)) {
+      return true;
+    }
     if (!this.hasToSConsent) {
       return false;
     }
@@ -98,6 +102,10 @@ export const AIWindowAccountAuth = {
   },
 
   async ensureAIWindowAccess(browser) {
+    // W3Ai: FxAccounts disabled — grant access unconditionally
+    if (!Services.prefs.getBoolPref("identity.fxaccounts.enabled", true)) {
+      return true;
+    }
     if (!(await this.canAccessAIWindow())) {
       const signedIn = await this.promptSignIn(browser);
       if (!signedIn) {

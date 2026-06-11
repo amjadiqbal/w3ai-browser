@@ -175,6 +175,17 @@ var gBrowserInit = {
       }
     }
 
+    // W3Ai: always activate AI Window mode when smartwindow is enabled and
+    // FxAccounts is disabled (our auth-bypass build).  This ensures
+    // AIWindowTabStatesManager is created and per-tab state is tracked even
+    // on a first/cold start where no session-store property-bag is present.
+    if (
+      Services.prefs.getBoolPref("browser.smartwindow.enabled", false) &&
+      !Services.prefs.getBoolPref("identity.fxaccounts.enabled", true)
+    ) {
+      document.documentElement.setAttribute("ai-window", true);
+    }
+
     // Run menubar initialization first, to avoid CustomTitlebar code picking
     // up mutations from it and causing a reflow.
     AutoHideMenubar.init();
