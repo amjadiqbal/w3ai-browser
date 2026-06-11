@@ -9,6 +9,10 @@ W3Ai versioning: `MAJOR.MINOR.PATCH` (independent of upstream Firefox version).
 ## [Unreleased]
 
 ### Added
+- **Milestone 16** — PageAssist real Claude API integration (`browser/components/genai/PageAssist.sys.mjs`)
+  - Replaced mock stub with live Anthropic API (`claude-opus-4-8`)
+  - SSE stream parsing with `cache_control: {type: "ephemeral"}` on page context for prompt caching
+  - Reads API key from `browser.smartwindow.apiKey` pref; graceful error messages when unconfigured
 - Root `README.md` rewritten with W3Ai/PlatoAi branding and product vision
 - `VERSION` file introduced for explicit W3Ai version tracking
 - `CHANGELOG.md` introduced
