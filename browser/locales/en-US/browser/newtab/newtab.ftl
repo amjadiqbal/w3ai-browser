@@ -2,9 +2,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-### Firefox Home / New Tab strings for about:home / about:newtab.
+### W3Ai Home / New Tab strings for about:home / about:newtab.
 
-newtab-page-title = New Tab
+newtab-page-title = W3Ai Home
 newtab-customize-panel-icon-button =
     .title = Customize this page
 newtab-customize-panel-icon-button-label = Customize
@@ -350,7 +350,7 @@ newtab-wallpaper-celestial-eclipse-time-lapse = Lunar eclipse time lapse
 newtab-wallpaper-celestial-black-hole = Black hole galaxy illustration
 newtab-wallpaper-celestial-river = Satellite image of river
 
-## Firefox
+## W3Ai
 
 newtab-wallpaper-category-title-firefox = { -brand-product-name }
 
@@ -493,7 +493,7 @@ newtab-section-mangage-topics-blocked-topics-empty-state = You have not blocked 
 ## Strings for custom wallpaper highlight
 
 newtab-custom-wallpaper-title = Custom wallpapers are here
-# 'Make firefox yours" means to customize or personalize
+# 'Make W3Ai yours' means to customize or personalize
 newtab-custom-wallpaper-subtitle = Upload your own wallpaper or pick a custom color to make { -brand-product-name } yours.
 newtab-custom-wallpaper-cta = Try it
 

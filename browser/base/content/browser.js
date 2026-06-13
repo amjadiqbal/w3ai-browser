@@ -1276,7 +1276,7 @@ function HandleAppCommandEvent(evt) {
       gLazyFindCommand("onFindCommand");
       break;
     case "Help":
-      openHelpLink("firefox-help");
+      openHelpLink("w3ai-help");
       break;
     case "Open":
       BrowserCommands.openFileWindow();

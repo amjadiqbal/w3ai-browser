@@ -1,0 +1,51 @@
+# Changelog
+
+All notable changes to W3Ai Browser are documented here.
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+W3Ai versioning: `MAJOR.MINOR.PATCH` (independent of upstream Firefox version).
+
+---
+
+## [Unreleased]
+
+### Added
+- **Milestone 15** — About:Addons branding cleanup
+  - `aboutAddons.ftl`: replace AMO search placeholders with "Search for extensions"; remove "built by Mozilla" from official badge tooltip; replace "Firefox Color" theme recommendation with W3Ai-branded copy
+  - `firefox-branding.js`: disable remote discovery recommendations panel (API server not live); clean up extension URL overrides
+- **Milestone 12** — Preferences UI cleanup
+  - `preferences.js`: remove Nimbus-controlled "More from Mozilla" panel trigger
+  - `aiFeatures.mjs`, `privacy.inc.xhtml`: replace firefox-prefixed support-page keys with w3ai-prefixed equivalents
+- **Milestone 11** — firefox-help topic key → w3ai-help
+  - `aboutDialog.js`, `browser.js`: replace `openHelpLink("firefox-help")` with `openHelpLink("w3ai-help")`
+- **Milestone 10** — W3Ai Home new tab branding
+  - `newtab.ftl`: rename tab title from "New Tab" to "W3Ai Home"; update wallpaper section comment
+  - `WallpaperFeed.sys.mjs`: filter out Firefox-branded wallpapers (category "firefox") from the picker
+- **Milestone 9** — about:support Name field and branding strings
+  - `moz.configure`: `MOZ_APP_VENDOR = Plato`; `--with-app-basename = W3Ai`; `--with-app-name = firefox`
+  - `configure.sh`: `MOZ_CRASHREPORTER_URL = https://crash-reports.plato.ai`
+- **Milestone 3** — About W3Ai dialog branding
+  - `aboutDialog.xhtml`: replace all Mozilla/foundation links with plato.ai/w3ai.io URLs; Terms and Privacy point to plato.ai
+  - `aboutDialog.ftl`: replace "global community" with "AI-first technology company"; update helpus CTA
+- **Milestone 2** — Toolkit brand string audit
+  - `brandings.ftl`: Screenshots, Profiler, Translations, Suggest, Home, View, Labs now use `{ -brand-short-name }` token
+  - `aboutAddons.ftl`: recommendations, badge tooltip, block notices, OpenH264 use brand tokens
+- **Milestone 1** — W3Ai custom new tab page
+  - `firefox.js`: disable Pocket/Discovery Stream, sponsored stories/topsites, newtab telemetry pings; always show wordmark; hide promo card
+  - `firefox-wordmark.svg`: use `context-fill` so CSS controls the wordmark colour (light/dark aware)
+  - `newtab.ftl`: section header comment updated to "W3Ai Home"
+- `browser/branding/w3ai/`: W3Ai branding assets transplanted onto clean Firefox base
+- `VERSION`: introduced for explicit W3Ai version tracking
+
+---
+
+## [1.0.0] - In Development (base: Firefox 151)
+
+### Added
+- W3Ai branding: `browser/branding/w3ai/` — icons, configure.sh, brand.ftl, brand.properties
+  - `MOZ_APP_DISPLAYNAME = "W3Ai Browser"`, `MOZ_APP_REMOTINGNAME = w3ai`, `MOZ_MACBUNDLE_ID = org.w3ai.browser`
+  - Vendor: Plato, Full name: Plato W3Ai Browser
+
+---
+
+*Upstream Firefox version: 151.0a1*
+*W3Ai Browser version managed in [VERSION](./VERSION)*

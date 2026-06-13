@@ -204,7 +204,7 @@ class BlockAiConfirmationDialog extends MozLitElement {
           <p
             data-l10n-id="preferences-ai-controls-block-confirmation-features-after"
           ></p>
-          <a is="moz-support-link" support-page="firefox-ai-controls"></a>
+          <a is="moz-support-link" support-page="w3ai-ai-controls"></a>
         </div>
         <moz-button-group>
           <moz-button

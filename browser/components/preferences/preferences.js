@@ -357,13 +357,6 @@ function init_all() {
     document.getElementById("category-experimental").hidden = true;
   }
 
-  NimbusFeatures.moreFromMozilla.recordExposureEvent({ once: true });
-  if (NimbusFeatures.moreFromMozilla.getVariable("enabled")) {
-    document.getElementById("category-more-from-mozilla").hidden = false;
-    gMoreFromMozillaPane.option =
-      NimbusFeatures.moreFromMozilla.getVariable("template");
-    register_module("paneMoreFromMozilla", gMoreFromMozillaPane);
-  }
   // The Sync category needs to be the last of the "real" categories
   // registered and inititalized since many tests wait for the
   // "sync-pane-loaded" observer notification before starting the test.

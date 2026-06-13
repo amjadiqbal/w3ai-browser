@@ -151,20 +151,22 @@ export class WallpaperFeed {
     }
 
     const wallpapers = [
-      ...records.map(record => {
-        return {
-          ...record,
-          ...(record.attachment
-            ? {
-                wallpaperUrl: `${baseAttachmentURL}${record.attachment.location}`,
-              }
-            : {}),
-          background_position: record.background_position || "center",
-          category: record.category || "",
-          order: record.order || 0,
-          thumbnail: record.thumbnail || null,
-        };
-      }),
+      ...records
+        .filter(record => record.category !== "firefox")
+        .map(record => {
+          return {
+            ...record,
+            ...(record.attachment
+              ? {
+                  wallpaperUrl: `${baseAttachmentURL}${record.attachment.location}`,
+                }
+              : {}),
+            background_position: record.background_position || "center",
+            category: record.category || "",
+            order: record.order || 0,
+            thumbnail: record.thumbnail || null,
+          };
+        }),
     ];
 
     const categories = [

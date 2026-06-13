@@ -128,7 +128,7 @@ function init() {
     document
       .getElementById("aboutDialogHelpLink")
       .addEventListener("click", () => {
-        openHelpLink("firefox-help");
+        openHelpLink("w3ai-help");
       });
     document
       .getElementById("submit-feedback")
