@@ -2182,8 +2182,8 @@ pref("sidebar.animation.duration-ms", 200);
 pref("sidebar.animation.expand-on-hover.duration-ms", 400);
 pref("sidebar.animation.expand-on-hover.delay-duration-ms", 200);
 
-// W3Ai: AI Agent, History, Bookmarks in the sidebar launcher; no Firefox AI chat (replaced by AIWindow)
-pref("sidebar.main.tools", "aiwindow,history,bookmarks");
+// W3Ai: AIWindow (right-side panel) + built-in aichat (provider selection) + History + Bookmarks
+pref("sidebar.main.tools", "aiwindow,aichat,history,bookmarks");
 pref("sidebar.installed.extensions", "");
 // W3Ai: vertical tabs enabled by default for left-rail navigation layout
 pref("sidebar.verticalTabs", true);
@@ -2200,7 +2200,7 @@ pref("sidebar.history.sortOption", "date");
 
 pref("sidebar.notification.badge.aichat", false);
 
-pref("browser.ml.chat.enabled", false);
+pref("browser.ml.chat.enabled", true);
 pref("browser.ml.chat.hideLocalhost", true);
 pref("browser.ml.chat.maxLength", 7000);
 pref("browser.ml.chat.menu", true);
@@ -2217,7 +2217,7 @@ pref("browser.ml.chat.shortcuts", true);
 pref("browser.ml.chat.shortcuts.custom", true);
 pref("browser.ml.chat.shortcuts.longPress", 60000);
 pref("browser.ml.chat.shortcut.onboardingMouseoverCount", 0);
-pref("browser.ml.chat.sidebar", false);
+pref("browser.ml.chat.sidebar", true);
 
 pref("browser.ml.linkPreview.allowedLanguages", "en");
 pref("browser.ml.linkPreview.blockListEnabled", true);
@@ -2249,8 +2249,13 @@ pref("browser.smartwindow.firstrun.autoAdvanceMS", 3000);
 pref("browser.smartwindow.firstrun.hasCompleted", false);
 pref("browser.smartwindow.showThemesNotice", true);
 pref("browser.smartwindow.firstrun.modelChoice", "");
-pref("browser.smartwindow.model", "");
+// W3Ai: default model sent to browser.smartwindow.endpoint (claude-opus-4-8 is
+// OpenAI-compatible and supported by ai.plato.ai).  Override per-user via prefs.
+pref("browser.smartwindow.model", "claude-opus-4-8");
 pref("browser.smartwindow.preferences.endpoint", "");
+// W3Ai: system prompt override — replaces the "Smart Window / Mozilla" identity
+// in the built-in Remote Settings prompt with W3Ai branding.
+pref("browser.smartwindow.customPrompts", '{"chat":"You are W3Ai Assistant, an AI browsing assistant built into W3Ai Browser by PlatoAi.\\nYou help users browse the web, summarize pages, answer questions, and perform web3/crypto research.\\nYou operate within the users browsing context — you can see pages, tabs, and history when provided.\\nBe concise, accurate, and helpful. Do not add unnecessary disclaimers for everyday tasks.\\nWhen discussing blockchain, DeFi, or crypto topics, note material risks clearly.\\nYou are powered by advanced AI. If asked, you are the W3Ai Assistant by PlatoAi."}');
 pref("browser.smartwindow.firstrun.explainerURL", "https://www.plato.ai/w3ai/ai-assistant/");
 pref("browser.smartwindow.checkSecurityFlags", false);
 

@@ -9,6 +9,11 @@ W3Ai versioning: `MAJOR.MINOR.PATCH` (independent of upstream Firefox version).
 ## [Unreleased]
 
 ### Added
+- **Milestone 21** — Fix AI chat engine model override + restore built-in provider selection
+  - `Utils.sys.mjs`: fixed `loadConfig` — replaced `prefHasUserValue(ENDPOINT_PREF/MODEL_PREF)` with `!!getStringPref(...)` so browser-default prefs (not user-set) are correctly detected as custom; this ensures `browser.smartwindow.model = claude-opus-4-8` is sent instead of the Remote Settings model name the W3Ai endpoint doesn't recognise
+  - `firefox.js`: added `browser.smartwindow.model = "claude-opus-4-8"` and W3Ai-branded `browser.smartwindow.customPrompts` to override the Mozilla/Smart Window identity in the Remote Settings dump
+  - `firefox.js`: restored `aichat` in `sidebar.main.tools` (`aiwindow,aichat,history,bookmarks`) so the built-in provider selection panel (Claude.ai, ChatGPT, etc.) is available in the sidebar again
+  - `firefox.js`: enabled `browser.ml.chat.enabled = true` and `browser.ml.chat.sidebar = true` so the aichat panel actually renders in the sidebar
 - **Milestone 20** — Fix black content area, use existing W3Ai AI endpoint, fix search
   - `w3ai-theme.css`: removed `overflow: clip` from `#w3ai-main-panel` — it was silently preventing the Gecko compositor from promoting browser-element layers, making the web content area black
   - `browser-init.js`: reverted unconditional `ai-window` attribute on startup; FxA bypass in `AIWindowAccountAuth` is sufficient for the AI sidebar button to work on click

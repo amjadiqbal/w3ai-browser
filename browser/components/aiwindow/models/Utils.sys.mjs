@@ -389,7 +389,7 @@ export class openAIEngine {
     }
 
     const userModel = Services.prefs.getStringPref(MODEL_PREF, "");
-    const hasCustomModel = Services.prefs.prefHasUserValue(MODEL_PREF);
+    const hasCustomModel = !!userModel;
     const modelChoiceId = Services.prefs.getStringPref(MODEL_CHOICE_PREF, "");
 
     const mainConfig = selectMainConfig(featureConfigs, {
@@ -491,6 +491,11 @@ export class openAIEngine {
       record => record.feature === feature
     );
 
+    // Treat any non-empty endpoint as a custom endpoint — the pref may be set
+    // as a browser default (not a user pref) so prefHasUserValue returns false,
+    // but we still want to honour the configured endpoint and override model.
+    const hasCustomEndpoint = !!Services.prefs.getStringPref(ENDPOINT_PREF, "");
+
     const majorVersion =
       majorVersionOverride ?? FEATURE_MAJOR_VERSIONS[feature];
 
@@ -501,7 +506,6 @@ export class openAIEngine {
       majorVersion
     );
 
-    const hasCustomEndpoint = Services.prefs.prefHasUserValue(ENDPOINT_PREF);
     if (hasCustomEndpoint) {
       this._applyCustomEndpointModel();
     }
