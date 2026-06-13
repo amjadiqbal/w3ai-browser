@@ -9,6 +9,11 @@ W3Ai versioning: `MAJOR.MINOR.PATCH` (independent of upstream Firefox version).
 ## [Unreleased]
 
 ### Added
+- **Milestone 22** — Fix aichat panel blank in AI Window mode + fluent brand errors + session restore
+  - `browser-sidebar.js`: removed `hideInAIWindow: true` from aichat registration — this flag made the built-in provider chat invisible whenever `browser.smartwindow.enabled` was active (AIWindow mode), which is why the panel was blank
+  - `firefox.js`: set `browser.ml.chat.provider = "https://claude.ai/new"` (exact map key for Claude) so Claude is pre-selected in the provider dropdown without triggering the onboarding flow
+  - `firefox.js`: set `browser.sessionstore.resume_from_crash = false` so the "trouble restoring session" page no longer appears on every startup
+  - `brand.ftl`: removed duplicate `-firefoxlabs-brand-name` — the toolkit's `brandings.ftl` already defines this term via `{ -brand-short-name } Labs`; our override was causing "Attempt to override an existing term" console errors
 - **Milestone 21** — Fix AI chat engine model override + restore built-in provider selection
   - `Utils.sys.mjs`: fixed `loadConfig` — replaced `prefHasUserValue(ENDPOINT_PREF/MODEL_PREF)` with `!!getStringPref(...)` so browser-default prefs (not user-set) are correctly detected as custom; this ensures `browser.smartwindow.model = claude-opus-4-8` is sent instead of the Remote Settings model name the W3Ai endpoint doesn't recognise
   - `firefox.js`: added `browser.smartwindow.model = "claude-opus-4-8"` and W3Ai-branded `browser.smartwindow.customPrompts` to override the Mozilla/Smart Window identity in the Remote Settings dump

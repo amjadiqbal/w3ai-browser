@@ -1423,7 +1423,7 @@ pref("browser.geolocation.warning.infoURL", "https://www.plato.ai/w3ai/geolocati
 pref("browser.xr.warning.infoURL", "https://www.plato.ai/w3ai/xr/");
 pref("browser.lna.warning.infoURL", "https://support.plato.ai/%LOCALE%/kb/control-personal-device-local-network-permissions-firefox");
 
-pref("browser.sessionstore.resume_from_crash", true);
+pref("browser.sessionstore.resume_from_crash", false);
 pref("browser.sessionstore.resume_session_once", false);
 pref("browser.sessionstore.resuming_after_os_restart", false);
 
@@ -2212,7 +2212,7 @@ pref("browser.ml.chat.prompts.0", '{"id":"summarize","l10nId":"genai-prompts-sum
 pref("browser.ml.chat.prompts.1", '{"id":"explain","l10nId":"genai-prompts-explain","targeting":"contentType != \'page\'"}');
 pref("browser.ml.chat.prompts.3", '{"id":"quiz","l10nId":"genai-prompts-quiz","targeting":"(!provider|regExpMatch(\'gemini\') || region == \'US\') && contentType != \'page\'"}');
 pref("browser.ml.chat.prompts.4", '{"id":"proofread", "l10nId":"genai-prompts-proofread","targeting":"contentType != \'page\'"}');
-pref("browser.ml.chat.provider", "https://chatgpt.com");
+pref("browser.ml.chat.provider", "https://claude.ai/new");
 pref("browser.ml.chat.shortcuts", true);
 pref("browser.ml.chat.shortcuts.custom", true);
 pref("browser.ml.chat.shortcuts.longPress", 60000);

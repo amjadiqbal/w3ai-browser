@@ -27,4 +27,3 @@
 trademarkInfo = Plato and the W3Ai logos are trademarks of the Plato Technologies Inc.
 # Additional brand tokens used by preferences and home settings
 -firefox-home-brand-name = W3Ai Home
--firefoxlabs-brand-name = W3Ai Labs

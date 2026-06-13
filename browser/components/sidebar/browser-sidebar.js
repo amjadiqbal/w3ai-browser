@@ -195,7 +195,6 @@ var SidebarController = {
         gleanClickEvent: Glean.sidebar.chatbotIconClick,
         toolContextMenuId: "aichat",
         permissions: true,
-        hideInAIWindow: true,
       }
     );
 
