@@ -9,6 +9,15 @@ W3Ai versioning: `MAJOR.MINOR.PATCH` (independent of upstream Firefox version).
 ## [Unreleased]
 
 ### Added
+- **Milestone 13** — Zero out remaining Mozilla FxA server URLs
+  - `firefox-branding.js`: explicit empty-string overrides for `identity.fxaccounts.remote.root`, `.profile.uri`, `.oauth.uri` — ensures no Mozilla account server is contacted even if `identity.fxaccounts.enabled` changes
+- **Milestone 8** — Privacy / telemetry hardening
+  - `firefox-branding.js`: disable Glean/healthreport upload, all classic telemetry pings, DAP measurement tasks, Normandy remote recipe execution, Shield studies, crash report auto-submission; zero out Merino, contile, partner attribution, coverage, MITM priming, IPProtection, FxA association ping, and SERP event telemetry endpoints
+- **Milestone 4** — Disable Firefox updater UI
+  - `distribution/policies.json` (new): `DisableAppUpdate: true` — enterprise policy engine blocks all update activity with no Mozilla server contact
+  - `distribution/moz.build`: ship `policies.json` to `dist/bin/distribution/` in all builds
+  - `aboutDialog.ftl`: `update-policy-disabled` → `{ -brand-short-name } is up to date` (clean, brand-appropriate)
+  - `preferences.ftl`: `managed-notice` → `{ -brand-short-name } settings are managed by { -vendor-short-name }.`
 - **Milestone 15** — About:Addons branding cleanup
   - `aboutAddons.ftl`: replace AMO search placeholders with "Search for extensions"; remove "built by Mozilla" from official badge tooltip; replace "Firefox Color" theme recommendation with W3Ai-branded copy
   - `firefox-branding.js`: disable remote discovery recommendations panel (API server not live); clean up extension URL overrides

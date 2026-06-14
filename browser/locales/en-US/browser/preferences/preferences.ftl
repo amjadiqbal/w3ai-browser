@@ -42,7 +42,7 @@ search-input-box2 =
     .style = width: 15.4em
     .placeholder = Find in Settings
 
-managed-notice = Your browser is being managed by your organization.
+managed-notice = { -brand-short-name } settings are managed by { -vendor-short-name }.
 managed-notice-info-icon =
     .alt = Information
 

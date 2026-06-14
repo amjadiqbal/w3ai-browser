@@ -10,3 +10,8 @@ if CONFIG["BUILT_BY_MOZILLA"]:
     FINAL_TARGET_FILES.distribution += [
         "distribution.ini",
     ]
+
+# W3Ai: ship policies.json to disable the Firefox updater UI in all builds
+FINAL_TARGET_FILES.distribution += [
+    "policies.json",
+]
