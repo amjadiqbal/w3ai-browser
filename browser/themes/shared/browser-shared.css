@@ -1264,7 +1264,7 @@ popupnotificationcontent {
 
   @media not (prefers-contrast) {
     /* TODO: Should this be in browser-colors to respect system theming on Linux? */
-    --swipe-nav-icon-primary-color: light-dark(#0060df, #00ddff);
+    --swipe-nav-icon-primary-color: light-dark(#0067cc, #00a4fd);
     --swipe-nav-icon-accent-color: light-dark(#ffffff, #000000);
   }
 

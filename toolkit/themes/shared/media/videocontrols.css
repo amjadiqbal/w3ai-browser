@@ -37,7 +37,7 @@
   --thumb-size: 13px;
   --label-font-size: 13px;
   --pip-toggle-padding: 5px;
-  --control-focus-outline: 2px solid #00ddff;
+  --control-focus-outline: 2px solid #00a4fd;
   --control-focus-outline-offset: -2px;
   --pip-toggle-icon-width-height: 16px;
   --pip-toggle-translate-x: calc(100% - var(--pip-toggle-icon-width-height) - 2 * var(--pip-toggle-padding));

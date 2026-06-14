@@ -381,16 +381,16 @@ content-search-handoff-ui {
   margin: 8px 0;
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
-  background-color: rgb(0, 221, 255);
+  background-color: #00a4fd;
   color: rgb(43, 42, 51);
 }
 
 .promo-cta .primary:focus-visible {
-  outline-color: rgb(0, 221, 255);
+  outline-color: #00a4fd;
 }
 
 .promo-cta .primary:hover {
-  background-color: rgb(128, 235, 255) !important;
+  background-color: #33b6fd !important;
   color: rgb(43, 42, 51) !important;
 }
 

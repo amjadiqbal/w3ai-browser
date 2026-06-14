@@ -449,8 +449,8 @@ pref("browser.urlbar.perplexity.hasBeenInSearchMode", false);
 // Whether or not Unified Search Button is shown always.
 pref("browser.urlbar.unifiedSearchButton.always", false);
 
-// Enable trending suggestions and recent searches.
-pref("browser.urlbar.trending.featureGate", true);
+// W3Ai: disable trending suggestions — show custom top sites instead
+pref("browser.urlbar.trending.featureGate", false);
 pref("browser.urlbar.trending.requireSearchMode", false);
 pref("browser.urlbar.recentsearches.featureGate", true);
 
@@ -479,8 +479,8 @@ pref("browser.urlbar.weather.uiTreatment", 0);
 pref("browser.urlbar.suggest.weather", true);
 
 // If `browser.urlbar.trending.featureGate` is true, this controls whether
-// trending suggestions are turned on.
-pref("browser.urlbar.suggest.trending", true);
+// trending suggestions are turned on. W3Ai: disabled.
+pref("browser.urlbar.suggest.trending", false);
 
 // Whether results that are part of the Firefox Suggest brand are shown in the
 // urlbar. This pref is exposed to the user in the UI, and it's sticky so that
@@ -1904,6 +1904,8 @@ pref("browser.newtabpage.activity-stream.showSponsored", false);
 pref("browser.newtabpage.activity-stream.showSponsoredTopSites", false);
 // W3Ai: always show the W3Ai logo/wordmark on the new tab page
 pref("browser.newtabpage.activity-stream.logowordmark.alwaysVisible", true);
+// W3Ai: set custom default top sites (new tab + empty URL-bar state)
+pref("browser.newtabpage.activity-stream.default.sites", "https://tmrw.w3ai.io/,https://www.tmrw-digital.com/,https://c100.w3ai.io/,https://coinmarketcap.com/");
 
 // Weather widget for newtab
 pref("browser.newtabpage.activity-stream.showWeather", true);

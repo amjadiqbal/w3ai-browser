@@ -9,6 +9,19 @@ W3Ai versioning: `MAJOR.MINOR.PATCH` (independent of upstream Firefox version).
 ## [Unreleased]
 
 ### Added
+- **Milestone 17** — Custom default top sites + disable trending URL-bar suggestions
+  - `firefox.js`: `browser.newtabpage.activity-stream.default.sites` set to W3Ai properties (tmrw.w3ai.io, tmrw-digital.com, c100.w3ai.io, coinmarketcap.com)
+  - `firefox.js`: `browser.urlbar.trending.featureGate` and `browser.urlbar.suggest.trending` disabled — removes "Trending on Google" from empty URL bar
+- **Milestone 16** — W3Ai brand accent color (logo blue `#00A4FD` replaces Firefox cyan `#00DDFF`)
+  - `browser-colors.css`: `--color-accent-primary`, `--focus-outline-color`, `--link-color` (and hover/active variants) → `#0067CC` (light) / `#00A4FD` (dark)
+  - `browser-shared.css`: swipe-nav icon primary color updated
+  - `formautofill-notification.css`: diff highlight color updated
+  - `panelUI-shared.css`: radio-check selected border updated
+  - `aboutPrivateBrowsing.css`: CTA button background updated
+  - `organizer.css`: bookmarks organizer focus-selected color updated
+  - `pictureinpicture/player.css`: radio border + toggle slider updated
+  - `videocontrols.css`: control focus outline updated
+  - `aboutReader.css`: reader mode selected highlight and primary color updated
 - **Milestone 13** — Zero out remaining Mozilla FxA server URLs
   - `firefox-branding.js`: explicit empty-string overrides for `identity.fxaccounts.remote.root`, `.profile.uri`, `.oauth.uri` — ensures no Mozilla account server is contacted even if `identity.fxaccounts.enabled` changes
 - **Milestone 8** — Privacy / telemetry hardening

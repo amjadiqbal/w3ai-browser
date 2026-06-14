@@ -62,9 +62,9 @@
 
       --organizer-hover-background: rgb(82, 82, 94);
       --organizer-selected-background: rgb(91, 91, 102);
-      --organizer-focus-selected-background: color-mix(in srgb, rgb(0, 221, 255) 80%, currentColor);
+      --organizer-focus-selected-background: color-mix(in srgb, rgb(0, 164, 253) 80%, currentColor);
       --organizer-focus-selected-color: rgb(43, 42, 51);
-      --organizer-outline-color: rgb(0, 221, 255);
+      --organizer-outline-color: rgb(0, 164, 253);
 
       scrollbar-color: rgba(249, 249, 250, 0.4) rgba(20, 20, 25, 0.3);
     }

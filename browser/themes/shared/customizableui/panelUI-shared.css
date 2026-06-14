@@ -1654,7 +1654,7 @@ toolbarbutton[itemtype="showinactivebutton"] {
 
   > .radio-check[selected] {
     background-color: light-dark(#fff, transparent);
-    border: 4px solid light-dark(#177ee6, #00ddff);
+    border: 4px solid light-dark(#0067cc, #00a4fd);
   }
 }
 

@@ -522,7 +522,7 @@ body:not(:fullscreen) #fullscreen {
 }
 
 .font-size-selection-radio > input[type="radio"]:checked {
-  border: 4px solid #00ddff;
+  border: 4px solid #00a4fd;
 }
 
 .subtitle-grid {
@@ -569,7 +569,7 @@ body:not(:fullscreen) #fullscreen {
 }
 
 input:checked + .slider {
-  background-color: #00ddff;
+  background-color: #00a4fd;
 }
 
 input:checked + .slider::before {
