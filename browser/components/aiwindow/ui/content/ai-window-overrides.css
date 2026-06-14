@@ -6,10 +6,30 @@
 @import url("chrome://browser/skin/urlbar-variables.css");
 
 :root {
-  --smartwindow-brand-accent: light-dark(var(--color-violet-90), var(--color-violet-40));
-  --box-shadow-color-lighter-layer-1: color-mix(in srgb, var(--color-violet-50) 15%, transparent);
-  --box-shadow-color-lighter-layer-2: color-mix(in srgb, var(--color-violet-50) 25%, transparent);
+  /*
+   * Adaptive BrandSkin — these vars are injected dynamically by
+   * AIWindowUI.applyPageTheme() when a site palette is detected.
+   * When not set, the fallbacks below restore the default Plato violet theme.
+   */
+  --smartwindow-brand-accent: var(
+    --agent-primary,
+    light-dark(var(--color-violet-90), var(--color-violet-40))
+  );
+  --box-shadow-color-lighter-layer-1: color-mix(
+    in srgb,
+    var(--agent-primary, var(--color-violet-50)) 15%,
+    transparent
+  );
+  --box-shadow-color-lighter-layer-2: color-mix(
+    in srgb,
+    var(--agent-primary, var(--color-violet-50)) 25%,
+    transparent
+  );
   --smartwindow-shadow: var(--box-shadow-level-2);
+
+  /* Sidebar background: transparent by default, overridden to a site color
+     when --agent-bg is set by AIWindowUI.applyPageTheme(). */
+  background-color: var(--agent-bg, transparent);
 }
 
 .ai-window {

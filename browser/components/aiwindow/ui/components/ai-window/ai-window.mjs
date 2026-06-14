@@ -13,6 +13,8 @@ const { XPCOMUtils } = ChromeUtils.importESModule(
 
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
+  AgentPluginRegistry:
+    "moz-src:///browser/components/aiwindow/services/AgentPluginRegistry.sys.mjs",
   Chat: "moz-src:///browser/components/aiwindow/models/Chat.sys.mjs",
   MODEL_FEATURES: "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs",
   openAIEngine: "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs",
@@ -111,6 +113,7 @@ export class AIWindow extends MozLitElement {
     showStarters: { type: Boolean, state: true },
     showFooter: { type: Boolean, state: true },
     showDisclaimer: { type: Boolean, state: true },
+    _agentName: { type: String, state: true },
   };
 
   #browser;
@@ -127,6 +130,7 @@ export class AIWindow extends MozLitElement {
   #swapDocShellsChromeWindow = null;
   #addedContextWebsites = []; // TODO: replace once Bug 2016760 lands
   #hasMemories = false;
+  _agentName = "";
 
   get #memoriesIconShown() {
     return (
@@ -389,6 +393,14 @@ export class AIWindow extends MozLitElement {
     this.ownerGlobal.addEventListener("unload", () => this.remove(), {
       once: true,
     });
+
+    // Adaptive BrandSkin: resolve initial agent name and refresh on tab switch
+    this.#refreshAgentPlugin();
+    const chromeWin = window.browsingContext?.topChromeWindow;
+    chromeWin?.gBrowser?.tabContainer?.addEventListener(
+      "TabSelect",
+      this.#onTabSelectForPlugin
+    );
   }
 
   get conversationId() {
@@ -549,7 +561,26 @@ export class AIWindow extends MozLitElement {
 
     this.ownerDocument.removeEventListener("OpenConversation", this);
 
+    // Adaptive BrandSkin: remove tab select listener
+    const chromeWin = window.browsingContext?.topChromeWindow;
+    chromeWin?.gBrowser?.tabContainer?.removeEventListener(
+      "TabSelect",
+      this.#onTabSelectForPlugin
+    );
+
     super.disconnectedCallback();
+  }
+
+  #onTabSelectForPlugin = () => {
+    this.#refreshAgentPlugin();
+  };
+
+  #refreshAgentPlugin() {
+    const url =
+      window.browsingContext?.topChromeWindow?.gBrowser?.currentURI?.spec ?? "";
+    const plugin = lazy.AgentPluginRegistry.getPluginForUrl(url);
+    this._agentName =
+      plugin !== lazy.AgentPluginRegistry.DEFAULT_PLUGIN ? plugin.name : "";
   }
 
   /**
@@ -1801,6 +1832,14 @@ export class AIWindow extends MozLitElement {
       <link rel="stylesheet" href="chrome://browser/skin/smartbar.css" />
       ${this.mode === MODE.SIDEBAR
         ? html`<div class="sidebar-header">
+            <div class="sidebar-header-identity">
+              <span class="sidebar-header-label">W3AI · SIDEBAR</span>
+              ${this._agentName
+                ? html`<span class="sidebar-header-agent"
+                    >${this._agentName}</span
+                  >`
+                : ""}
+            </div>
             <moz-button
               data-l10n-id="aiwindow-new-chat"
               data-l10n-attrs="tooltiptext,aria-label"

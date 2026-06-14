@@ -350,6 +350,11 @@ export class AIWindowTabStatesManager {
     }
 
     lazy.AIWindowUI.openSidebar(this.#window, conversation);
+    // applyPageTheme is called inside openSidebar after the element is ready.
+    // For already-open sidebars on rapid tab switches, trigger it directly.
+    if (lazy.AIWindowUI.isSidebarOpen(this.#window)) {
+      lazy.AIWindowUI.applyPageTheme(this.#window);
+    }
     if (tabState?.state) {
       lazy.AIWindowUI.updateSidebarInput(
         this.#window,

@@ -13,6 +13,8 @@ MOZ_SRC_FILES += [
     "actors/AIChatContentParent.sys.mjs",
     "actors/AISmartBarChild.sys.mjs",
     "actors/AISmartBarParent.sys.mjs",
+    "actors/PageColorChild.sys.mjs",
+    "actors/PageColorParent.sys.mjs",
     "modules/AIWindow.sys.mjs",
     "modules/AIWindowAccountAuth.sys.mjs",
     "modules/AIWindowConstants.sys.mjs",

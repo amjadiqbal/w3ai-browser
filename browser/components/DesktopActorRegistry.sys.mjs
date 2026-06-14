@@ -608,6 +608,17 @@ let JSWINDOWACTORS = {
     enablePreference: "browser.ml.pageAssist.enabled",
   },
 
+  PageColor: {
+    parent: {
+      esModuleURI:
+        "moz-src:///browser/components/aiwindow/ui/actors/PageColorParent.sys.mjs",
+    },
+    child: {
+      esModuleURI:
+        "moz-src:///browser/components/aiwindow/ui/actors/PageColorChild.sys.mjs",
+    },
+  },
+
   PageInfo: {
     child: {
       esModuleURI: "resource:///actors/PageInfoChild.sys.mjs",

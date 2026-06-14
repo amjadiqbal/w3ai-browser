@@ -111,13 +111,55 @@ smartwindow-prompts {
   grid-area: sidebar-header;
   padding: var(--space-small);
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-small);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--agent-primary, var(--color-violet-50)) 18%, transparent);
+  background: color-mix(in srgb, var(--agent-bg, transparent) 40%, transparent);
+}
+
+.sidebar-header-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding-inline-start: var(--space-xsmall);
+}
+
+.sidebar-header-label {
+  color: color-mix(
+    in srgb,
+    var(--agent-text, var(--color-gray-50)) 70%,
+    transparent
+  );
+  font-size: var(--font-size-xsmall);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-header-agent {
+  color: var(--agent-accent, var(--agent-primary, var(--color-violet-60)));
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 moz-button.new-chat-icon-button {
   --button-border-radius: var(--border-radius-large);
   /* Updating background color for light only, persisting default dark background-color */
   --button-background-color: light-dark(var(--color-white), rgba(0, 0, 0, 0.33));
-  --button-text-color: light-dark(var(--color-violet-80), var(--color-white));
+  --button-text-color: light-dark(
+    var(--agent-primary, var(--color-violet-80)),
+    var(--agent-accent, var(--color-white))
+  );
   --button-background-color-hover: color-mix(in srgb, currentColor 11%, transparent);
 }
 
@@ -133,9 +175,17 @@ moz-button.new-chat-icon-button::part(button) {
 }
 
 #smartbar-toggle-button {
-  --smartbar-button-border-color: color-mix(in srgb, var(--color-purple-70) 15%, transparent);
-  --smartbar-button-background-color: color-mix(in srgb, var(--color-purple-40) 20%, transparent);
-  --smartbar-button-text-color: var(--color-gray-100);
+  --smartbar-button-border-color: color-mix(
+    in srgb,
+    var(--agent-primary, var(--color-purple-70)) 15%,
+    transparent
+  );
+  --smartbar-button-background-color: color-mix(
+    in srgb,
+    var(--agent-primary, var(--color-purple-40)) 20%,
+    transparent
+  );
+  --smartbar-button-text-color: var(--agent-text, var(--color-gray-100));
 }
 
 #smartbar-toggle-button::part(button) {

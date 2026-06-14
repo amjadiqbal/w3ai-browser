@@ -8,6 +8,7 @@ import {
   AIWINDOW_URL,
   AIWindow,
 } from "moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs";
+import { AgentPluginRegistry } from "moz-src:///browser/components/aiwindow/services/AgentPluginRegistry.sys.mjs";
 
 const gFadingWindows = new WeakSet();
 
@@ -167,6 +168,9 @@ export const AIWindowUI = {
     if (!aiWindowElement) {
       return;
     }
+
+    // Apply adaptive site palette — fire and forget, runs after element is ready
+    this.applyPageTheme(win);
 
     if (conversation) {
       aiWindowElement.openConversation(conversation);
@@ -475,5 +479,104 @@ export const AIWindowUI = {
     this._runTabPanelsFade(win).finally(() => {
       gFadingWindows.delete(win);
     });
+  },
+
+  /**
+   * Adaptive BrandSkin — apply the active tab's site palette to the sidebar.
+   *
+   * Tier 1: AgentPluginRegistry supplies pre-defined brand palettes for
+   *         registered sites (zero DOM extraction overhead).
+   * Tier 2: PageColor JSWindowActor extracts colors from the live page DOM
+   *         for any unregistered site.
+   * Fallback: clears all --agent-* overrides so the default Plato theme
+   *           (violet) is used.
+   *
+   * Fire-and-forget; callers should not await this.
+   *
+   * @param {Window} win
+   */
+  async applyPageTheme(win) {
+    if (!this.isSidebarOpen(win)) {
+      return;
+    }
+
+    const aiBrowser = win.document.getElementById(this.BROWSER_ID);
+    if (!aiBrowser) {
+      return;
+    }
+
+    const url = win.gBrowser?.selectedBrowser?.currentURI?.spec ?? "";
+
+    // Tier 1: known brand palette
+    const plugin = AgentPluginRegistry.getPluginForUrl(url);
+    let palette = plugin?.theme ?? null;
+
+    // Tier 2: live DOM extraction
+    if (!palette) {
+      try {
+        const selectedBrowser = win.gBrowser.selectedBrowser;
+        const windowGlobal =
+          selectedBrowser?.browsingContext?.currentWindowGlobal;
+        const actor = windowGlobal?.getActor("PageColor");
+        if (actor) {
+          palette = await actor.extractColors();
+        }
+      } catch {
+        // Extraction failed — fall through to default theme
+      }
+    }
+
+    this._applyThemeToBrowser(aiBrowser, palette);
+  },
+
+  /**
+   * Write (or clear) --agent-* CSS custom properties on the sidebar document
+   * root so the entire AI window inherits the site palette.
+   *
+   * @param {XULElement} aiBrowser  The outer ai-window-browser element
+   * @param {object|null} palette   The resolved palette, or null to reset
+   */
+  _applyThemeToBrowser(aiBrowser, palette) {
+    const outerRoot = aiBrowser.contentDocument?.documentElement;
+    if (!outerRoot) {
+      return;
+    }
+
+    const vars = {
+      "--agent-primary": palette?.primary ?? null,
+      "--agent-accent": palette?.accent ?? null,
+      "--agent-bg": palette?.background ?? null,
+      "--agent-surface": palette?.surface ?? null,
+      "--agent-text": palette?.text ?? null,
+    };
+
+    for (const [key, val] of Object.entries(vars)) {
+      if (val) {
+        outerRoot.style.setProperty(key, val);
+      } else {
+        outerRoot.style.removeProperty(key);
+      }
+    }
+
+    // Also apply to the inner aiChatContent document if it is loaded
+    try {
+      const aiWindowEl =
+        aiBrowser.contentDocument?.querySelector("ai-window:defined");
+      const innerBrowser = aiWindowEl?.renderRoot?.getElementById(
+        "aichat-browser"
+      );
+      const innerRoot = innerBrowser?.contentDocument?.documentElement;
+      if (innerRoot) {
+        for (const [key, val] of Object.entries(vars)) {
+          if (val) {
+            innerRoot.style.setProperty(key, val);
+          } else {
+            innerRoot.style.removeProperty(key);
+          }
+        }
+      }
+    } catch {
+      // Inner document may not be ready yet — outer theming is sufficient
+    }
   },
 };
