@@ -985,6 +985,12 @@ export let ProfileDataUpgrader = {
       } catch (e) {}
     }
 
+    if (existingDataVersion < 167) {
+      // W3Ai: clear user-set newtabpage.pinned so the W3Ai default sites take
+      // effect in existing profiles (default value set in firefox.js).
+      Services.prefs.clearUserPref("browser.newtabpage.pinned");
+    }
+
     // Update the migration version.
     Services.prefs.setIntPref("browser.migration.version", newVersion);
   },
