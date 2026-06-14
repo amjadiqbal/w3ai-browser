@@ -1904,8 +1904,9 @@ pref("browser.newtabpage.activity-stream.showSponsored", false);
 pref("browser.newtabpage.activity-stream.showSponsoredTopSites", false);
 // W3Ai: always show the W3Ai logo/wordmark on the new tab page
 pref("browser.newtabpage.activity-stream.logowordmark.alwaysVisible", true);
-// W3Ai: set custom default top sites (new tab + empty URL-bar state)
+// W3Ai: default.sites for fresh profiles (no history); pinned forces slots in existing profiles
 pref("browser.newtabpage.activity-stream.default.sites", "https://tmrw.w3ai.io/,https://www.tmrw-digital.com/,https://c100.w3ai.io/,https://coinmarketcap.com/");
+pref("browser.newtabpage.pinned", "[{\"url\":\"https://tmrw.w3ai.io/\",\"label\":\"TMRW W3Ai\"},{\"url\":\"https://www.tmrw-digital.com/\",\"label\":\"TMRW Digital\"},{\"url\":\"https://c100.w3ai.io/\",\"label\":\"C100 W3Ai\"},{\"url\":\"https://coinmarketcap.com/\",\"label\":\"CoinMarketCap\"}]");
 
 // Weather widget for newtab
 pref("browser.newtabpage.activity-stream.showWeather", true);
