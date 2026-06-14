@@ -991,6 +991,48 @@ export let ProfileDataUpgrader = {
       Services.prefs.clearUserPref("browser.newtabpage.pinned");
     }
 
+    if (existingDataVersion < 168) {
+      // W3Ai: block old Firefox default sites from appearing in top sites.
+      // NewTabUtils stores blocked URLs as base64(MD5(url)) keys in this pref.
+      try {
+        const cryptoHash = Cc["@mozilla.org/security/hash;1"].createInstance(
+          Ci.nsICryptoHash
+        );
+        const toHash = url => {
+          const encoded = new TextEncoder().encode(url);
+          cryptoHash.init(cryptoHash.MD5);
+          cryptoHash.update(encoded, encoded.length);
+          return cryptoHash.finish(true);
+        };
+        const urlsToBlock = [
+          "https://www.youtube.com/",
+          "https://youtube.com/",
+          "https://en.wikipedia.org/wiki/Main_Page",
+          "https://www.wikipedia.org/",
+          "https://wikipedia.org/",
+          "https://www.reddit.com/",
+          "https://reddit.com/",
+          "https://addons.mozilla.org/",
+          "https://addons.mozilla.org/en-US/firefox/",
+        ];
+        let existing = {};
+        try {
+          existing = JSON.parse(
+            Services.prefs.getStringPref("browser.newtabpage.blocked", "{}")
+          );
+        } catch (e) {}
+        for (const url of urlsToBlock) {
+          existing[toHash(url)] = 1;
+        }
+        Services.prefs.setStringPref(
+          "browser.newtabpage.blocked",
+          JSON.stringify(existing)
+        );
+      } catch (e) {
+        console.error("W3Ai: failed to block default top sites", e);
+      }
+    }
+
     // Update the migration version.
     Services.prefs.setIntPref("browser.migration.version", newVersion);
   },
