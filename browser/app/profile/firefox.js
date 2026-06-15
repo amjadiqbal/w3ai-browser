@@ -1902,6 +1902,11 @@ pref("browser.newtabpage.activity-stream.feeds.system.topstories", false);
 pref("browser.newtabpage.activity-stream.feeds.section.topstories", false);
 pref("browser.newtabpage.activity-stream.showSponsored", false);
 pref("browser.newtabpage.activity-stream.showSponsoredTopSites", false);
+// W3Ai: You.com API key — set this in your local profile via about:config
+// or place it in browser/app/profile/local-secrets.js (gitignored).
+// Never commit the actual key to the repository.
+pref("browser.w3ai.youcom.api_key", "");
+
 // W3Ai: always show the W3Ai logo/wordmark on the new tab page
 pref("browser.newtabpage.activity-stream.logowordmark.alwaysVisible", true);
 // W3Ai: default.sites for fresh profiles (no history); pinned forces slots in existing profiles

@@ -110,6 +110,7 @@ const MAX_INTERACTION_COUNT = 1000;
 export class AIWindow extends MozLitElement {
   static properties = {
     mode: { type: String, reflect: true }, // sidebar | fullpage
+    noHeader: { type: Boolean, attribute: "no-header" },
     showStarters: { type: Boolean, state: true },
     showFooter: { type: Boolean, state: true },
     showDisclaimer: { type: Boolean, state: true },
@@ -1830,7 +1831,7 @@ export class AIWindow extends MozLitElement {
       />
       <!-- TODO (Bug 2008938): Make in-page Smartbar styling not dependent on chrome styles -->
       <link rel="stylesheet" href="chrome://browser/skin/smartbar.css" />
-      ${this.mode === MODE.SIDEBAR
+      ${this.mode === MODE.SIDEBAR && !this.noHeader
         ? html`<div class="sidebar-header">
             <div class="sidebar-header-identity">
               <span class="sidebar-header-label">W3AI · SIDEBAR</span>
