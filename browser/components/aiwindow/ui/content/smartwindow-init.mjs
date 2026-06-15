@@ -15,8 +15,13 @@ const { topChromeWindow } = window.browsingContext;
  * Initializes ASRouter and call appropriate trigger functions
  */
 async function init() {
-  if (!lazy.AIWindow.isAIWindowActive(topChromeWindow)) {
+  const isSidebar =
+    window.browsingContext?.embedderElement?.id === "ai-window-browser";
+  if (!isSidebar && !lazy.AIWindow.isAIWindowActive(topChromeWindow)) {
     window.location.href = topChromeWindow.BROWSER_NEW_TAB_URL;
+    return;
+  }
+  if (isSidebar) {
     return;
   }
 

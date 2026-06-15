@@ -15,8 +15,25 @@ ChromeUtils.defineESModuleGetters(lazy, {
     "moz-src:///browser/components/aiwindow/services/AgentPluginRegistry.sys.mjs",
 });
 
-const PREF_YOUCOM_API_KEY = "browser.w3ai.youcom.api_key";
 const YOUCOM_BASE = "https://api.ydc-index.io";
+
+async function loadYoucomApiKey() {
+  const envKey = Services.env.get("YOUCOM_API_KEY");
+  if (envKey) {
+    return envKey;
+  }
+  try {
+    const envFile = PathUtils.join(PathUtils.profileDir, "w3ai.env");
+    const content = await IOUtils.readUTF8(envFile);
+    const match = content.match(/^YOUCOM_API_KEY=(.+)$/m);
+    if (match?.[1]) {
+      return match[1].trim();
+    }
+  } catch {
+    // file not present
+  }
+  return "";
+}
 
 const TABS = ["chat", "summary", "search", "content", "research", "finance"];
 
@@ -46,9 +63,11 @@ class W3AiSidebar extends HTMLElement {
   }
 
   connectedCallback() {
-    this.#youcomKey = Services.prefs.getStringPref(PREF_YOUCOM_API_KEY, "");
     this.#render();
     this.#attachListeners();
+    loadYoucomApiKey().then(key => {
+      this.#youcomKey = key;
+    });
     this.#syncPageContext();
 
     window.addEventListener("ai-window:sidebar-toggle", this.#onSidebarToggle);
@@ -256,7 +275,7 @@ class W3AiSidebar extends HTMLElement {
 
     if (data.error) {
       const msg = data.error === "no_key"
-        ? `<div class="error-msg">You.com API key not configured.<br>Set pref <code>browser.w3ai.youcom.api_key</code> in about:config.</div>`
+        ? `<div class="error-msg">You.com API key not configured.<br>Set <code>YOUCOM_API_KEY</code> in the environment or <code>w3ai.env</code> in your profile.</div>`
         : `<div class="error-msg">Error: ${data.error}</div>`;
       resultsEl.innerHTML = msg;
       return;
@@ -425,6 +444,7 @@ class W3AiSidebar extends HTMLElement {
       </div>`;
 
     this.#attachSummaryListener();
+    this.#switchTab(this.#activeTab);
     this.#syncPageContext();
   }
 
@@ -440,7 +460,7 @@ class W3AiSidebar extends HTMLElement {
 
       const key = this.#youcomKey;
       if (!key) {
-        resultEl.innerHTML = `<div class="error-msg">You.com API key not configured.<br>Set pref <code>browser.w3ai.youcom.api_key</code> in about:config.</div>`;
+        resultEl.innerHTML = `<div class="error-msg">You.com API key not configured.<br>Set <code>YOUCOM_API_KEY</code> in the environment or <code>w3ai.env</code> in your profile.</div>`;
         btn.disabled = false;
         return;
       }
