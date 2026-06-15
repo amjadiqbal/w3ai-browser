@@ -2,21 +2,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/*
- * Adaptive BrandSkin — --agent-* vars are injected on :root by chat.js
- * applyBrandSkin() whenever the active tab changes. Default values fall
- * back to the standard sidebar palette so no visual change occurs on
- * unregistered / un-themed pages.
- */
-
 body {
   display: flex;
   flex-direction: column;
   inset: 0;
   margin: 0;
   position: absolute;
-  background-color: var(--agent-bg, var(--background-color-canvas, transparent));
-  transition: background-color 0.3s ease;
 }
 
 #agent-identity {
@@ -24,25 +15,11 @@ body {
   flex-direction: column;
   gap: 2px;
   padding: var(--space-small) var(--space-large);
-  background: color-mix(
-    in srgb,
-    var(--agent-bg, transparent) 50%,
-    transparent
-  );
-  border-bottom: 1px solid
-    color-mix(
-      in srgb,
-      var(--agent-primary, var(--border-color)) 25%,
-      transparent
-    );
+  border-bottom: 1px solid var(--border-color);
 }
 
 .agent-label {
-  color: color-mix(
-    in srgb,
-    var(--agent-text, var(--text-color-deemphasized)) 70%,
-    transparent
-  );
+  color: var(--text-color-deemphasized);
   font-size: var(--font-size-xsmall);
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.06em;
@@ -50,7 +27,8 @@ body {
 }
 
 .agent-name {
-  color: var(--agent-accent, var(--agent-primary, var(--color-violet-60)));
+  /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
+  color: var(--color-violet-60);
   font-size: var(--font-size-small);
   font-weight: var(--font-weight-bold);
 }
@@ -64,29 +42,11 @@ browser {
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  background-color: color-mix(
-    in srgb,
-    var(--agent-bg, transparent) 60%,
-    transparent
-  );
-  transition: background-color 0.3s ease;
 }
 
 #header {
   align-items: center;
-  /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
-  background-color: color-mix(
-    in srgb,
-    var(--agent-bg, var(--sidebar-background-color)) 100%,
-    transparent
-  );
-  border-bottom: 1px solid
-    color-mix(
-      in srgb,
-      var(--agent-primary, var(--border-color)) 30%,
-      var(--border-color) 70%
-    );
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   flex-direction: row;
   padding-inline: var(--space-large);
@@ -124,6 +84,12 @@ browser {
       --caret-anchor: right;
     }
   }
+}
+
+#share-page-btn {
+  /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
+  --button-text-color-ghost: var(--color-violet-60);
+  flex-shrink: 0;
 }
 
 #header-close {
@@ -293,17 +259,7 @@ browser {
 }
 
 #summarize-btn-container {
-  border-top: 1px solid
-    color-mix(
-      in srgb,
-      var(--agent-primary, var(--border-color)) 30%,
-      var(--border-color) 70%
-    );
-  background-color: color-mix(
-    in srgb,
-    var(--agent-bg, transparent) 30%,
-    transparent
-  );
+  border-top: 1px solid var(--border-color);
   padding: var(--space-large);
   position: relative;
 

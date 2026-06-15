@@ -165,6 +165,8 @@ export class GenAIChild extends JSWindowActorChild {
         return this.getContentText();
       case "AutoSubmit":
         return await this.autoSubmitClick(data);
+      case "ShareContext":
+        return await this.shareContext(data);
       default:
         return null;
     }
@@ -266,6 +268,48 @@ export class GenAIChild extends JSWindowActorChild {
 
       // Disconnect once things stabilize
       win.setTimeout(() => observer.disconnect(), 2000);
+    }
+  }
+
+  /**
+   * Inject promptText into the AI provider's textarea and submit it.
+   * Unlike autoSubmitClick, this never checks _autosent so it works on
+   * already-open conversations.
+   *
+   * @param {string} promptText
+   */
+  async shareContext({ promptText = "" } = {}) {
+    const win = this.contentWindow;
+    if (!win) {
+      return;
+    }
+
+    if (win.document.readyState === "loading") {
+      await new Promise(r =>
+        win.addEventListener("DOMContentLoaded", r, { once: true })
+      );
+    }
+
+    const editable = await this.findTextareaEl(win, 3000);
+    if (!editable) {
+      return;
+    }
+
+    editable.focus();
+    editable.textContent = promptText;
+    editable.dispatchEvent(new win.InputEvent("input", { bubbles: true }));
+
+    await new Promise(r => win.requestAnimationFrame(r));
+    await new Promise(r => win.requestAnimationFrame(r));
+
+    const submitBtn =
+      win.document.querySelector('button[data-testid="send-button"]') ||
+      win.document.querySelector('button[aria-label="Send prompt"]') ||
+      win.document.querySelector('button[aria-label="Send message"]') ||
+      win.document.querySelector('[role="button"][aria-label*="send" i]');
+
+    if (submitBtn && !submitBtn.disabled) {
+      submitBtn.click();
     }
   }
 

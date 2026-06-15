@@ -32,12 +32,18 @@
   </head>
   <body>
     <div id="agent-identity" hidden>
-      <span class="agent-label">W3AI · SIDEBAR</span>
+      <span class="agent-label"></span>
       <span class="agent-name"></span>
     </div>
     <div id="header">
       <select data-l10n-id="genai-header-provider-menu" id="provider"></select>
       <div id="permissions-indicator"></div>
+      <moz-button
+        id="share-page-btn"
+        iconsrc="chrome://global/skin/icons/link.svg"
+        title="Share current page with AI"
+        type="icon ghost"
+      ></moz-button>
       <moz-button
         data-l10n-id="genai-header-settings-button"
         iconsrc="chrome://global/skin/icons/more.svg"

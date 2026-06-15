@@ -310,125 +310,86 @@ function handleChange({ target }) {
 }
 addEventListener("change", handleChange);
 
-function _hexFromRgb(r, g, b) {
-  return (
-    "#" +
-    r.toString(16).padStart(2, "0") +
-    g.toString(16).padStart(2, "0") +
-    b.toString(16).padStart(2, "0")
-  );
-}
-
-function _shiftChannel(c, amount) {
-  return Math.max(0, Math.min(255, c + amount));
-}
-
-async function extractFaviconPalette() {
-  const tab = topChromeWindow.gBrowser?.selectedTab;
-  const faviconUrl = tab?.getAttribute("image") ?? "";
-  if (
-    !faviconUrl ||
-    (!faviconUrl.startsWith("data:") && !faviconUrl.startsWith("chrome:"))
-  ) {
-    return null;
-  }
-  return new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => {
-      try {
-        const size = 32;
-        const canvas = document.createElement("canvas");
-        canvas.width = canvas.height = size;
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        ctx.drawImage(img, 0, 0, size, size);
-        const { data } = ctx.getImageData(0, 0, size, size);
-        const counts = new Map();
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i],
-            g = data[i + 1],
-            b = data[i + 2],
-            a = data[i + 3];
-          if (a < 200) {
-            continue;
-          }
-          const lum = (r * 299 + g * 587 + b * 114) / 1000;
-          if (lum > 235 || lum < 20) {
-            continue;
-          }
-          const key =
-            ((Math.round(r / 32) * 32) << 16) |
-            ((Math.round(g / 32) * 32) << 8) |
-            (Math.round(b / 32) * 32);
-          counts.set(key, (counts.get(key) || 0) + 1);
-        }
-        if (!counts.size) {
-          resolve(null);
-          return;
-        }
-        const [bestKey] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
-        const pr = (bestKey >> 16) & 0xff;
-        const pg = (bestKey >> 8) & 0xff;
-        const pb = bestKey & 0xff;
-        const lum = (pr * 299 + pg * 587 + pb * 114) / 1000;
-        const isDark = lum < 140;
-        const shift = isDark ? 50 : -50;
-        resolve({
-          primary: _hexFromRgb(pr, pg, pb),
-          accent: _hexFromRgb(
-            _shiftChannel(pr, shift),
-            _shiftChannel(pg, shift),
-            _shiftChannel(pb, shift)
-          ),
-          background: isDark ? "#0c0c0c" : "#f5f5f5",
-          surface: isDark ? "#181818" : "#ffffff",
-          text: isDark ? "#f0f0f0" : "#111111",
-          mode: isDark ? "dark" : "light",
-        });
-      } catch {
-        resolve(null);
-      }
-    };
-    img.onerror = () => resolve(null);
-    img.src = faviconUrl;
-  });
-}
-
-async function applyBrandSkin() {
+function applyBrandSkin() {
   const url =
     topChromeWindow.gBrowser?.selectedBrowser?.currentURI?.spec ?? "";
 
   const plugin = lazy.AgentPluginRegistry.getPluginForUrl(url);
-  let palette = plugin?.theme ?? null;
-
-  if (!palette && url && !url.startsWith("about:") && !url.startsWith("chrome:")) {
-    palette = await extractFaviconPalette();
-  }
-
-  const root = document.documentElement;
-  const vars = {
-    "--agent-primary": palette?.primary ?? null,
-    "--agent-accent": palette?.accent ?? null,
-    "--agent-bg": palette?.background ?? null,
-    "--agent-surface": palette?.surface ?? null,
-    "--agent-text": palette?.text ?? null,
-  };
-  for (const [key, val] of Object.entries(vars)) {
-    if (val) {
-      root.style.setProperty(key, val);
-    } else {
-      root.style.removeProperty(key);
-    }
-  }
+  const isRegistered = plugin !== lazy.AgentPluginRegistry.DEFAULT_PLUGIN;
 
   const agentIdentity = document.getElementById("agent-identity");
   if (!agentIdentity) {
     return;
   }
-  const isRegistered =
-    plugin !== lazy.AgentPluginRegistry.DEFAULT_PLUGIN && !!palette;
   agentIdentity.hidden = !isRegistered;
   if (isRegistered) {
+    agentIdentity.querySelector(".agent-label").textContent =
+      plugin.label ?? "W3AI · SIDEBAR";
     agentIdentity.querySelector(".agent-name").textContent = plugin.name;
+  }
+}
+
+async function shareCurrentPageWithAI() {
+  const shareBtnEl = document.getElementById("share-page-btn");
+  if (shareBtnEl) {
+    shareBtnEl.disabled = true;
+  }
+
+  try {
+    const selectedBrowser = topChromeWindow.gBrowser?.selectedBrowser;
+    if (!selectedBrowser) {
+      return;
+    }
+
+    const url = selectedBrowser.currentURI?.spec ?? "";
+    if (
+      !url ||
+      url.startsWith("about:") ||
+      url.startsWith("chrome:") ||
+      url.startsWith("moz-")
+    ) {
+      return;
+    }
+
+    const pageTitle = selectedBrowser.contentTitle ?? "";
+
+    let pageText = "";
+    try {
+      const wgp = selectedBrowser.browsingContext?.currentWindowGlobal;
+      const actor = wgp?.getActor("GenAI");
+      if (actor) {
+        const result = await actor.sendQuery("GetReadableText");
+        pageText = result?.selection ?? "";
+      }
+    } catch {}
+
+    const MAX_TEXT = 10000;
+    const truncated =
+      pageText.length > MAX_TEXT
+        ? pageText.slice(0, MAX_TEXT) + "\n\n[Content truncated]"
+        : pageText;
+
+    const lines = [
+      "I'm currently viewing this page in my browser:",
+      "",
+      `URL: ${url}`,
+      `Title: ${pageTitle}`,
+    ];
+    if (truncated) {
+      lines.push("", "Page content:", truncated);
+    }
+    const contextMsg = lines.join("\n");
+
+    const chatBrowser = await browserPromise;
+    const wgp = chatBrowser?.browsingContext?.currentWindowGlobal;
+    const actor = wgp?.getActor("GenAI");
+    if (actor) {
+      actor.sendAsyncMessage("ShareContext", { promptText: contextMsg });
+    }
+  } finally {
+    if (shareBtnEl) {
+      shareBtnEl.disabled = false;
+    }
   }
 }
 
@@ -480,6 +441,9 @@ var browserPromise = new Promise((resolve, reject) => {
         },
         { once: true }
       );
+      document
+        .getElementById("share-page-btn")
+        .addEventListener("click", shareCurrentPageWithAI);
       document.getElementById("header-close").addEventListener("click", () => {
         closeSidebar();
         Glean.genaiChatbot.sidebarCloseClick.record({

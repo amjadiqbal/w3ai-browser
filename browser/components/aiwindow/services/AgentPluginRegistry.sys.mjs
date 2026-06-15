@@ -16,6 +16,7 @@
  *
  * @typedef {{
  *   name: string,
+ *   label?: string,
  *   description: string,
  *   theme?: AgentTheme,
  *   systemSuffix: string,
@@ -33,6 +34,32 @@
  * that already have a well-known brand palette.
  */
 const REGISTRY = [
+  {
+    pattern: /tmrw-digital\.com/i,
+    plugin: {
+      name: "TMRW Digital",
+      label: "TMRW W3AI Agent",
+      description: "The Tomorrow Company — Web3 infrastructure and digital assets",
+      theme: {
+        primary: "#8B5CF6",
+        accent: "#D946EF",
+        background: "#04030F",
+        surface: "#0B0920",
+        text: "#FFFFFF",
+        mode: "dark",
+      },
+      systemSuffix:
+        "You are the TMRW Digital AI Agent, embedded in the W3Ai Browser for The Tomorrow Company. " +
+        "You specialize in Web3 infrastructure, RWAs, digital asset compliance, and cyber security. " +
+        "Be precise, professional, and forward-looking in your responses.",
+      suggestedPrompts: [
+        "What is The Tomorrow Company building?",
+        "Explain their RWA infrastructure",
+        "How does TMRW approach Web3 compliance?",
+        "What are their key partnerships?",
+      ],
+    },
+  },
   {
     pattern: /c100\.w3ai\.io/i,
     plugin: {
@@ -63,12 +90,13 @@ const REGISTRY = [
     pattern: /w3ai\.io/i,
     plugin: {
       name: "W3Ai Assistant",
+      label: "W3AI · SIDEBAR",
       description: "W3Ai platform — AI-native Web3 browser features",
       theme: {
         primary: "#7C3AED",
         accent: "#A855F7",
-        background: "#0D0B1A",
-        surface: "#160F2B",
+        background: null,
+        surface: null,
         text: "#FFFFFF",
         mode: "dark",
       },
