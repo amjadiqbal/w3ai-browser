@@ -105,6 +105,12 @@ aiwindow-firstrun-button = Let’s go!
 smartwindow-ask-button =
     .label = Ask
 
+## W3Ai Chat Toolbar Button
+
+w3ai-chat-button =
+    .tooltiptext = Open W3Ai Chat
+    .aria-label = Open W3Ai Chat
+
 ## Memories toggle button
 
 aiwindow-memories-on =

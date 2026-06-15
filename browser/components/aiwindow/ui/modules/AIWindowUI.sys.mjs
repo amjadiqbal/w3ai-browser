@@ -90,17 +90,15 @@ export const AIWindowUI = {
    * @returns {boolean} whether the sidebar is open (visible)
    */
   isSidebarOpen(win) {
-    const nodes = this._getSidebarElements(win);
-    if (!nodes) {
-      return false;
-    }
-    return !nodes.box.collapsed;
+    return (
+      win?.document
+        ?.getElementById("browser")
+        ?.classList.contains("ai-sidebar-open") ?? false
+    );
   },
 
   _showSidebarElements(box, splitter) {
-    box.collapsed = false;
-    splitter.collapsed = false;
-    box.parentElement.collapsed = false;
+    box.ownerDocument.getElementById("browser").classList.add("ai-sidebar-open");
   },
 
   /**
@@ -209,10 +207,8 @@ export const AIWindowUI = {
     if (!this.isSidebarOpen(win)) {
       return;
     }
-    const { box, splitter } = this._getSidebarElements(win);
 
-    box.collapsed = true;
-    splitter.collapsed = true;
+    win.document.getElementById("browser").classList.remove("ai-sidebar-open");
     this._setAskButtonStyle(win, false);
 
     // Dispatch event to notify tab state manager that sidebar was toggled
@@ -243,11 +239,11 @@ export const AIWindowUI = {
     if (!nodes) {
       return false;
     }
-    const { chromeDoc, box, splitter } = nodes;
+    const { chromeDoc, box } = nodes;
+    const browserHbox = chromeDoc.getElementById("browser");
 
-    if (!box.collapsed) {
-      box.collapsed = true;
-      splitter.collapsed = true;
+    if (browserHbox.classList.contains("ai-sidebar-open")) {
+      browserHbox.classList.remove("ai-sidebar-open");
       this._setAskButtonStyle(win, false);
 
       // Dispatch event to notify tab state manager that sidebar was toggled
@@ -270,7 +266,7 @@ export const AIWindowUI = {
     }
 
     this.ensureBrowserIsAppended(chromeDoc, box);
-    this._showSidebarElements(box, splitter);
+    browserHbox.classList.add("ai-sidebar-open");
     this._setAskButtonStyle(win, true);
 
     // Dispatch event to notify tab state manager that sidebar was toggled
@@ -316,10 +312,13 @@ export const AIWindowUI = {
    */
   _setAskButtonStyle(win, sidebarIsOpen) {
     const askBtn = win.document.querySelector("#smartwindow-ask-button-inner");
-    if (!askBtn) {
-      return;
+    if (askBtn) {
+      askBtn.classList.toggle("sidebar-is-open", sidebarIsOpen);
     }
-    askBtn.classList.toggle("sidebar-is-open", sidebarIsOpen);
+    const chatBtn = win.document.getElementById("w3ai-chat-button");
+    if (chatBtn) {
+      chatBtn.classList.toggle("sidebar-is-open", sidebarIsOpen);
+    }
   },
 
   /**

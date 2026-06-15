@@ -394,6 +394,17 @@
   }
 }
 
+#w3ai-chat-button {
+  list-style-image: url("chrome://browser/content/aiwindow/assets/ai-bot-icon.svg");
+  -moz-context-properties: fill, stroke;
+  fill: var(--toolbarbutton-icon-fill);
+
+  &.sidebar-is-open {
+    list-style-image: url("chrome://global/skin/icons/close.svg");
+    fill: var(--toolbarbutton-icon-fill-attention);
+  }
+}
+
 #document-pip-return-to-opener-button {
   list-style-image: url("chrome://global/skin/media/picture-in-picture-closed.svg");
 }

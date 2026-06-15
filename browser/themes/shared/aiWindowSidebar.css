@@ -4,6 +4,8 @@
 
 :root {
   --ai-window-sidebar-width-default: 412px;
+  --ai-sidebar-transition-duration: 280ms;
+  --ai-sidebar-transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Hide AI window sidebar on about:newtab, about:home, firstrun, and AI Window URL */
@@ -14,21 +16,39 @@
   }
 }
 
+/* Sidebar panel — hidden by default via max-width, animates open */
 .ai-window-right-sidebar {
+  min-width: 0;
   width: var(--ai-window-sidebar-width-default);
+  max-width: 0;
+  overflow: hidden;
+  transition: max-width var(--ai-sidebar-transition-duration) var(--ai-sidebar-transition-easing);
 }
 
-/* Splitter styling to match the left sidebar */
+#browser.ai-sidebar-open .ai-window-right-sidebar {
+  max-width: var(--ai-window-sidebar-width-default);
+}
+
+/* Splitter — hidden until sidebar is open */
 #ai-window-splitter {
-  /* Matching sidebar "revamp" splitter width */
+  display: none;
   --splitter-width: var(--space-medium);
-  border-inline: calc((var(--space-medium) - var(--splitter-width)) / 2) solid transparent;
-  background-clip: padding-box;
   border: 0;
   background-color: transparent;
+  background-clip: padding-box;
   z-index: var(--browser-area-z-index-sidebar-splitter);
+}
+
+#browser.ai-sidebar-open #ai-window-splitter {
+  display: flex;
 }
 
 #ai-window-splitter:hover {
   background-color: var(--toolbarbutton-hover-background);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-window-right-sidebar {
+    transition: none;
+  }
 }

@@ -202,7 +202,8 @@ document.addEventListener(
         #identity-permission-box,
         #translations-button,
         #split-view-button,
-        #smartwindow-ask-button
+        #smartwindow-ask-button,
+        #w3ai-chat-button
         `);
       if (!element) {
         return;
@@ -298,6 +299,7 @@ document.addEventListener(
           break;
 
         case "smartwindow-ask-button":
+        case "w3ai-chat-button":
           if (isLeftClick) {
             AIWindowUI.toggleSidebar(window);
           }
@@ -332,7 +334,8 @@ document.addEventListener(
         #unified-extensions-button,
         #library-button,
         #split-view-button,
-        #smartwindow-ask-button
+        #smartwindow-ask-button,
+        #w3ai-chat-button
       `);
       if (!element) {
         return;
@@ -425,6 +428,7 @@ document.addEventListener(
           break;
 
         case "smartwindow-ask-button":
+        case "w3ai-chat-button":
           if (isLikeLeftClick) {
             AIWindowUI.toggleSidebar(window);
           }
