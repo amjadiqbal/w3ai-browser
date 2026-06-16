@@ -70,8 +70,8 @@
   /* stylelint-disable-next-line media-query-no-invalid */
   @media -moz-pref("sidebar.revamp") {
     border-radius: var(--border-radius-medium);
-    box-shadow: var(--content-area-shadow);
-    outline: 0.5px solid var(--sidebar-border-color);
+    /* TMRW: drop the subtle box-shadow/outline border around the panel
+       for a flatter, borderless sidebar look. */
     background-color: var(--sidebar-background-color);
     color: var(--sidebar-text-color);
   }

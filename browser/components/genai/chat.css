@@ -71,14 +71,23 @@ browser {
     background-color: var(--button-background-color-ghost);
     background-position-x: var(--caret-anchor) var(--caret-padding);
     color: var(--button-text-color-ghost);
+    cursor: pointer;
     flex: 1;
     height: var(--button-size-icon);
     margin-block: 0;
     max-width: var(--select-default-width);
+    transition:
+      background-color 120ms ease,
+      color 120ms ease;
 
     &:hover {
       background-color: var(--button-background-color-ghost-hover);
       color: var(--button-text-color-ghost-hover);
+    }
+
+    &:focus-visible {
+      outline: var(--focus-outline);
+      outline-offset: var(--focus-outline-offset);
     }
 
     &:dir(rtl) {
@@ -122,15 +131,17 @@ browser {
   }
 
   .screen {
-    /* TMRW: override the shared light-dark() onboarding token, which
-       resolves to a brownish gray in dark mode, with the brand surface
-       color used across the chat sidebar/newtab. */
-    --mr-screen-background-color: #1e1d23;
     border-radius: var(--border-radius-medium);
     min-height: unset;
   }
 
   .main-content {
+    /* TMRW: the rounded onboarding card actually reads its background
+       from --background-color-canvas (a shared light-dark() design
+       token), not --mr-screen-background-color as the upstream CSS
+       custom-property declarations might suggest — that one is dead/
+       unused here. Override the real one, scoped to this screen only. */
+    background-color: #1e1d23;
     height: unset;
   }
 
