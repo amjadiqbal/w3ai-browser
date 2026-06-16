@@ -2358,7 +2358,7 @@ preferences-ai-controls-key-points-control =
 
 preferences-ai-controls-sidebar-chatbot-group =
     .label = AI chatbot providers in sidebar
-    .description = Keep a chatbot in view as you browse. Choose from Anthropic Claude, ChatGPT, Copilot, Google Gemini, and Le Chat Mistral.
+    .description = Keep a chatbot in view as you browse. Choose from Anthropic Claude, ChatGPT, Copilot, Google Gemini, You.com, and DeepSeek.
 
 preferences-ai-controls-sidebar-chatbot-control =
     .label = Chatbot in sidebar

@@ -80,7 +80,7 @@ XPCOMUtils.defineLazyPreferenceGetter(
   lazy,
   "chatProviders",
   "browser.ml.chat.providers",
-  "claude,chatgpt,copilot,gemini,lechat",
+  "claude,chatgpt,copilot,gemini,you,deepseek",
   reorderChatProviders
 );
 XPCOMUtils.defineLazyPreferenceGetter(
@@ -211,16 +211,31 @@ export const GenAI = {
       },
     ],
     [
-      "https://chat.mistral.ai/chat",
+      "https://you.com",
       {
-        iconUrl: "chrome://browser/content/genai/assets/brands/lechat.svg",
-        id: "lechat",
-        link1: "https://mistral.ai/terms/#terms-of-service-le-chat",
-        link2: "https://mistral.ai/terms/#privacy-policy",
-        linksId: "genai-settings-chat-lechat-links",
-        maxLength: 13350,
-        name: "Le Chat Mistral",
-        tooltipId: "genai-onboarding-lechat-tooltip",
+        iconUrl: "chrome://browser/content/genai/assets/brands/you.svg",
+        id: "you",
+        link1: "https://you.com/legal/terms",
+        link2: "https://you.com/privacy",
+        linksId: "genai-settings-chat-you-links",
+        maxLength: 8192,
+        name: "You.com",
+        tooltipId: "genai-onboarding-you-tooltip",
+      },
+    ],
+    [
+      "https://chat.deepseek.com",
+      {
+        iconUrl: "chrome://browser/content/genai/assets/brands/deepseek.svg",
+        id: "deepseek",
+        link1:
+          "https://cdn.deepseek.com/policies/en-US/deepseek-terms-of-use.html",
+        link2:
+          "https://cdn.deepseek.com/policies/en-US/deepseek-privacy-policy.html",
+        linksId: "genai-settings-chat-deepseek-links",
+        maxLength: 8192,
+        name: "DeepSeek",
+        tooltipId: "genai-onboarding-deepseek-tooltip",
       },
     ],
     [

@@ -234,8 +234,11 @@ browser {
     &.huggingchat {
       background-image: url(assets/brands/huggingchat.svg);
     }
-    &.lechat {
-      background-image: url(assets/brands/lechat.svg);
+    &.you {
+      background-image: url(assets/brands/you.svg);
+    }
+    &.deepseek {
+      background-image: url(assets/brands/deepseek.svg);
     }
   }
 
