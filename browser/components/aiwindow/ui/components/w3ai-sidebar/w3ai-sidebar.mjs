@@ -49,8 +49,8 @@ class W3AiSidebar extends HTMLElement {
   #activeTab = "chat";
   #currentUrl = "";
   #currentHost = "";
-  #agentName = "W3Ai Agent";
-  #agentLabel = "W3AI · SIDEBAR";
+  #agentName = "TMRW Agent";
+  #agentLabel = "TMRW · SIDEBAR";
   #plugin = null;
   #youcomKey = "";
   #searchQueries = {};
@@ -97,7 +97,7 @@ class W3AiSidebar extends HTMLElement {
     this.#currentUrl = uri?.spec ?? "";
     this.#currentHost = uri?.host ?? "";
     this.#plugin = lazy.AgentPluginRegistry.getPluginForUrl(this.#currentUrl);
-    this.#agentName = this.#plugin?.name ?? "W3Ai Agent";
+    this.#agentName = this.#plugin?.name ?? "TMRW Agent";
 
     const hostEl = this.#shadow.getElementById("current-url");
     if (hostEl) {

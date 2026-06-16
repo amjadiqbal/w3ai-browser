@@ -4,18 +4,20 @@
 
 @import url("chrome://global/skin/design-system/toolbar.css");
 
-/* W3Ai: enforce brand blue unconditionally — overrides tokens-brand.css layer and
-   the -moz-native-theme gate that would otherwise keep Firefox cyan on macOS */
+/* TMRW: enforce brand violet/lime unconditionally — overrides tokens-brand.css
+   layer and the -moz-native-theme gate that would otherwise keep Firefox
+   cyan on macOS. Palette sourced from tmrw.w3ai.io (violet primary CTA,
+   lime-green secondary accent). */
 :root,
 :host(.anonymous-content-host) {
-  --color-accent-primary: light-dark(#0067cc, #00a4fd) !important;
-  --color-accent-primary-hover: light-dark(#005bb5, #33b6fd) !important;
-  --color-accent-primary-active: light-dark(#004f9e, #66c8fe) !important;
-  --color-accent-primary-selected: light-dark(#0067cc, #00a4fd) !important;
-  --focus-outline-color: light-dark(#0067cc, #00a4fd) !important;
-  --link-color: light-dark(#0067cc, #00a4fd) !important;
-  --link-color-hover: light-dark(#005bb5, #33b6fd) !important;
-  --link-color-active: light-dark(#004f9e, #66c8fe) !important;
+  --color-accent-primary: light-dark(#7c3aed, #9d5cff) !important;
+  --color-accent-primary-hover: light-dark(#6d28d9, #b07bff) !important;
+  --color-accent-primary-active: light-dark(#5b21b6, #c49aff) !important;
+  --color-accent-primary-selected: light-dark(#7c3aed, #9d5cff) !important;
+  --focus-outline-color: light-dark(#7c3aed, #9d5cff) !important;
+  --link-color: light-dark(#7c3aed, #9d5cff) !important;
+  --link-color-hover: light-dark(#6d28d9, #b07bff) !important;
+  --link-color-active: light-dark(#5b21b6, #c49aff) !important;
 }
 
 :root {
@@ -33,8 +35,8 @@
   --tabs-navbar-separator-color: ThreeDShadow;
   --tabs-navbar-separator-style: solid;
 
-  --short-notification-background: #0250bb;
-  --short-notification-gradient: #9059ff;
+  --short-notification-background: #2d1b69;
+  --short-notification-gradient: #bef264;
   --warning-icon-bgcolor: light-dark(#ffa436, #ffbd4f);
 
   --urlbar-box-bgcolor: var(--button-background-color-hover);
@@ -60,14 +62,14 @@
   }
 
   &[lwtheme] {
-    --link-color: light-dark(#0067cc, #00a4fd);
-    --link-color-hover: light-dark(#005bb5, #33b6fd);
-    --link-color-active: light-dark(#004f9e, #66c8fe);
+    --link-color: light-dark(#7c3aed, #9d5cff);
+    --link-color-hover: light-dark(#6d28d9, #b07bff);
+    --link-color-active: light-dark(#5b21b6, #c49aff);
     --tabs-navbar-separator-color: light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.3));
-    --color-accent-attention: light-dark(#2ac3a2, #54ffbd);
+    --color-accent-attention: light-dark(#84cc16, #bef264);
 
     @media not (prefers-contrast) {
-      --focus-outline-color: light-dark(#0067cc, #00a4fd);
+      --focus-outline-color: light-dark(#7c3aed, #9d5cff);
     }
   }
 
@@ -87,7 +89,7 @@
  */
 @media not ((forced-colors) or (-moz-native-theme)) {
   :root:not([lwtheme]) {
-    --color-accent-primary: light-dark(#0067cc, #00a4fd);
+    --color-accent-primary: light-dark(#7c3aed, #9d5cff);
     --button-text-color-primary: light-dark(rgb(251, 251, 254), rgb(43, 42, 51));
     --button-background-color: light-dark(rgba(207, 207, 216, 0.33), rgba(0, 0, 0, 0.33));
     --button-background-color-hover: light-dark(rgba(207, 207, 216, 0.66), rgba(207, 207, 216, 0.2));
@@ -129,8 +131,8 @@
       --chrome-content-separator-color: light-dark(rgb(204, 204, 204), hsl(240, 5%, 5%));
     }
 
-    --link-color: light-dark(#0067cc, #00a4fd);
-    --color-accent-attention: light-dark(#2ac3a2, #54ffbd);
+    --link-color: light-dark(#7c3aed, #9d5cff);
+    --color-accent-attention: light-dark(#84cc16, #bef264);
 
     --sidebar-background-color: light-dark(white, rgb(28, 27, 34));
     --sidebar-text-color: light-dark(rgb(21, 20, 26), rgb(249, 249, 250));

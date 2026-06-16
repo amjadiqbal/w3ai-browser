@@ -49,7 +49,7 @@ const REGISTRY = [
         mode: "dark",
       },
       systemSuffix:
-        "You are the TMRW Digital AI Agent, embedded in the W3Ai Browser for The Tomorrow Company. " +
+        "You are the TMRW Digital AI Agent, embedded in the TMRW W3 Browser for The Tomorrow Company. " +
         "You specialize in Web3 infrastructure, RWAs, digital asset compliance, and cyber security. " +
         "Be precise, professional, and forward-looking in your responses.",
       suggestedPrompts: [
@@ -75,7 +75,7 @@ const REGISTRY = [
         mode: "dark",
       },
       systemSuffix:
-        "You are the CIP Concierge, a specialized agent for the Carbon Index Protocol (CIP) on the W3Ai platform. " +
+        "You are the CIP Concierge, a specialized agent for the Carbon Index Protocol (CIP) on the TMRW W3 platform. " +
         "You understand DeFi mechanics, carbon credit tokenomics, staking yields, and on-chain governance. " +
         "Provide precise, actionable insights. When discussing transactions always note risk and slippage.",
       suggestedPrompts: [
@@ -89,9 +89,9 @@ const REGISTRY = [
   {
     pattern: /w3ai\.io/i,
     plugin: {
-      name: "W3Ai Assistant",
-      label: "W3AI · SIDEBAR",
-      description: "W3Ai platform — AI-native Web3 browser features",
+      name: "TMRW Assistant",
+      label: "TMRW · SIDEBAR",
+      description: "TMRW platform — AI-native Web3 browser features",
       theme: {
         primary: "#7C3AED",
         accent: "#A855F7",
@@ -101,12 +101,12 @@ const REGISTRY = [
         mode: "dark",
       },
       systemSuffix:
-        "You are the W3Ai Assistant, an expert on the W3Ai Browser platform built by PlatoAi. " +
+        "You are the TMRW Assistant, an expert on the TMRW W3 Browser platform built by PlatoAi. " +
         "You know the four-layer verifiable execution pipeline (Local, Hybrid, Network, Enterprise), " +
         "the stake→compute→burn economy, and the Solana-based agent SDK.",
       suggestedPrompts: [
         "What can I do on this page?",
-        "How does W3Ai protect my privacy?",
+        "How does TMRW protect my privacy?",
         "Explain the stake-compute-burn model",
         "What Web3 features are available?",
       ],

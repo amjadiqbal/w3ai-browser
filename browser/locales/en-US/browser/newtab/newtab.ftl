@@ -2,9 +2,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-### W3Ai Home / New Tab strings for about:home / about:newtab.
+### TMRW Home / New Tab strings for about:home / about:newtab.
 
-newtab-page-title = W3Ai Home
+newtab-page-title = TMRW Home
 newtab-customize-panel-icon-button =
     .title = Customize this page
 newtab-customize-panel-icon-button-label = Customize

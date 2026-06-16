@@ -16,14 +16,14 @@
 ## For further details, consult:
 ## https://mozilla-l10n.github.io/styleguides/mozilla_general/#brands-copyright-and-trademark
 
--brand-shorter-name = W3Ai
--brand-short-name = W3Ai Browser
--brand-shortcut-name = W3Ai
--brand-full-name = Plato W3Ai Browser
+-brand-shorter-name = TMRW
+-brand-short-name = TMRW W3 Browser
+-brand-shortcut-name = TMRW
+-brand-full-name = TMRW W3 Browser
 # This brand name can be used in messages where the product name needs to
 # remain unchanged across different versions (Nightly, Beta, etc.).
--brand-product-name = W3Ai
+-brand-product-name = TMRW
 -vendor-short-name = Plato
-trademarkInfo = Plato and the W3Ai logos are trademarks of the Plato Technologies Inc.
+trademarkInfo = Plato and the TMRW W3 Browser logos are trademarks of the Plato Technologies Inc.
 # Additional brand tokens used by preferences and home settings
--firefox-home-brand-name = W3Ai Home
+-firefox-home-brand-name = TMRW Home
