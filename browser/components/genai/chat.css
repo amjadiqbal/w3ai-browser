@@ -180,11 +180,15 @@ browser {
         z-index: 1;
       }
       &::after {
-        background: linear-gradient(transparent, var(--background-color-canvas));
+        /* TMRW: match .main-content's #1e1d23 override below — these
+           used to share --background-color-canvas, but that no longer
+           matches the card's actual background, producing a visible
+           seam at the top/bottom of the scrollable list. */
+        background: linear-gradient(transparent, #1e1d23);
         bottom: 0;
       }
       &::before {
-        background: linear-gradient(var(--background-color-canvas), transparent);
+        background: linear-gradient(#1e1d23, transparent);
         top: 0;
       }
     }
