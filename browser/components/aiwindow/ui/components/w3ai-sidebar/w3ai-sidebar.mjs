@@ -375,7 +375,17 @@ class W3AiSidebar extends HTMLElement {
       <div id="shell">
         <header id="w3ai-header">
           <div class="identity">
-            <div class="avatar">✦</div>
+            <div class="avatar">
+              <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g fill="white">
+                  <ellipse cx="8" cy="8" rx="1.7" ry="3.6" transform="rotate(0 8 8)"/>
+                  <ellipse cx="8" cy="8" rx="1.7" ry="3.6" transform="rotate(45 8 8)"/>
+                  <ellipse cx="8" cy="8" rx="1.7" ry="3.6" transform="rotate(90 8 8)"/>
+                  <ellipse cx="8" cy="8" rx="1.7" ry="3.6" transform="rotate(135 8 8)"/>
+                </g>
+                <circle cx="8" cy="8" r="1.3" fill="white"/>
+              </svg>
+            </div>
             <div class="brand">
               <span class="brand-label">${this.#agentLabel}</span>
               <span class="brand-title" id="agent-name">${this.#agentName}</span>
