@@ -211,7 +211,7 @@ export const GenAI = {
       },
     ],
     [
-      "https://you.com",
+      "https://you.com/signin?redirectUrl=%2Fplatform",
       {
         iconUrl: "chrome://browser/content/genai/assets/brands/you.svg",
         id: "you",

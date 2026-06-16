@@ -137,7 +137,36 @@ function renderChat() {
   browser.setAttribute("nodefaultsrc", "true");
   browser.setAttribute("remote", "true");
   browser.setAttribute("type", "content");
-  return browserContainer.appendChild(browser);
+  browserContainer.appendChild(browser);
+
+  // TMRW: force every chat provider's own dark theme so the embedded
+  // site (Claude, ChatGPT, Gemini, You.com, DeepSeek, etc.) renders with
+  // a consistently dark background instead of each site's own light or
+  // branded palette. This nudges prefers-color-scheme rather than
+  // force-overriding arbitrary site CSS, so each site's own dark theme
+  // (which all of the above support) still renders correctly.
+  const applyDarkOverride = () => {
+    try {
+      browser.browsingContext.prefersColorSchemeOverride = "dark";
+    } catch (ex) {
+      console.error("Failed to override chat browser color scheme", ex);
+    }
+  };
+  applyDarkOverride();
+  browser.addProgressListener?.(
+    {
+      onLocationChange() {
+        applyDarkOverride();
+      },
+      QueryInterface: ChromeUtils.generateQI([
+        "nsIWebProgressListener",
+        "nsISupportsWeakReference",
+      ]),
+    },
+    Ci.nsIWebProgress.NOTIFY_LOCATION
+  );
+
+  return browser;
 }
 
 async function renderProviders() {
@@ -311,8 +340,7 @@ function handleChange({ target }) {
 addEventListener("change", handleChange);
 
 function applyBrandSkin() {
-  const url =
-    topChromeWindow.gBrowser?.selectedBrowser?.currentURI?.spec ?? "";
+  const url = topChromeWindow.gBrowser?.selectedBrowser?.currentURI?.spec ?? "";
 
   const plugin = lazy.AgentPluginRegistry.getPluginForUrl(url);
   const isRegistered = plugin !== lazy.AgentPluginRegistry.DEFAULT_PLUGIN;
@@ -409,9 +437,7 @@ var browserPromise = new Promise((resolve, reject) => {
           if (browser !== topChromeWindow.gBrowser.selectedBrowser) {
             return;
           }
-          if (
-            flags & Ci.nsIWebProgressListener.LOCATION_CHANGE_SAME_DOCUMENT
-          ) {
+          if (flags & Ci.nsIWebProgressListener.LOCATION_CHANGE_SAME_DOCUMENT) {
             return;
           }
           applyBrandSkin();

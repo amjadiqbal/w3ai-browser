@@ -46,9 +46,10 @@ browser {
 
 #header {
   align-items: center;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: none;
   display: flex;
   flex-direction: row;
+  padding-block: 0;
   padding-inline: var(--space-large);
 
   ::part(button),
@@ -72,7 +73,7 @@ browser {
     color: var(--button-text-color-ghost);
     flex: 1;
     height: var(--button-size-icon);
-    margin-block: var(--space-xsmall);
+    margin-block: 0;
     max-width: var(--select-default-width);
 
     &:hover {
@@ -121,6 +122,10 @@ browser {
   }
 
   .screen {
+    /* TMRW: override the shared light-dark() onboarding token, which
+       resolves to a brownish gray in dark mode, with the brand surface
+       color used across the chat sidebar/newtab. */
+    --mr-screen-background-color: #1e1d23;
     border-radius: var(--border-radius-medium);
     min-height: unset;
   }
