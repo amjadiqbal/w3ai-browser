@@ -81,10 +81,10 @@ input {
 }
 :root[lwt-newtab-brighttext] {
   color-scheme: dark;
-  --newtab-background-color: #2B2A33;
-  --newtab-background-color-secondary: #42414d;
+  --newtab-background-color: #0A0710;
+  --newtab-background-color-secondary: #120d1c;
   --newtab-text-primary-color: var(--text-color);
-  --newtab-background-card: rgba(66, 65, 77, 0.85);
+  --newtab-background-card: rgba(28, 20, 46, 0.85);
   --newtab-text-topic-label-color: var(--color-violet-30);
   --newtab-text-secondary-text: #FBFBFEB0;
   --newtab-contextual-text-primary-color: light-dark(var(--text-color), var(--newtab-text-primary-color));
