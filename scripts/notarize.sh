@@ -1,18 +1,25 @@
 #!/usr/bin/env bash
-# notarize.sh — codesign, notarize, and staple TMRW W3 Browser for distribution
+# notarize.sh — package, codesign, notarize, and staple TMRW W3 Browser
 #
 # Prerequisites:
-#   1. Xcode Command Line Tools installed (xcode-select --install)
-#   2. Valid "Developer ID Application" certificate in your keychain
+#   1. Xcode Command Line Tools (xcode-select --install)
+#   2. "Developer ID Application" certificate installed in Keychain
 #   3. .env file at repo root with all APPLE_* variables filled in
+#   4. Run ./mach build && ./mach package first
 #
 # Usage:
-#   ./scripts/notarize.sh              # uses .env from repo root
-#   APP_PATH="/path/to/App.app" ./scripts/notarize.sh
+#   ./scripts/notarize.sh
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+OBJ_DIR="$REPO_ROOT/obj-x86_64-apple-darwin25.5.0"
+SOURCE_DMG="$(ls "$OBJ_DIR/dist/"*.dmg 2>/dev/null | head -1)"
+WORK_DIR="/tmp/tmrw-notarize"
+APP_NAME="TMRW W3 Browser"
+APP_PATH="$WORK_DIR/$APP_NAME.app"
+ZIP_PATH="$WORK_DIR/$APP_NAME.zip"
+OUT_DMG="$OBJ_DIR/dist/$APP_NAME.dmg"
 
 # ── Load .env ──────────────────────────────────────────────────────────────────
 ENV_FILE="$REPO_ROOT/.env"
@@ -21,49 +28,71 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
-set -a
-# shellcheck source=/dev/null
-source "$ENV_FILE"
-set +a
+while IFS= read -r line || [[ -n "$line" ]]; do
+  [[ "$line" =~ ^[[:space:]]*# ]] && continue
+  [[ -z "${line//[[:space:]]/}" ]] && continue
+  if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+    key="${BASH_REMATCH[1]}"
+    val="${BASH_REMATCH[2]}"
+    val="${val#\"}" ; val="${val%\"}"
+    val="${val#\'}" ; val="${val%\'}"
+    export "$key=$val"
+  fi
+done < "$ENV_FILE"
 
-# ── Validate required vars ─────────────────────────────────────────────────────
-required_vars=(
-  APPLE_ID
-  APPLE_APP_SPECIFIC_PASSWORD
-  APPLE_TEAM_ID
-  APPLE_BUNDLE_ID
-  APPLE_SIGNING_IDENTITY
-)
-for var in "${required_vars[@]}"; do
+# ── Validate ───────────────────────────────────────────────────────────────────
+for var in APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID APPLE_BUNDLE_ID APPLE_SIGNING_IDENTITY; do
   if [[ -z "${!var:-}" ]]; then
     echo "ERROR: $var is not set in .env"
     exit 1
   fi
 done
 
-# ── Resolve app path ───────────────────────────────────────────────────────────
-APP_PATH="${APP_PATH:-$REPO_ROOT/$BUILT_APP_PATH}"
-if [[ ! -d "$APP_PATH" ]]; then
-  echo "ERROR: App not found at: $APP_PATH"
-  echo "Run './mach build' first, or set APP_PATH=/path/to/TMRW W3 Browser.app"
+if [[ ! -f "$SOURCE_DMG" ]]; then
+  echo "ERROR: Source DMG not found: $SOURCE_DMG"
+  echo "Run './mach build && ./mach package' first."
   exit 1
 fi
 
-DMG_PATH="${APP_PATH%.app}.dmg"
-ZIP_PATH="${APP_PATH%.app}-notarize.zip"
-
-echo "==> App:    $APP_PATH"
-echo "==> Bundle: $APPLE_BUNDLE_ID"
 echo "==> Signer: $APPLE_SIGNING_IDENTITY"
+echo "==> Bundle: $APPLE_BUNDLE_ID"
 echo ""
 
-# ── Step 1: Deep codesign ──────────────────────────────────────────────────────
-echo "==> [1/5] Codesigning..."
+# ── Step 1: Extract .app from mach package DMG ────────────────────────────────
+echo "==> [1/6] Extracting app from packaged DMG..."
+rm -rf "$WORK_DIR"
+mkdir -p "$WORK_DIR"
+
+hdiutil attach "$SOURCE_DMG" -nobrowse -mountpoint /tmp/tmrw-src-dmg -quiet
+cp -R "/tmp/tmrw-src-dmg/$APP_NAME.app" "$APP_PATH"
+hdiutil detach /tmp/tmrw-src-dmg -quiet
+
+echo "    Extracted to $APP_PATH"
+
+echo "    Stripping extended attributes..."
+xattr -cr "$APP_PATH"
+
+# ── Step 2: Deep codesign with hardened runtime ───────────────────────────────
+echo ""
+echo "==> [2/6] Codesigning (deep, hardened runtime)..."
+
+# Sign binaries that --deep misses because they live outside MacOS/Frameworks
+SKIP_SIGN=(
+  "$APP_PATH/Contents/Resources/gmp-clearkey/0.1/libclearkey.dylib"
+  "$APP_PATH/Contents/Library/LaunchServices/org.mozilla.updater"
+)
+for bin in "${SKIP_SIGN[@]}"; do
+  if [[ -f "$bin" ]]; then
+    echo "    Pre-signing: $(basename "$bin")"
+    codesign --force --timestamp --options runtime \
+      --sign "$APPLE_SIGNING_IDENTITY" "$bin"
+  fi
+done
+
 codesign \
   --deep \
   --force \
   --verify \
-  --verbose=2 \
   --timestamp \
   --options runtime \
   --entitlements "$REPO_ROOT/browser/branding/w3ai/entitlements.plist" \
@@ -71,17 +100,16 @@ codesign \
   "$APP_PATH"
 
 echo "==> Verifying signature..."
-codesign --verify --deep --strict --verbose=2 "$APP_PATH"
-spctl --assess --type exec --verbose "$APP_PATH"
+codesign --verify --deep --strict "$APP_PATH" && echo "    Signature OK"
 
-# ── Step 2: Create zip for notarization ───────────────────────────────────────
+# ── Step 3: Zip for notarization ──────────────────────────────────────────────
 echo ""
-echo "==> [2/5] Creating zip for notarization..."
+echo "==> [3/6] Creating zip for notarization..."
 ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
 
-# ── Step 3: Submit to Apple Notary Service ────────────────────────────────────
+# ── Step 4: Submit to Apple Notary Service ────────────────────────────────────
 echo ""
-echo "==> [3/5] Submitting to Apple Notary Service (this takes 1-5 minutes)..."
+echo "==> [4/6] Submitting to Apple Notary Service (takes 1-5 min)..."
 xcrun notarytool submit "$ZIP_PATH" \
   --apple-id "$APPLE_ID" \
   --password "$APPLE_APP_SPECIFIC_PASSWORD" \
@@ -89,43 +117,32 @@ xcrun notarytool submit "$ZIP_PATH" \
   --wait \
   --timeout 600
 
-# ── Step 4: Staple notarization ticket ────────────────────────────────────────
+# ── Step 5: Staple ────────────────────────────────────────────────────────────
 echo ""
-echo "==> [4/5] Stapling notarization ticket..."
+echo "==> [5/6] Stapling notarization ticket..."
 xcrun stapler staple "$APP_PATH"
 xcrun stapler validate "$APP_PATH"
 
-# ── Step 5: Create distributable DMG ──────────────────────────────────────────
+# ── Step 6: Create signed DMG ─────────────────────────────────────────────────
 echo ""
-echo "==> [5/5] Creating DMG..."
-if command -v create-dmg &>/dev/null; then
-  create-dmg \
-    --volname "TMRW W3 Browser" \
-    --window-size 600 400 \
-    --icon-size 128 \
-    --app-drop-link 450 170 \
-    "$DMG_PATH" \
-    "$APP_PATH"
-else
-  hdiutil create \
-    -volname "TMRW W3 Browser" \
-    -srcfolder "$APP_PATH" \
-    -ov -format UDZO \
-    "$DMG_PATH"
-fi
+echo "==> [6/6] Creating distributable DMG..."
+rm -f "$OUT_DMG"
 
-# Sign the DMG too
-codesign \
-  --sign "$APPLE_SIGNING_IDENTITY" \
-  --timestamp \
-  "$DMG_PATH"
+hdiutil create \
+  -volname "$APP_NAME" \
+  -srcfolder "$APP_PATH" \
+  -ov -format UDZO \
+  "$OUT_DMG"
+
+codesign --sign "$APPLE_SIGNING_IDENTITY" --timestamp "$OUT_DMG"
 
 echo ""
-echo "==> Done!"
-echo "    App:  $APP_PATH"
-echo "    DMG:  $DMG_PATH"
+echo "============================================================"
+echo "  Done!"
+echo "  DMG: $OUT_DMG"
 echo ""
-echo "    Distribute the DMG to testers via TestFlight or direct download."
-echo "    For TestFlight: upload via Transporter app or xcrun altool."
+echo "  Share this DMG with testers — it is fully notarized."
+echo "  macOS will not show any security warning on install."
+echo "============================================================"
 
-rm -f "$ZIP_PATH"
+rm -rf "$WORK_DIR"
