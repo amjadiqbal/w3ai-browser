@@ -6,6 +6,12 @@
 # W3Ai: local extension drops that are not part of the source tree
 browser/extensions/changelly-exchange/
 
+# W3Ai: local secrets — NEVER commit these
+.env
+.env.local
+*.env
+w3ai.env
+
 # Filenames that should be ignored wherever they appear
 *~
 *.pyc
