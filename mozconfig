@@ -1,0 +1,6 @@
+# Automatically download and use compiled C++ components:
+ac_add_options --with-branding=browser/branding/w3ai
+ac_add_options --enable-artifact-builds
+
+# Rename package/DMG output from "firefox-*" to "tmrw-w3-browser-*"
+export MOZ_PKG_APPNAME=tmrw-w3-browser
