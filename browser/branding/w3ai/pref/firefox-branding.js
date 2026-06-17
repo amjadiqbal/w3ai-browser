@@ -11,26 +11,26 @@ pref("startup.homepage_welcome_url.additional", "");
 pref("app.update.interval", 21600); // 6 hours
 // Give the user x seconds to react before showing the big UI. default=192 hours
 pref("app.update.promptWaitTime", 691200);
-// app.update.url.manual: URL user can browse to manually if for some reason
-// all update installation attempts fail.
-// app.update.url.details: a default value for the "More information about this
-// update" link supplied in the "An update is available" page of the update
-// wizard.
+
+// TMRW W3 Browser update server — serves update.xml listing latest MAR
+// Variables substituted at check time: VERSION, BUILD_ID, BUILD_TARGET, LOCALE, CHANNEL, OS_VERSION, SYSTEM_CAPABILITIES, DISTRIBUTION, DISTRIBUTION_VERSION
+pref("app.update.url", "https://updates.tmrw.w3ai.io/update/1/%PRODUCT%/%VERSION%/%BUILD_ID%/%BUILD_TARGET%/%LOCALE%/%CHANNEL%/%OS_VERSION%/%SYSTEM_CAPABILITIES%/%DISTRIBUTION%/%DISTRIBUTION_VERSION%/update.xml");
+
 #if MOZ_UPDATE_CHANNEL == beta
-  pref("app.update.url.manual", "");
-  pref("app.update.url.details", "");
-  pref("app.releaseNotesURL", "");
-  pref("app.releaseNotesURL.aboutDialog", "");
+  pref("app.update.url.manual", "https://tmrw.w3ai.io/download");
+  pref("app.update.url.details", "https://tmrw.w3ai.io/releases");
+  pref("app.releaseNotesURL", "https://tmrw.w3ai.io/releases");
+  pref("app.releaseNotesURL.aboutDialog", "https://tmrw.w3ai.io/releases");
 #elifdef MOZ_ESR
-  pref("app.update.url.manual", "");
-  pref("app.update.url.details", "");
-  pref("app.releaseNotesURL", "");
-  pref("app.releaseNotesURL.aboutDialog", "");
+  pref("app.update.url.manual", "https://tmrw.w3ai.io/download");
+  pref("app.update.url.details", "https://tmrw.w3ai.io/releases");
+  pref("app.releaseNotesURL", "https://tmrw.w3ai.io/releases");
+  pref("app.releaseNotesURL.aboutDialog", "https://tmrw.w3ai.io/releases");
 #else
-  pref("app.update.url.manual", "");
-  pref("app.update.url.details", "");
-  pref("app.releaseNotesURL", "");
-  pref("app.releaseNotesURL.aboutDialog", "");
+  pref("app.update.url.manual", "https://tmrw.w3ai.io/download");
+  pref("app.update.url.details", "https://tmrw.w3ai.io/releases");
+  pref("app.releaseNotesURL", "https://tmrw.w3ai.io/releases");
+  pref("app.releaseNotesURL.aboutDialog", "https://tmrw.w3ai.io/releases");
 #endif
 pref("app.releaseNotesURL.prompt", "");
 
