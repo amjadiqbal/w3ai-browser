@@ -127,16 +127,41 @@ echo "==> [5/6] Stapling notarization ticket..."
 xcrun stapler staple "$APP_PATH"
 xcrun stapler validate "$APP_PATH"
 
-# ── Step 6: Create signed DMG ─────────────────────────────────────────────────
+# ── Step 6: Create signed installer DMG with branded layout ───────────────────
 echo ""
 echo "==> [6/6] Creating distributable DMG..."
-rm -f "$OUT_DMG"
+STAGING_DMG="/tmp/tmrw-installer-rw.dmg"
+MOUNT_POINT="/tmp/tmrw-installer-mount"
+rm -f "$OUT_DMG" "$STAGING_DMG"
+
+# Size = app on disk + 80 MB for background, symlink, DS_Store headroom
+APP_SIZE_MB=$(du -sm "$APP_PATH" | cut -f1)
+DMG_SIZE_MB=$((APP_SIZE_MB + 80))
 
 hdiutil create \
   -volname "$APP_NAME" \
-  -srcfolder "$APP_PATH" \
-  -ov -format UDZO \
-  "$OUT_DMG"
+  -size ${DMG_SIZE_MB}m \
+  -fs HFS+ \
+  -layout SPUD \
+  "$STAGING_DMG"
+
+hdiutil attach "$STAGING_DMG" -mountpoint "$MOUNT_POINT" -nobrowse -quiet
+
+cp -R "$APP_PATH"        "$MOUNT_POINT/$APP_NAME.app"
+ln -s /Applications      "$MOUNT_POINT/Applications"
+mkdir -p                 "$MOUNT_POINT/.background"
+cp "$REPO_ROOT/browser/branding/w3ai/background.png" \
+                         "$MOUNT_POINT/.background/background.png"
+cp "$REPO_ROOT/browser/branding/w3ai/dsstore" \
+                         "$MOUNT_POINT/.DS_Store"
+cp "$REPO_ROOT/browser/branding/w3ai/disk.icns" \
+                         "$MOUNT_POINT/.VolumeIcon.icns"
+
+hdiutil detach "$MOUNT_POINT" -quiet
+
+# Compress to final read-only DMG
+hdiutil convert "$STAGING_DMG" -format UDZO -imagekey zlib-level=9 -o "$OUT_DMG" -quiet
+rm -f "$STAGING_DMG"
 
 codesign --sign "$APPLE_SIGNING_IDENTITY" --timestamp "$OUT_DMG"
 
