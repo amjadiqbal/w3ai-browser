@@ -58,36 +58,36 @@ BUILD_ID="$(grep "^BuildID" \
 BUILD_ID="${BUILD_ID:-$(date +%Y%m%d%H%M%S)}"
 echo "    Build ID: $BUILD_ID"
 
-# ── Step 3: Upload DMG to Vercel Blob ─────────────────────────────────────────
+# ── Step 3: Upload DMG to Vercel Blob (multipart via @vercel/blob SDK) ─────────
 echo ""
 echo "==> [3/4] Uploading DMG to Vercel Blob (~215MB, please wait)..."
 
-BLOB_RESPONSE=""
-BLOB_HTTP_STATUS=""
-BLOB_RESPONSE="$(curl -s -X PUT \
-  "https://blob.vercel-storage.com/TMRW-W3-Browser-v${VERSION}.dmg" \
-  -H "Authorization: Bearer $BLOB_READ_WRITE_TOKEN" \
-  -H "Content-Type: application/octet-stream" \
-  -H "x-content-type: application/octet-stream" \
-  --data-binary "@$SIGNED_DMG" \
-  -w "\n%{http_code}" 2>&1)" || {
-  echo "ERROR: curl upload command failed (exit $?)"
-  exit 1
-}
+UPLOAD_TMPDIR="$(mktemp -d)"
+trap "rm -rf '$UPLOAD_TMPDIR'" EXIT
 
-BLOB_HTTP_STATUS="$(echo "$BLOB_RESPONSE" | tail -1)"
-BLOB_BODY="$(echo "$BLOB_RESPONSE" | head -1)"
-echo "    HTTP status: $BLOB_HTTP_STATUS"
+# Bootstrap @vercel/blob in a temp dir
+(cd "$UPLOAD_TMPDIR" && \
+  echo '{"name":"uploader","type":"module"}' > package.json && \
+  npm install @vercel/blob --silent 2>/dev/null)
 
-if [[ "$BLOB_HTTP_STATUS" != "200" ]]; then
-  echo "ERROR: Blob upload failed (HTTP $BLOB_HTTP_STATUS): $BLOB_BODY"
-  exit 1
-fi
+cat > "$UPLOAD_TMPDIR/upload.mjs" << 'JSEOF'
+import { put } from '@vercel/blob';
+import { createReadStream } from 'fs';
+const url = (await put(process.argv[3], createReadStream(process.argv[2]), {
+  access: 'public',
+  token: process.env.BLOB_READ_WRITE_TOKEN,
+  contentType: 'application/octet-stream',
+  multipart: true,
+})).url;
+console.log(url);
+JSEOF
 
-DMG_URL="$(echo "$BLOB_BODY" | grep -o '"url":"[^"]*"' | cut -d'"' -f4)"
+DMG_URL="$(cd "$UPLOAD_TMPDIR" && \
+  BLOB_READ_WRITE_TOKEN="$BLOB_READ_WRITE_TOKEN" \
+  node upload.mjs "$SIGNED_DMG" "TMRW-W3-Browser-v${VERSION}.dmg")"
 
 if [[ -z "$DMG_URL" ]]; then
-  echo "ERROR: Could not parse upload URL from response: $BLOB_BODY"
+  echo "ERROR: Upload returned empty URL"
   exit 1
 fi
 echo "    Uploaded: $DMG_URL"
