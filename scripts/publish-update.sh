@@ -1,133 +1,108 @@
 #!/usr/bin/env bash
-# publish-update.sh — publish a new TMRW W3 Browser release to the update server
+# publish-update.sh — notarize + generate update files for tmrw.w3ai.io
 #
-# What this does:
-#   1. Reads the current version from browser/config/version.txt
-#   2. Notarizes the DMG (calls notarize.sh)
-#   3. Uploads the DMG + MAR file to S3 (or any static host)
-#   4. Writes a fresh update.xml and uploads it
-#   5. Users with the browser installed get a silent update prompt
+# What this produces (upload both to your web server at /updates/):
+#   - TMRW-W3-Browser.dmg   → the notarized installer
+#   - update.xml             → tells installed browsers an update exists
 #
-# Prerequisites:
-#   - AWS CLI installed + configured (brew install awscli && aws configure)
-#   - .env file with S3_BUCKET set
-#   - Run ./mach build && ./mach package first
+# Usage:
+#   ./scripts/publish-update.sh
+#   Then upload the two files in /tmp/tmrw-publish/ to your server's /updates/ folder.
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OBJ_DIR="$REPO_ROOT/obj-x86_64-apple-darwin25.5.0"
 VERSION="$(cat "$REPO_ROOT/browser/config/version.txt" | tr -d '[:space:]')"
-APP_NAME="TMRW W3 Browser"
+OUT_DIR="/tmp/tmrw-publish"
 
-# ── Load .env ──────────────────────────────────────────────────────────────────
+rm -rf "$OUT_DIR" && mkdir -p "$OUT_DIR"
+
+echo "============================================================"
+echo "  TMRW W3 Browser — publish v$VERSION"
+echo "============================================================"
+echo ""
+
+# ── Step 1: Notarize ──────────────────────────────────────────────────────────
+echo "==> [1/3] Notarizing build..."
+"$REPO_ROOT/scripts/notarize.sh"
+
+SIGNED_DMG="$OBJ_DIR/dist/TMRW W3 Browser.dmg"
+cp "$SIGNED_DMG" "$OUT_DIR/TMRW-W3-Browser.dmg"
+echo "    Copied DMG to $OUT_DIR/TMRW-W3-Browser.dmg"
+
+# ── Step 2: Get build ID from the packaged app ────────────────────────────────
+echo ""
+echo "==> [2/3] Reading build ID..."
+
+BUILD_ID="$(defaults read "$OBJ_DIR/dist/TMRW W3 Browser.app/Contents/Info" "BuildID" 2>/dev/null \
+  || grep -r "BuildID" "$OBJ_DIR/dist/TMRW W3 Browser.app/Contents/Resources/application.ini" 2>/dev/null | head -1 | cut -d= -f2 \
+  || date +%Y%m%d%H%M%S)"
+
+BUILD_ID="${BUILD_ID//[[:space:]]/}"
+echo "    Build ID: $BUILD_ID"
+
+DMG_SIZE="$(stat -f%z "$OUT_DIR/TMRW-W3-Browser.dmg")"
+DMG_HASH="$(shasum -a 512 "$OUT_DIR/TMRW-W3-Browser.dmg" | awk '{print $1}')"
+DMG_URL="https://tmrw.w3ai.io/updates/TMRW-W3-Browser.dmg"
+
+# ── Step 3: Write update.xml ──────────────────────────────────────────────────
+echo ""
+echo "==> [3/3] Writing update.xml..."
+
+cat > "$OUT_DIR/update.xml" <<EOF
+<?xml version="1.0"?>
+<updates>
+  <update type="minor"
+          displayVersion="$VERSION"
+          appVersion="$VERSION"
+          platformVersion="$VERSION"
+          buildID="$BUILD_ID"
+          detailsURL="https://tmrw.w3ai.io/releases">
+    <patch type="complete"
+           URL="$DMG_URL"
+           hashFunction="SHA512"
+           hashValue="$DMG_HASH"
+           size="$DMG_SIZE"/>
+  </update>
+</updates>
+EOF
+
+echo "    build ID : $BUILD_ID"
+echo "    version  : $VERSION"
+echo "    DMG size : $DMG_SIZE bytes"
+echo ""
+echo "============================================================"
+echo ""
+echo "  Two files are ready in: $OUT_DIR/"
+echo ""
+echo "  UPLOAD BOTH to your web server at:  tmrw.w3ai.io/updates/"
+echo ""
+echo "    TMRW-W3-Browser.dmg  →  https://tmrw.w3ai.io/updates/TMRW-W3-Browser.dmg"
+echo "    update.xml           →  https://tmrw.w3ai.io/updates/update.xml"
+echo ""
+echo "  Installed browsers will detect the update within 6 hours."
+echo "  To trigger immediately: Help menu → Check for Updates"
+echo "============================================================"
+
+# ── Optional: auto-upload via rsync/scp if SSH_UPDATE_HOST is set in .env ────
 ENV_FILE="$REPO_ROOT/.env"
+SSH_HOST=""
+SSH_PATH=""
 while IFS= read -r line || [[ -n "$line" ]]; do
   [[ "$line" =~ ^[[:space:]]*# ]] && continue
   [[ -z "${line//[[:space:]]/}" ]] && continue
   if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
-    key="${BASH_REMATCH[1]}"
-    val="${BASH_REMATCH[2]}"
+    key="${BASH_REMATCH[1]}" ; val="${BASH_REMATCH[2]}"
     val="${val#\"}" ; val="${val%\"}"
-    val="${val#\'}" ; val="${val%\'}"
-    export "$key=$val"
+    [[ "$key" == "SSH_UPDATE_HOST" ]] && SSH_HOST="$val"
+    [[ "$key" == "SSH_UPDATE_PATH" ]] && SSH_PATH="$val"
   fi
 done < "$ENV_FILE"
 
-S3_BUCKET="${S3_BUCKET:-tmrw-w3-browser-updates}"
-CDN_BASE="${CDN_BASE:-https://updates.tmrw.w3ai.io}"
-
-echo "==> Publishing TMRW W3 Browser v$VERSION"
-echo ""
-
-# ── Step 1: Notarize + produce signed DMG ────────────────────────────────────
-echo "==> [1/4] Notarizing..."
-"$REPO_ROOT/scripts/notarize.sh"
-
-SIGNED_DMG="$OBJ_DIR/dist/$APP_NAME.dmg"
-
-# ── Step 2: Locate the MAR update file ───────────────────────────────────────
-echo ""
-echo "==> [2/4] Locating MAR update package..."
-MAR_FILE="$(ls "$OBJ_DIR/dist/"*.complete.mar 2>/dev/null | head -1)"
-if [[ -z "$MAR_FILE" ]]; then
-  echo "    No .mar file found — building update package..."
-  ./mach package-multi-locale 2>/dev/null || true
-  MAR_FILE="$(ls "$OBJ_DIR/dist/"*.complete.mar 2>/dev/null | head -1)"
+if [[ -n "$SSH_HOST" && -n "$SSH_PATH" ]]; then
+  echo ""
+  echo "==> Auto-uploading via rsync to $SSH_HOST:$SSH_PATH ..."
+  rsync -avz --progress "$OUT_DIR/" "$SSH_HOST:$SSH_PATH/"
+  echo "    Upload complete. Update is live."
 fi
-
-if [[ -z "$MAR_FILE" ]]; then
-  echo "    WARNING: No MAR file found. Uploading DMG only (no silent update)."
-  MAR_SIZE=0
-  MAR_HASH=""
-else
-  MAR_SIZE="$(stat -f%z "$MAR_FILE")"
-  MAR_HASH="$(shasum -a 512 "$MAR_FILE" | awk '{print $1}')"
-  echo "    MAR: $MAR_FILE ($MAR_SIZE bytes)"
-fi
-
-# ── Step 3: Upload to S3 ──────────────────────────────────────────────────────
-echo ""
-echo "==> [3/4] Uploading to S3 bucket: $S3_BUCKET..."
-
-DMG_KEY="releases/v$VERSION/$APP_NAME-$VERSION.dmg"
-aws s3 cp "$SIGNED_DMG" "s3://$S3_BUCKET/$DMG_KEY" \
-  --content-type "application/x-apple-diskimage" \
-  --acl public-read
-
-if [[ -n "$MAR_FILE" ]]; then
-  MAR_KEY="releases/v$VERSION/$(basename "$MAR_FILE")"
-  aws s3 cp "$MAR_FILE" "s3://$S3_BUCKET/$MAR_KEY" \
-    --content-type "application/octet-stream" \
-    --acl public-read
-  MAR_URL="$CDN_BASE/$MAR_KEY"
-fi
-
-DMG_URL="$CDN_BASE/$DMG_KEY"
-echo "    DMG uploaded: $DMG_URL"
-
-# ── Step 4: Generate and upload update.xml ───────────────────────────────────
-echo ""
-echo "==> [4/4] Writing update.xml..."
-
-BUILD_ID="$(date +%Y%m%d%H%M%S)"
-
-if [[ -n "$MAR_FILE" ]]; then
-UPDATE_XML="<?xml version=\"1.0\"?>
-<updates>
-  <update type=\"minor\"
-          displayVersion=\"$VERSION\"
-          appVersion=\"$VERSION\"
-          platformVersion=\"$VERSION\"
-          buildID=\"$BUILD_ID\">
-    <patch type=\"complete\"
-           URL=\"$MAR_URL\"
-           size=\"$MAR_SIZE\"
-           hashFunction=\"SHA512\"
-           hashValue=\"$MAR_HASH\"/>
-  </update>
-</updates>"
-else
-UPDATE_XML="<?xml version=\"1.0\"?>
-<updates/>"
-fi
-
-echo "$UPDATE_XML" > /tmp/update.xml
-
-# Upload update.xml to all path prefixes the browser might request
-# The browser substitutes %PRODUCT%, %VERSION% etc — we serve the same XML
-# for all combinations by using a wildcard-friendly path structure.
-aws s3 cp /tmp/update.xml "s3://$S3_BUCKET/update/1/TMRW W3 Browser/$VERSION/" \
-  --recursive --exclude "*" --include "*.xml" 2>/dev/null || \
-aws s3 cp /tmp/update.xml "s3://$S3_BUCKET/update.xml" \
-  --content-type "text/xml" \
-  --acl public-read
-
-echo ""
-echo "============================================================"
-echo "  Published v$VERSION"
-echo "  DMG download: $DMG_URL"
-echo ""
-echo "  Users with TMRW W3 Browser installed will be prompted"
-echo "  to update within 6 hours (next background check)."
-echo "============================================================"
