@@ -14,7 +14,11 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OBJ_DIR="$REPO_ROOT/obj-x86_64-apple-darwin25.5.0"
-SOURCE_DMG="$(ls "$OBJ_DIR/dist/"*.dmg 2>/dev/null | head -1)"
+SOURCE_DMG="$(ls -t "$OBJ_DIR/dist/tmrw-w3-browser-"*.dmg 2>/dev/null | head -1)" || true
+# Fallback: older builds used the default firefox-* naming; pick newest
+if [[ -z "$SOURCE_DMG" ]]; then
+  SOURCE_DMG="$(ls -t "$OBJ_DIR/dist/firefox-"*.dmg 2>/dev/null | head -1)" || true
+fi
 WORK_DIR="/tmp/tmrw-notarize"
 APP_NAME="TMRW W3 Browser"
 APP_PATH="$WORK_DIR/$APP_NAME.app"
