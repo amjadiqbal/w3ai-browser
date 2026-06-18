@@ -23,7 +23,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
 done < "$ENV_FILE"
 
 # ── Validate required vars ─────────────────────────────────────────────────────
-for var in PUBLISH_SECRET PUBLISH_URL BLOB_READ_WRITE_TOKEN; do
+for var in PUBLISH_SECRET PUBLISH_URL BLOB_READ_WRITE_TOKEN VERCEL_BYPASS_SECRET; do
   if [[ -z "${!var:-}" ]]; then
     echo "ERROR: $var not set in .env"
     exit 1
@@ -84,6 +84,8 @@ echo "==> [4/4] Publishing update manifest to tmrw.w3ai.io..."
 RESPONSE="$(curl -s -X POST "$PUBLISH_URL" \
   -H "Authorization: Bearer $PUBLISH_SECRET" \
   -H "Content-Type: application/json" \
+  -H "User-Agent: TMRW-W3-Publisher/1.0" \
+  -H "x-vercel-protection-bypass: ${VERCEL_BYPASS_SECRET}" \
   -d "{\"version\":\"$VERSION\",\"buildID\":\"$BUILD_ID\",\"dmgHash\":\"$DMG_HASH\",\"dmgSize\":$DMG_SIZE,\"dmgUrl\":\"$DMG_URL\"}" \
   -w "\n%{http_code}")"
 
