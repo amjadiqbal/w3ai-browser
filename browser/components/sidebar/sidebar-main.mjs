@@ -606,15 +606,17 @@ export default class SidebarMain extends MozLitElement {
   }
 
   async showView(view) {
+    if (view === "viewCustomizeSidebar") {
+      Glean.sidebarCustomize.iconClick.record();
+      window.openTrustedLinkIn("about:preferences", "tab");
+      return;
+    }
     const { currentID, toolsAndExtensions } = window.SidebarController;
     let isToolOpening =
       (!currentID || (currentID && currentID !== view)) &&
       toolsAndExtensions.has(view);
     window.SidebarController.recordIconClick(view, this.expanded);
     window.SidebarController.toggle(view);
-    if (view === "viewCustomizeSidebar") {
-      Glean.sidebarCustomize.iconClick.record();
-    }
     if (isToolOpening) {
       await this.checkShouldShowCalloutSurveys(view);
     }
