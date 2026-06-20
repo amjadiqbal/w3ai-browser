@@ -13,8 +13,9 @@ pref("app.update.interval", 21600); // 6 hours
 pref("app.update.promptWaitTime", 691200);
 
 // TMRW W3 Browser update server — serves update.xml listing latest MAR
-// Variables substituted at check time: VERSION, BUILD_ID, BUILD_TARGET, LOCALE, CHANNEL, OS_VERSION, SYSTEM_CAPABILITIES, DISTRIBUTION, DISTRIBUTION_VERSION
-pref("app.update.url", "https://tmrw.w3ai.io/updates/update.xml");
+// lockPref prevents cached profile prefs from overriding this at runtime
+lockPref("app.update.url", "https://tmrw.w3ai.io/updates/update.xml");
+lockPref("app.update.enabled", true);
 
 #if MOZ_UPDATE_CHANNEL == beta
   pref("app.update.url.manual", "https://tmrw.w3ai.io/download");

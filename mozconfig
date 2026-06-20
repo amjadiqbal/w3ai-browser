@@ -1,6 +1,10 @@
-# Automatically download and use compiled C++ components:
 ac_add_options --with-branding=browser/branding/w3ai
 ac_add_options --enable-artifact-builds
+ac_add_options --enable-update-channel=release
 
 # Rename package/DMG output from "firefox-*" to "tmrw-w3-browser-*"
 export MOZ_PKG_APPNAME=tmrw-w3-browser
+
+# Force our version numbers to override the artifact build's compiled-in 151.0a1
+export MOZ_APP_VERSION=1.0.0
+export MOZ_APP_VERSION_DISPLAY=1.0.0

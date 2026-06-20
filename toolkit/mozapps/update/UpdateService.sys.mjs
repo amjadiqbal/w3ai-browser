@@ -1971,7 +1971,7 @@ function updateIsAtLeastAsOldAs(update, version, buildID) {
 function updateIsAtLeastAsOldAsCurrentVersion(update) {
   return updateIsAtLeastAsOldAs(
     update,
-    Services.appinfo.version,
+    AppConstants.MOZ_APP_VERSION,
     Services.appinfo.appBuildID
   );
 }
@@ -2432,7 +2432,7 @@ class Update {
     }
 
     if (!this.previousAppVersion) {
-      this.previousAppVersion = Services.appinfo.version;
+      this.previousAppVersion = AppConstants.MOZ_APP_VERSION;
     }
 
     if (!this.elevationFailure) {
@@ -3035,7 +3035,7 @@ export class UpdateService {
       if (
         updateIsAtLeastAsOldAs(
           lazy.UM.internal.readyUpdate,
-          Services.appinfo.version,
+          AppConstants.MOZ_APP_VERSION,
           Services.appinfo.appBuildID
         )
       ) {
@@ -3043,7 +3043,7 @@ export class UpdateService {
       } else if (
         updateIsAtLeastAsOldAs(
           lazy.UM.internal.downloadingUpdate,
-          Services.appinfo.version,
+          AppConstants.MOZ_APP_VERSION,
           Services.appinfo.appBuildID
         )
       ) {
@@ -3057,7 +3057,7 @@ export class UpdateService {
             tooOldUpdate.appVersion +
             ", " +
             "application version: " +
-            Services.appinfo.version +
+            AppConstants.MOZ_APP_VERSION +
             ", update " +
             "build ID: " +
             tooOldUpdate.buildID +
@@ -4257,7 +4257,7 @@ export class UpdateService {
         "UpdateService:downloadUpdate - Skipping download of update since " +
           "it is for an earlier or same application version and build ID.\n" +
           "current application version: " +
-          Services.appinfo.version +
+          AppConstants.MOZ_APP_VERSION +
           "\n" +
           "update application version : " +
           update.appVersion +
