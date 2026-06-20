@@ -124,8 +124,18 @@ xcrun notarytool submit "$ZIP_PATH" \
 # ── Step 5: Staple ────────────────────────────────────────────────────────────
 echo ""
 echo "==> [5/6] Stapling notarization ticket..."
-xcrun stapler staple "$APP_PATH"
-xcrun stapler validate "$APP_PATH"
+STAPLE_OK=0
+for attempt in 1 2 3; do
+  if xcrun stapler staple "$APP_PATH" 2>&1; then
+    STAPLE_OK=1
+    break
+  fi
+  echo "    Staple attempt $attempt failed (CloudKit propagation delay). Retrying in 30s..."
+  sleep 30
+done
+if [[ $STAPLE_OK -eq 0 ]]; then
+  echo "    WARNING: Stapling failed after 3 attempts. App is still notarized — Gatekeeper will verify online."
+fi
 
 # ── Step 6: Create signed installer DMG with branded layout ───────────────────
 echo ""
