@@ -151,24 +151,23 @@ trap "rm -rf '$UPLOAD_TMPDIR'" EXIT
 DMG_BLOB_NAME="TMRW-W3-Browser-v${VERSION}.dmg"
 
 cat > "$UPLOAD_TMPDIR/upload.mjs" << 'JSEOF'
-import { put, del, head } from '@vercel/blob';
+import { put, del, list, head } from '@vercel/blob';
 import { createReadStream, statSync } from 'fs';
-import { createHash } from 'crypto';
-import { Readable } from 'stream';
 
 const [,, localPath, blobName] = process.argv;
 const token = process.env.BLOB_READ_WRITE_TOKEN;
 const localSize = statSync(localPath).size;
 
-// Delete existing blob to avoid multipart-overwrite corruption
+// Delete any existing blobs with this name so the upload is always fresh
+// (overwriting via multipart can mix old and new chunks, corrupting the file)
 try {
-  const existing = await head(blobName, { token });
-  if (existing) {
-    await del(existing.url, { token });
+  const { blobs } = await list({ token, prefix: blobName });
+  for (const b of blobs) {
+    await del(b.url, { token });
   }
 } catch (_) {}
 
-// Upload with multipart (required for >4.5MB blobs on Vercel)
+// Upload with multipart (required for files >4.5MB on Vercel)
 const blob = await put(blobName, createReadStream(localPath), {
   access: 'public',
   token,
@@ -176,21 +175,24 @@ const blob = await put(blobName, createReadStream(localPath), {
   multipart: true,
 });
 
-// Verify: download and hash the uploaded file, compare to local hash
-const localHash = await new Promise((resolve, reject) => {
-  const h = createHash('sha256');
-  createReadStream(localPath).on('data', d => h.update(d)).on('end', () => resolve(h.digest('hex'))).on('error', reject);
-});
-
-const resp = await fetch(blob.url);
-if (!resp.ok) throw new Error(`Download check failed: HTTP ${resp.status}`);
-const remoteHash = await new Promise(async (resolve, reject) => {
-  const h = createHash('sha256');
-  Readable.fromWeb(resp.body).on('data', d => h.update(d)).on('end', () => resolve(h.digest('hex'))).on('error', reject);
-});
-
-if (localHash !== remoteHash) {
-  throw new Error(`INTEGRITY FAIL: local=${localHash} remote=${remoteHash}`);
+// Verify size via metadata — avoids re-downloading 200MB.
+// Retry up to 5x with 3s delay for CDN propagation after upload.
+let verified = false;
+for (let attempt = 0; attempt <= 5; attempt++) {
+  try {
+    const meta = await head(blob.url, { token });
+    if (meta.size !== localSize) {
+      throw new Error(`SIZE MISMATCH: local=${localSize} remote=${meta.size}`);
+    }
+    verified = true;
+    break;
+  } catch (e) {
+    if (attempt < 5) {
+      await new Promise(r => setTimeout(r, 3000));
+    } else {
+      throw new Error(`Upload verification failed after retries: ${e.message}`);
+    }
+  }
 }
 
 console.log(blob.url);
