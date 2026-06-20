@@ -2,19 +2,38 @@
 # publish-update.sh — notarize + upload to Vercel Blob + update tmrw.w3ai.io
 #
 # Usage:
-#   ./scripts/publish-update.sh                   # publish at current version
-#   ./scripts/publish-update.sh --bump patch       # 1.0.0 → 1.0.1 then publish
-#   ./scripts/publish-update.sh --bump minor       # 1.0.0 → 1.1.0 then publish
-#   ./scripts/publish-update.sh --bump major       # 1.0.0 → 2.0.0 then publish
-#   ./scripts/publish-update.sh --test-update 1.0.1  # push fake xml for testing only (no build)
+#   ./scripts/publish-update.sh                      # publish at current APP_VERSION
+#   ./scripts/publish-update.sh --bump patch          # 1.0.0 → 1.0.1 then publish
+#   ./scripts/publish-update.sh --bump minor          # 1.0.0 → 1.1.0 then publish
+#   ./scripts/publish-update.sh --bump major          # 1.0.0 → 2.0.0 then publish
+#   ./scripts/publish-update.sh --test-update 1.0.1   # push fake xml for testing only (no build)
 # Prerequisites: ./mach build && ./mach package (unless using --test-update)
+# Version is controlled via APP_VERSION in .env — all other version files sync from there.
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OBJ_DIR="$REPO_ROOT/obj-x86_64-apple-darwin25.5.0"
+ENV_FILE="$REPO_ROOT/.env"
 VERSION_FILE="$REPO_ROOT/browser/config/version.txt"
-VERSION="$(cat "$VERSION_FILE" | tr -d '[:space:]')"
+
+# ── Load .env first (APP_VERSION lives here) ───────────────────────────────────
+while IFS= read -r line || [[ -n "$line" ]]; do
+  [[ "$line" =~ ^[[:space:]]*# ]] && continue
+  [[ -z "${line//[[:space:]]/}" ]] && continue
+  if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+    key="${BASH_REMATCH[1]}" ; val="${BASH_REMATCH[2]}"
+    val="${val#\"}" ; val="${val%\"}" ; val="${val#\'}" ; val="${val%\'}"
+    export "$key=$val"
+  fi
+done < "$ENV_FILE"
+
+# APP_VERSION in .env is the source of truth; fall back to version.txt
+if [[ -n "${APP_VERSION:-}" ]]; then
+  VERSION="$APP_VERSION"
+else
+  VERSION="$(tr -d '[:space:]' < "$VERSION_FILE")"
+fi
 
 # ── Parse flags ────────────────────────────────────────────────────────────────
 BUMP=""
@@ -27,6 +46,17 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# ── Sync version to all files ──────────────────────────────────────────────────
+sync_version() {
+  local v="$1"
+  echo "$v" > "$VERSION_FILE"
+  sed -i '' "s/^APP_VERSION=.*/APP_VERSION=$v/" "$ENV_FILE"
+  sed -i '' "s/MOZ_APP_VERSION=.*/MOZ_APP_VERSION=$v/" "$REPO_ROOT/mozconfig" 2>/dev/null || true
+  sed -i '' "s/MOZ_APP_VERSION_DISPLAY=.*/MOZ_APP_VERSION_DISPLAY=$v/" "$REPO_ROOT/mozconfig" 2>/dev/null || true
+  sed -i '' "s/MOZ_APP_VERSION=.*/MOZ_APP_VERSION=$v/" "$REPO_ROOT/browser/branding/w3ai/configure.sh" 2>/dev/null || true
+  sed -i '' "s/MOZ_APP_VERSION_DISPLAY=.*/MOZ_APP_VERSION_DISPLAY=$v/" "$REPO_ROOT/browser/branding/w3ai/configure.sh" 2>/dev/null || true
+}
+
 # ── Auto-bump version ──────────────────────────────────────────────────────────
 if [[ -n "$BUMP" ]]; then
   IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
@@ -36,37 +66,22 @@ if [[ -n "$BUMP" ]]; then
     major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
     *) echo "ERROR: --bump must be patch, minor, or major"; exit 1 ;;
   esac
-  NEW_VERSION="$MAJOR.$MINOR.$PATCH"
-  echo "$NEW_VERSION" > "$VERSION_FILE"
-  sed -i '' "s/MOZ_APP_VERSION=.*/MOZ_APP_VERSION=$NEW_VERSION/" "$REPO_ROOT/mozconfig" 2>/dev/null || true
-  sed -i '' "s/MOZ_APP_VERSION_DISPLAY=.*/MOZ_APP_VERSION_DISPLAY=$NEW_VERSION/" "$REPO_ROOT/mozconfig" 2>/dev/null || true
-  sed -i '' "s/MOZ_APP_VERSION=.*/MOZ_APP_VERSION=$NEW_VERSION/" "$REPO_ROOT/browser/branding/w3ai/configure.sh" 2>/dev/null || true
-  sed -i '' "s/MOZ_APP_VERSION_DISPLAY=.*/MOZ_APP_VERSION_DISPLAY=$NEW_VERSION/" "$REPO_ROOT/browser/branding/w3ai/configure.sh" 2>/dev/null || true
-  VERSION="$NEW_VERSION"
-  echo "Bumped version: $VERSION"
+  VERSION="$MAJOR.$MINOR.$PATCH"
+  sync_version "$VERSION"
+  echo "Bumped version: $VERSION (synced to .env, version.txt, mozconfig, configure.sh)"
 fi
 
-# ── Load .env ──────────────────────────────────────────────────────────────────
-ENV_FILE="$REPO_ROOT/.env"
-while IFS= read -r line || [[ -n "$line" ]]; do
-  [[ "$line" =~ ^[[:space:]]*# ]] && continue
-  [[ -z "${line//[[:space:]]/}" ]] && continue
-  if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
-    key="${BASH_REMATCH[1]}" ; val="${BASH_REMATCH[2]}"
-    val="${val#\"}" ; val="${val%\"}" ; val="${val#\'}" ; val="${val%\'}"
-    export "$key=$val"
-  fi
-done < "$ENV_FILE"
-
 # ── Validate required vars ─────────────────────────────────────────────────────
-for var in PUBLISH_SECRET PUBLISH_URL VERCEL_BYPASS_SECRET; do
+for var in PUBLISH_SECRET PUBLISH_URL VERCEL_BYPASS_SECRET BLOB_READ_WRITE_TOKEN; do
   if [[ -z "${!var:-}" ]]; then
     echo "ERROR: $var not set in .env"
     exit 1
   fi
 done
 
-# ── --test-update: just push a version number to update.xml, no build needed ──
+# ── --test-update: push a version number to update.xml without a real build ───
+# Reuses the existing live DMG (same URL, hash, size). Only tests the update
+# notification flow — the user will download the same build they already have.
 if [[ -n "$TEST_VERSION" ]]; then
   echo "==> Pushing test update.xml: installed=$VERSION → advertised=$TEST_VERSION"
   EXISTING=$(curl -s https://tmrw.w3ai.io/updates/update.xml)
@@ -85,7 +100,8 @@ if [[ -n "$TEST_VERSION" ]]; then
   BODY="$(echo "$RESPONSE" | head -1)"
   if [[ "$HTTP_STATUS" == "200" ]]; then
     echo "    update.xml now shows appVersion=$TEST_VERSION"
-    echo "    Open Help → About in the browser to see the update notification."
+    echo "    NOTE: DMG URL still points to the $VERSION build (same file, test only)."
+    echo "    Open Help → About in the installed browser to see the update notification."
   else
     echo "ERROR: HTTP $HTTP_STATUS: $BODY"
     exit 1
@@ -125,7 +141,6 @@ echo "==> [3/4] Uploading DMG to Vercel Blob (~215MB, please wait)..."
 UPLOAD_TMPDIR="$(mktemp -d)"
 trap "rm -rf '$UPLOAD_TMPDIR'" EXIT
 
-# Bootstrap @vercel/blob in a temp dir
 (cd "$UPLOAD_TMPDIR" && \
   echo '{"name":"uploader","type":"module"}' > package.json && \
   npm install @vercel/blob --silent 2>/dev/null)
@@ -143,9 +158,12 @@ const url = (await put(process.argv[3], createReadStream(process.argv[2]), {
 console.log(url);
 JSEOF
 
+# Upload using the exact version so the filename always matches the manifest.
+# e.g. v1.0.0 → TMRW-W3-Browser-v1.0.0.dmg, v1.0.1 → TMRW-W3-Browser-v1.0.1.dmg
+DMG_BLOB_NAME="TMRW-W3-Browser-v${VERSION}.dmg"
 DMG_URL="$(cd "$UPLOAD_TMPDIR" && \
   BLOB_READ_WRITE_TOKEN="$BLOB_READ_WRITE_TOKEN" \
-  node upload.mjs "$SIGNED_DMG" "TMRW-W3-Browser-v${VERSION}.dmg")"
+  node upload.mjs "$SIGNED_DMG" "$DMG_BLOB_NAME")"
 
 if [[ -z "$DMG_URL" ]]; then
   echo "ERROR: Upload returned empty URL"
