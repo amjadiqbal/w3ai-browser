@@ -81,7 +81,7 @@ export var UpdateUtils = {
           replacement = Services.appinfo.name;
           break;
         case "VERSION":
-          replacement = Services.appinfo.version;
+          replacement = AppConstants.MOZ_APP_VERSION;
           break;
         case "BUILD_ID":
           replacement = Services.appinfo.appBuildID;

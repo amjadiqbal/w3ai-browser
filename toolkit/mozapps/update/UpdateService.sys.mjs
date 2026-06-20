@@ -5459,7 +5459,18 @@ export class CheckerService {
       throw Components.Exception("", Cr.NS_ERROR_INVALID_ARG);
     }
 
-    let url = Services.appinfo.updateURL;
+    // Services.appinfo.updateURL reads application.ini [AppUpdate] URL which
+    // points to Mozilla's AUS server. Allow app.update.url pref (set via
+    // lockPref in branding) to override it so custom builds use their own
+    // update server.
+    let url;
+    try {
+      url = Services.prefs.getStringPref("app.update.url", "");
+    } catch (e) {}
+    if (!url) {
+      url = Services.appinfo.updateURL;
+    }
+    LOG("CheckerService:getUpdateURL - resolved URL: " + url);
     let updatePin;
 
     if (Services.policies) {
@@ -5657,6 +5668,7 @@ export class CheckerService {
       request.addEventListener("error", onError);
 
       LOG("CheckerService:#updateCheck - sending request to: " + url);
+      console.error("[TMRW-UPDATE] Fetching update URL:", url);
       request.send(null);
       this.#updateCheckData[requestKey].request = request;
     });
@@ -5718,6 +5730,10 @@ export class CheckerService {
     try {
       // Analyze the resulting DOM and determine the set of updates.
       updates = this.#parseUpdates(request);
+      console.error("[TMRW-UPDATE] Parsed updates from XML:", updates.length, "update(s)");
+      for (const u of updates) {
+        console.error("[TMRW-UPDATE]  appVersion=" + u.appVersion + " type=" + u.type + " isOld=" + updateIsAtLeastAsOldAsCurrentVersion(u));
+      }
     } catch (e) {
       LOG(
         "CheckerService:#updateCheck - there was a problem checking for " +
