@@ -145,22 +145,57 @@ trap "rm -rf '$UPLOAD_TMPDIR'" EXIT
   echo '{"name":"uploader","type":"module"}' > package.json && \
   npm install @vercel/blob --silent 2>/dev/null)
 
+# Upload using the exact version so the filename always matches the manifest.
+# Delete before upload to avoid multipart-overwrite corruption (mixed old/new chunks).
+# Verify SHA-512 hash after upload to catch any in-transit corruption.
+DMG_BLOB_NAME="TMRW-W3-Browser-v${VERSION}.dmg"
+
 cat > "$UPLOAD_TMPDIR/upload.mjs" << 'JSEOF'
-import { put } from '@vercel/blob';
-import { createReadStream } from 'fs';
-const url = (await put(process.argv[3], createReadStream(process.argv[2]), {
+import { put, del, head } from '@vercel/blob';
+import { createReadStream, statSync } from 'fs';
+import { createHash } from 'crypto';
+import { Readable } from 'stream';
+
+const [,, localPath, blobName] = process.argv;
+const token = process.env.BLOB_READ_WRITE_TOKEN;
+const localSize = statSync(localPath).size;
+
+// Delete existing blob to avoid multipart-overwrite corruption
+try {
+  const existing = await head(blobName, { token });
+  if (existing) {
+    await del(existing.url, { token });
+  }
+} catch (_) {}
+
+// Upload with multipart (required for >4.5MB blobs on Vercel)
+const blob = await put(blobName, createReadStream(localPath), {
   access: 'public',
-  token: process.env.BLOB_READ_WRITE_TOKEN,
+  token,
   contentType: 'application/octet-stream',
   multipart: true,
-  allowOverwrite: true,
-})).url;
-console.log(url);
+});
+
+// Verify: download and hash the uploaded file, compare to local hash
+const localHash = await new Promise((resolve, reject) => {
+  const h = createHash('sha256');
+  createReadStream(localPath).on('data', d => h.update(d)).on('end', () => resolve(h.digest('hex'))).on('error', reject);
+});
+
+const resp = await fetch(blob.url);
+if (!resp.ok) throw new Error(`Download check failed: HTTP ${resp.status}`);
+const remoteHash = await new Promise(async (resolve, reject) => {
+  const h = createHash('sha256');
+  Readable.fromWeb(resp.body).on('data', d => h.update(d)).on('end', () => resolve(h.digest('hex'))).on('error', reject);
+});
+
+if (localHash !== remoteHash) {
+  throw new Error(`INTEGRITY FAIL: local=${localHash} remote=${remoteHash}`);
+}
+
+console.log(blob.url);
 JSEOF
 
-# Upload using the exact version so the filename always matches the manifest.
-# e.g. v1.0.0 → TMRW-W3-Browser-v1.0.0.dmg, v1.0.1 → TMRW-W3-Browser-v1.0.1.dmg
-DMG_BLOB_NAME="TMRW-W3-Browser-v${VERSION}.dmg"
 DMG_URL="$(cd "$UPLOAD_TMPDIR" && \
   BLOB_READ_WRITE_TOKEN="$BLOB_READ_WRITE_TOKEN" \
   node upload.mjs "$SIGNED_DMG" "$DMG_BLOB_NAME")"
@@ -169,7 +204,7 @@ if [[ -z "$DMG_URL" ]]; then
   echo "ERROR: Upload returned empty URL"
   exit 1
 fi
-echo "    Uploaded: $DMG_URL"
+echo "    Uploaded and verified: $DMG_URL"
 
 # ── Step 4: POST metadata to Vercel API ───────────────────────────────────────
 echo ""
