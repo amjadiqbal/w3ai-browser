@@ -116,6 +116,7 @@ MOZ_SRC_FILES += [
     "DesktopActorRegistry.sys.mjs",
     "ProfileDataUpgrader.sys.mjs",
     "StartupTelemetry.sys.mjs",
+    "TMRWUpdateGate.sys.mjs",
 ]
 
 if CONFIG["MOZ_DEBUG"] or CONFIG["MOZ_DEV_EDITION"] or CONFIG["NIGHTLY_BUILD"]:

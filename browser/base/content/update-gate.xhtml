@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE window>
+<window xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+        id="update-gate-window"
+        title="TMRW W3 Browser — Update Required"
+        onload="UpdateGateDialog.init();"
+        style="-moz-appearance: none; background: #0f0f1a;">
+
+  <html:link xmlns:html="http://www.w3.org/1999/xhtml"
+             rel="stylesheet" href="chrome://global/skin/global.css"/>
+
+  <html:style xmlns:html="http://www.w3.org/1999/xhtml"><![CDATA[
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body, window {
+      background: #0f0f1a;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    #root {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 48px;
+      gap: 20px;
+      height: 100%;
+      background: #0f0f1a;
+    }
+
+    #logo {
+      width: 72px;
+      height: 72px;
+      border-radius: 16px;
+    }
+
+    #title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffffff;
+      text-align: center;
+    }
+
+    #subtitle {
+      font-size: 13px;
+      color: #8888aa;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    #version-badge {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-size: 13px;
+      color: #8888aa;
+    }
+
+    #version-badge .arrow {
+      color: #6b7bff;
+      font-size: 16px;
+    }
+
+    #version-badge .new-ver {
+      color: #6b7bff;
+      font-weight: 700;
+    }
+
+    #progress-wrap {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #progress-bar-track {
+      width: 100%;
+      height: 6px;
+      background: #1a1a2e;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    #progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #6b7bff, #a78bfa);
+      border-radius: 3px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    #progress-label {
+      font-size: 12px;
+      color: #8888aa;
+      text-align: center;
+    }
+
+    #btn-row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    button {
+      flex: 1;
+      padding: 10px 0;
+      border-radius: 8px;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    #btn-download {
+      background: #6b7bff;
+      color: #fff;
+    }
+
+    #btn-download:hover { background: #5563ee; }
+    #btn-download:disabled { background: #2a2a4a; color: #555577; cursor: default; }
+
+    #btn-quit {
+      background: #1a1a2e;
+      color: #8888aa;
+      border: 1px solid #2a2a4a;
+    }
+
+    #btn-quit:hover { background: #222240; }
+
+    #status-ok {
+      font-size: 13px;
+      color: #4ade80;
+      text-align: center;
+    }
+  ]]></html:style>
+
+  <html:div xmlns:html="http://www.w3.org/1999/xhtml" id="root">
+    <html:img id="logo" src="chrome://branding/content/about-logo.png"/>
+
+    <html:div id="title">Update Required</html:div>
+
+    <html:div id="subtitle">
+      A new version of TMRW W3 Browser is available.<br/>
+      Please update to continue.
+    </html:div>
+
+    <html:div id="version-badge">
+      <span id="cur-ver"></span>
+      <span class="arrow">→</span>
+      <span class="new-ver" id="new-ver"></span>
+    </html:div>
+
+    <html:div id="progress-wrap">
+      <html:div id="progress-bar-track">
+        <html:div id="progress-bar-fill"></html:div>
+      </html:div>
+      <html:div id="progress-label">Ready to download</html:div>
+    </html:div>
+
+    <html:div id="btn-row">
+      <html:button id="btn-download" onclick="UpdateGateDialog.startDownload()">
+        Download Update
+      </html:button>
+      <html:button id="btn-quit" onclick="UpdateGateDialog.quit()">
+        Quit
+      </html:button>
+    </html:div>
+  </html:div>
+
+  <html:script xmlns:html="http://www.w3.org/1999/xhtml"><![CDATA[
+    const UpdateGateDialog = {
+      _params: null,
+
+      init() {
+        this._params = window.arguments[0];
+        document.getElementById("cur-ver").textContent =
+          "v" + this._params.currentVersion;
+        document.getElementById("new-ver").textContent =
+          "v" + this._params.serverVersion;
+      },
+
+      async startDownload() {
+        const { dmgUrl, serverVersion } = this._params;
+        const btn = document.getElementById("btn-download");
+        const fill = document.getElementById("progress-bar-fill");
+        const label = document.getElementById("progress-label");
+
+        if (!dmgUrl) {
+          this._openFallback();
+          return;
+        }
+
+        btn.disabled = true;
+        document.getElementById("btn-quit").disabled = true;
+        label.textContent = "Starting download...";
+
+        try {
+          const resp = await fetch(dmgUrl, { cache: "no-store" });
+          const total = parseInt(resp.headers.get("content-length") || "0");
+          const reader = resp.body.getReader();
+          const chunks = [];
+          let loaded = 0;
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+            loaded += value.length;
+            if (total > 0) {
+              const pct = Math.round((loaded / total) * 100);
+              fill.style.width = pct + "%";
+              label.textContent =
+                "Downloading " +
+                Math.round(loaded / 1024 / 1024) +
+                " / " +
+                Math.round(total / 1024 / 1024) +
+                " MB";
+            }
+          }
+
+          fill.style.width = "100%";
+          label.textContent = "Saving file...";
+
+          const bytes = new Uint8Array(
+            chunks.reduce((a, c) => a + c.length, 0)
+          );
+          let offset = 0;
+          for (const chunk of chunks) {
+            bytes.set(chunk, offset);
+            offset += chunk.length;
+          }
+
+          const homeDir = Services.dirsvc.get("Home", Ci.nsIFile);
+          const savePath = PathUtils.join(
+            homeDir.path,
+            "Downloads",
+            `TMRW-W3-Browser-v${serverVersion}.dmg`
+          );
+
+          await IOUtils.write(savePath, bytes);
+
+          label.textContent =
+            "Download complete! Opening installer...";
+
+          // Open the DMG (mounts it and shows in Finder)
+          const file = Cc["@mozilla.org/file/local;1"].createInstance(
+            Ci.nsIFile
+          );
+          file.initWithPath(savePath);
+          file.launch();
+
+          label.textContent =
+            "Drag TMRW W3 Browser to Applications, then relaunch.";
+
+          document.getElementById("btn-quit").disabled = false;
+          document.getElementById("btn-quit").textContent =
+            "Quit to Install";
+        } catch (e) {
+          label.textContent = "Download failed. Opening browser download page...";
+          this._openFallback();
+          document.getElementById("btn-quit").disabled = false;
+          document.getElementById("btn-download").disabled = false;
+          document.getElementById("btn-download").textContent =
+            "Try Again";
+        }
+      },
+
+      _openFallback() {
+        const wn = Cc["@mozilla.org/appshell/window-mediator;1"]
+          .getService(Ci.nsIWindowMediator)
+          .getMostRecentWindow("navigator:browser");
+        if (wn) {
+          wn.openTrustedLinkIn(
+            "https://tmrw.w3ai.io/releases",
+            "tab"
+          );
+        }
+        this._params.resolve();
+        window.close();
+      },
+
+      quit() {
+        Services.startup.quit(Ci.nsIAppStartup.eAttemptQuit);
+      },
+    };
+  ]]></html:script>
+</window>

@@ -30,6 +30,8 @@ ChromeUtils.defineESModuleGetters(lazy, {
   DAPVisitCounter: "resource://gre/modules/DAPVisitCounter.sys.mjs",
   DefaultBrowserCheck:
     "moz-src:///browser/components/DefaultBrowserCheck.sys.mjs",
+  TMRWUpdateGate:
+    "moz-src:///browser/components/TMRWUpdateGate.sys.mjs",
   DesktopActorRegistry:
     "moz-src:///browser/components/DesktopActorRegistry.sys.mjs",
   Discovery: "resource:///modules/Discovery.sys.mjs",
@@ -758,6 +760,10 @@ BrowserGlue.prototype = {
 
   // the first browser window has finished initializing
   _onFirstWindowLoaded: function BG__onFirstWindowLoaded(aWindow) {
+    // Check for mandatory update before anything else. Modal dialog blocks
+    // the window until user downloads the update or quits.
+    lazy.TMRWUpdateGate.check(aWindow).catch(() => {});
+
     // A channel for "remote troubleshooting" code...
     let channel = new lazy.WebChannel(
       "remote-troubleshooting",
