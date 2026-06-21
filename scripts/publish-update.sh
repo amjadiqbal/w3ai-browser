@@ -3,10 +3,10 @@
 #
 # Usage:
 #   ./scripts/publish-update.sh                      # publish at current APP_VERSION
-#   ./scripts/publish-update.sh --bump patch          # 1.0.0 → 1.0.1 then publish
-#   ./scripts/publish-update.sh --bump minor          # 1.0.0 → 1.1.0 then publish
-#   ./scripts/publish-update.sh --bump major          # 1.0.0 → 2.0.0 then publish
-#   ./scripts/publish-update.sh --test-update 1.0.1   # push fake xml for testing only (no build)
+#   ./scripts/publish-update.sh --bump patch          # 1.0.1 → 1.0.2 then publish
+#   ./scripts/publish-update.sh --bump minor          # 1.0.1 → 1.1.0 then publish
+#   ./scripts/publish-update.sh --bump major          # 1.0.1 → 2.0.0 then publish
+#   ./scripts/publish-update.sh --test-update 1.0.2   # push fake xml for testing only (no build)
 # Prerequisites: ./mach build && ./mach package (unless using --test-update)
 # Version is controlled via APP_VERSION in .env — all other version files sync from there.
 
@@ -80,8 +80,6 @@ for var in PUBLISH_SECRET PUBLISH_URL VERCEL_BYPASS_SECRET BLOB_READ_WRITE_TOKEN
 done
 
 # ── --test-update: push a version number to update.xml without a real build ───
-# Reuses the existing live DMG (same URL, hash, size). Only tests the update
-# notification flow — the user will download the same build they already have.
 if [[ -n "$TEST_VERSION" ]]; then
   echo "==> Pushing test update.xml: installed=$VERSION → advertised=$TEST_VERSION"
   EXISTING=$(curl -s https://tmrw.w3ai.io/updates/update.xml)
@@ -134,7 +132,7 @@ echo "==> [2/4] Reading build ID..."
 BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
 echo "    Build ID: $BUILD_ID"
 
-# ── Step 3: Upload DMG to Vercel Blob (multipart via @vercel/blob SDK) ─────────
+# ── Step 3: Upload DMG to Vercel Blob ─────────────────────────────────────────
 echo ""
 echo "==> [3/4] Uploading DMG to Vercel Blob (~215MB, please wait)..."
 
@@ -145,9 +143,6 @@ trap "rm -rf '$UPLOAD_TMPDIR'" EXIT
   echo '{"name":"uploader","type":"module"}' > package.json && \
   npm install @vercel/blob --silent 2>/dev/null)
 
-# Upload using the exact version so the filename always matches the manifest.
-# Delete before upload to avoid multipart-overwrite corruption (mixed old/new chunks).
-# Verify SHA-512 hash after upload to catch any in-transit corruption.
 DMG_BLOB_NAME="TMRW-W3-Browser-v${VERSION}.dmg"
 
 cat > "$UPLOAD_TMPDIR/upload.mjs" << 'JSEOF'
@@ -158,16 +153,13 @@ const [,, localPath, blobName] = process.argv;
 const token = process.env.BLOB_READ_WRITE_TOKEN;
 const localSize = statSync(localPath).size;
 
-// Delete any existing blobs with this name so the upload is always fresh
-// (overwriting via multipart can mix old and new chunks, corrupting the file)
+// Delete existing blob before uploading to prevent stale chunks from a
+// previous partial upload mixing with new data (causes corrupted DMG).
 try {
   const { blobs } = await list({ token, prefix: blobName });
-  for (const b of blobs) {
-    await del(b.url, { token });
-  }
+  for (const b of blobs) await del(b.url, { token });
 } catch (_) {}
 
-// Upload with multipart (required for files >4.5MB on Vercel)
 const blob = await put(blobName, createReadStream(localPath), {
   access: 'public',
   token,
@@ -175,23 +167,15 @@ const blob = await put(blobName, createReadStream(localPath), {
   multipart: true,
 });
 
-// Verify size via metadata — avoids re-downloading 200MB.
-// Retry up to 5x with 3s delay for CDN propagation after upload.
-let verified = false;
-for (let attempt = 0; attempt <= 5; attempt++) {
+// Verify size via metadata (retry for CDN propagation delay).
+for (let i = 0; i <= 5; i++) {
   try {
     const meta = await head(blob.url, { token });
-    if (meta.size !== localSize) {
-      throw new Error(`SIZE MISMATCH: local=${localSize} remote=${meta.size}`);
-    }
-    verified = true;
+    if (meta.size !== localSize) throw new Error(`SIZE MISMATCH: local=${localSize} remote=${meta.size}`);
     break;
   } catch (e) {
-    if (attempt < 5) {
-      await new Promise(r => setTimeout(r, 3000));
-    } else {
-      throw new Error(`Upload verification failed after retries: ${e.message}`);
-    }
+    if (i < 5) await new Promise(r => setTimeout(r, 3000));
+    else throw new Error(`Upload verification failed: ${e.message}`);
   }
 }
 
@@ -208,25 +192,42 @@ if [[ -z "$DMG_URL" ]]; then
 fi
 echo "    Uploaded and verified: $DMG_URL"
 
-# ── Step 4: POST metadata to Vercel API ───────────────────────────────────────
+# ── Step 4: Publish manifest (retry until server can reach the CDN URL) ────────
 echo ""
 echo "==> [4/4] Publishing update manifest to tmrw.w3ai.io..."
 
-RESPONSE="$(curl -s -X POST "$PUBLISH_URL" \
-  -H "Authorization: Bearer $PUBLISH_SECRET" \
-  -H "Content-Type: application/json" \
-  -H "User-Agent: TMRW-W3-Publisher/1.0" \
-  -H "x-vercel-protection-bypass: ${VERCEL_BYPASS_SECRET}" \
-  -d "{\"version\":\"$VERSION\",\"buildID\":\"$BUILD_ID\",\"dmgHash\":\"$DMG_HASH\",\"dmgSize\":$DMG_SIZE,\"dmgUrl\":\"$DMG_URL\",\"notes\":\"${RELEASE_NOTES:-}\"}" \
-  -w "\n%{http_code}")"
+PAYLOAD="{\"version\":\"$VERSION\",\"buildID\":\"$BUILD_ID\",\"dmgHash\":\"$DMG_HASH\",\"dmgSize\":$DMG_SIZE,\"dmgUrl\":\"$DMG_URL\",\"notes\":\"${RELEASE_NOTES:-}\"}"
 
-HTTP_STATUS="$(echo "$RESPONSE" | tail -1)"
-BODY="$(echo "$RESPONSE" | head -1)"
+for attempt in 1 2 3 4 5; do
+  RESPONSE="$(curl -s -X POST "$PUBLISH_URL" \
+    -H "Authorization: Bearer $PUBLISH_SECRET" \
+    -H "Content-Type: application/json" \
+    -H "User-Agent: TMRW-W3-Publisher/1.0" \
+    -H "x-vercel-protection-bypass: ${VERCEL_BYPASS_SECRET}" \
+    -d "$PAYLOAD" \
+    -w "\n%{http_code}")"
+  HTTP_STATUS="$(echo "$RESPONSE" | tail -1)"
+  BODY="$(echo "$RESPONSE" | head -1)"
 
-if [[ "$HTTP_STATUS" == "200" ]]; then
-  echo "    Success: $BODY"
-else
+  if [[ "$HTTP_STATUS" == "200" ]]; then
+    echo "    Success: $BODY"
+    break
+  fi
+
+  if echo "$BODY" | grep -q "not reachable yet"; then
+    echo "    CDN not propagated yet (attempt $attempt/5), waiting 15s..."
+    sleep 15
+    continue
+  fi
+
   echo "ERROR: Publish failed (HTTP $HTTP_STATUS): $BODY"
+  exit 1
+done
+
+if [[ "$HTTP_STATUS" != "200" ]]; then
+  echo "ERROR: Publish failed after 5 attempts — CDN URL never became reachable."
+  echo "  URL: $DMG_URL"
+  echo "  Try running: ./scripts/publish-update.sh --test-update $VERSION"
   exit 1
 fi
 
@@ -234,7 +235,7 @@ echo ""
 echo "============================================================"
 echo "  Published v$VERSION (build $BUILD_ID)"
 echo ""
-echo "  Direct download (share this with testers):"
+echo "  Direct download:"
 echo "  $DMG_URL"
 echo ""
 echo "  Manifest: https://tmrw.w3ai.io/updates/update.xml"
