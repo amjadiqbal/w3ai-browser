@@ -50,6 +50,7 @@ done
 sync_version() {
   local v="$1"
   echo "$v" > "$VERSION_FILE"
+  echo "$v" > "$REPO_ROOT/browser/config/version_display.txt"
   sed -i '' "s/^APP_VERSION=.*/APP_VERSION=$v/" "$ENV_FILE"
   sed -i '' "s/MOZ_APP_VERSION=.*/MOZ_APP_VERSION=$v/" "$REPO_ROOT/mozconfig" 2>/dev/null || true
   sed -i '' "s/MOZ_APP_VERSION_DISPLAY=.*/MOZ_APP_VERSION_DISPLAY=$v/" "$REPO_ROOT/mozconfig" 2>/dev/null || true
