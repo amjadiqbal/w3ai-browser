@@ -92,9 +92,18 @@ if [[ $DEEP -eq 1 ]]; then
   [[ -n "$LATEST_XPT_JAR" ]] && unzip -q -o "$LATEST_XPT_JAR" -d "$OBJ_DIR"
   [[ -n "$LATEST_UPD_JAR" ]] && unzip -q -o "$LATEST_UPD_JAR" -d "$OBJ_DIR"
 
-  # Jars extract to bin/ but the build expects dist/bin/
-  echo "    Linking bin/ → dist/bin/..."
-  cp -pn "$OBJ_DIR/bin/"* "$OBJ_DIR/dist/bin/" 2>/dev/null || true
+  # The jar extracts compiled binaries to obj-/bin/ but the build system
+  # expects them at obj-/dist/bin/. Use rsync (handles dirs + files, no glob limit).
+  echo "    Copying binaries: bin/ → dist/bin/..."
+  mkdir -p "$OBJ_DIR/dist/bin"
+  rsync -a --ignore-existing "$OBJ_DIR/bin/" "$OBJ_DIR/dist/bin/"
+  # Verify the critical binary made it across
+  if [[ ! -f "$OBJ_DIR/dist/bin/firefox" ]]; then
+    echo "ERROR: dist/bin/firefox still missing after rsync. Check $OBJ_DIR/bin/:"
+    ls "$OBJ_DIR/bin/" | head -10
+    exit 1
+  fi
+  echo "    firefox binary confirmed at dist/bin/firefox"
 
   # Build the updater.app sub-bundle that the repackage step requires
   echo "    Building updater.app bundle..."
