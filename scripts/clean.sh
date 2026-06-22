@@ -80,10 +80,14 @@ if [[ $DEEP -eq 1 ]]; then
   echo ""
   echo "==> [--all] Wiping entire obj- build directory (~2-3 GB)..."
   rm -rf "$OBJ_DIR"
-  echo "    Done. Run to rebuild:"
-  echo "      ./mach configure"
-  echo "      ./mach build faster"
-  echo "      ./mach package"
+  echo "    Done. IMPORTANT — artifact build requires 3 steps to rebuild:"
+  echo "      1. ./mach configure           (recreate obj- dir)"
+  echo "      2. ./mach artifact install    (re-download pre-built Firefox binaries ~1 GB)"
+  echo "      3. ./mach build faster        (compile only our JS/frontend changes)"
+  echo "      4. ./mach package             (optional: create DMG)"
+  echo ""
+  echo "    NOTE: 'mach artifact install' is mandatory after --all. Without it,"
+  echo "    './mach build' searches 500 pushheads and fails with 'no built artifacts found'."
 fi
 
 echo ""
