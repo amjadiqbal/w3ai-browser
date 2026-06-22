@@ -53,8 +53,9 @@ for var in APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID APPLE_BUNDLE_ID AP
 done
 
 if [[ ! -f "$SOURCE_DMG" ]]; then
-  echo "ERROR: Source DMG not found: $SOURCE_DMG"
-  echo "Run './mach build && ./mach package' first."
+  echo "ERROR: Source DMG not found in $OBJ_DIR/dist/"
+  echo "Run: ./mach build faster && ./mach package"
+  echo "(Never use './mach build' alone — it tries to pull artifacts and fails on this fork)"
   exit 1
 fi
 
@@ -75,6 +76,59 @@ echo "    Extracted to $APP_PATH"
 
 echo "    Stripping extended attributes..."
 xattr -cr "$APP_PATH"
+
+# ── Step 1b: Patch updater.app Info.plist if missing ─────────────────────────
+# The artifact build does not process Info.plist.in, so updater.app ships without
+# Contents/Info.plist — codesign --deep fails on an invalid sub-bundle.
+UPDATER_PLIST="$APP_PATH/Contents/MacOS/updater.app/Contents/Info.plist"
+if [[ ! -f "$UPDATER_PLIST" ]]; then
+  echo "    Patching missing updater.app/Contents/Info.plist..."
+  mkdir -p "$(dirname "$UPDATER_PLIST")"
+  SMReq="identifier \"${APPLE_BUNDLE_ID}\" and anchor apple generic and certificate leaf[subject.OU] = \"${APPLE_TEAM_ID}\""
+  cat > "$UPDATER_PLIST" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleDisplayName</key>
+	<string>updater</string>
+	<key>CFBundleExecutable</key>
+	<string>org.mozilla.updater</string>
+	<key>CFBundleIconFile</key>
+	<string>updater.icns</string>
+	<key>CFBundleIdentifier</key>
+	<string>org.mozilla.updater</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>updater</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>1.0</string>
+	<key>LSHasLocalizedDisplayName</key>
+	<true/>
+	<key>NSMainNibFile</key>
+	<string>MainMenu</string>
+	<key>NSRequiresAquaSystemAppearance</key>
+	<false/>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>SMAuthorizedClients</key>
+	<array>
+		<string>${SMReq}</string>
+	</array>
+</dict>
+</plist>
+PLIST
+  echo "    Info.plist written."
+fi
 
 # ── Step 2: Deep codesign with hardened runtime ───────────────────────────────
 echo ""
