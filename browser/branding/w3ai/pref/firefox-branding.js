@@ -26,7 +26,7 @@ pref("app.update.promptWaitTime", 691200);
 
 // TMRW uses a custom updater (no MAR signature check) with MAR-based patches.
 // update.xml served at this URL describes complete .mar packages.
-pref("app.update.url", "https://tmrw.w3ai.io/updates/update.xml");
+pref("app.update.url", "https://tmrw-update.w3ai.io/updates/update.xml");
 pref("app.update.enabled", true);
 pref("app.update.auto", false);
 
