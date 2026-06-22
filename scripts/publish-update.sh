@@ -266,10 +266,10 @@ echo "    MAR: $MAR_URL"
 echo ""
 echo "==> [5/5] Publishing update manifest to tmrw.w3ai.io..."
 
-# update.xml patch URL points to the MAR (for Firefox's built-in MAR updater).
-# The dmgUrl/dmgHash/dmgSize fields are what the server places in the XML patch element.
-# DMG is also uploaded above for direct download links.
-PAYLOAD="{\"version\":\"$VERSION\",\"buildID\":\"$BUILD_ID\",\"dmgHash\":\"$MAR_HASH\",\"dmgSize\":$MAR_SIZE,\"dmgUrl\":\"$MAR_URL\",\"marHash\":\"$MAR_HASH\",\"marSize\":$MAR_SIZE,\"marUrl\":\"$MAR_URL\",\"directDmgUrl\":\"$DMG_URL\",\"notes\":\"${RELEASE_NOTES:-}\"}"
+# Send both DMG and MAR info. The server needs to be updated (see Lovable prompt)
+# to accept marUrl/marHash/marSize and put the MAR URL in the update.xml patch element.
+# Until then, dmgUrl is the real DMG so the server validation passes.
+PAYLOAD="{\"version\":\"$VERSION\",\"buildID\":\"$BUILD_ID\",\"dmgHash\":\"$DMG_HASH\",\"dmgSize\":$DMG_SIZE,\"dmgUrl\":\"$DMG_URL\",\"marHash\":\"$MAR_HASH\",\"marSize\":$MAR_SIZE,\"marUrl\":\"$MAR_URL\",\"notes\":\"${RELEASE_NOTES:-}\"}"
 
 for attempt in 1 2 3 4 5; do
   RESPONSE="$(curl -s -X POST "$PUBLISH_URL" \
