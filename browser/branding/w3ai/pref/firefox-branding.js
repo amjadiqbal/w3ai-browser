@@ -12,7 +12,7 @@ pref("app.update.interval", 21600); // 6 hours
 // Give the user x seconds to react before showing the big UI. default=192 hours
 pref("app.update.promptWaitTime", 691200);
 
-// TMRW W3 Browser update server — serves update.xml listing latest MAR
+// TMRW Browser update server — serves update.xml listing latest MAR
 pref("app.update.url", "https://tmrw.w3ai.io/updates/update.xml");
 pref("app.update.enabled", true);
 

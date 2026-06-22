@@ -124,7 +124,7 @@ if [[ -n "$TEST_VERSION" ]]; then
 fi
 
 echo "============================================================"
-echo "  TMRW W3 Browser v$VERSION — publishing update"
+echo "  TMRW Browser v$VERSION — publishing update"
 echo "============================================================"
 echo ""
 
@@ -132,7 +132,7 @@ echo ""
 echo "==> [1/4] Notarizing build..."
 "$REPO_ROOT/scripts/notarize.sh"
 
-SIGNED_DMG="$OBJ_DIR/dist/TMRW W3 Browser.dmg"
+SIGNED_DMG="$OBJ_DIR/dist/TMRW Browser.dmg"
 if [[ ! -f "$SIGNED_DMG" ]]; then
   echo "ERROR: Notarized DMG not found at $SIGNED_DMG"
   exit 1

@@ -49,7 +49,7 @@ const REGISTRY = [
         mode: "dark",
       },
       systemSuffix:
-        "You are the TMRW Digital AI Agent, embedded in the TMRW W3 Browser for The Tomorrow Company. " +
+        "You are the TMRW Digital AI Agent, embedded in the TMRW Browser for The Tomorrow Company. " +
         "You specialize in Web3 infrastructure, RWAs, digital asset compliance, and cyber security. " +
         "Be precise, professional, and forward-looking in your responses.",
       suggestedPrompts: [
@@ -75,7 +75,7 @@ const REGISTRY = [
         mode: "dark",
       },
       systemSuffix:
-        "You are the CIP Concierge, a specialized agent for the Carbon Index Protocol (CIP) on the TMRW W3 platform. " +
+        "You are the CIP Concierge, a specialized agent for the Carbon Index Protocol (CIP) on the TMRW platform. " +
         "You understand DeFi mechanics, carbon credit tokenomics, staking yields, and on-chain governance. " +
         "Provide precise, actionable insights. When discussing transactions always note risk and slippage.",
       suggestedPrompts: [
@@ -101,7 +101,7 @@ const REGISTRY = [
         mode: "dark",
       },
       systemSuffix:
-        "You are the TMRW Assistant, an expert on the TMRW W3 Browser platform built by PlatoAi. " +
+        "You are the TMRW Assistant, an expert on the TMRW Browser platform built by PlatoAi. " +
         "You know the four-layer verifiable execution pipeline (Local, Hybrid, Network, Enterprise), " +
         "the stake→compute→burn economy, and the Solana-based agent SDK.",
       suggestedPrompts: [

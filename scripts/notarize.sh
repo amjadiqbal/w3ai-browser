@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# notarize.sh — package, codesign, notarize, and staple TMRW W3 Browser
+# notarize.sh — package, codesign, notarize, and staple TMRW Browser
 #
 # Prerequisites:
 #   1. Xcode Command Line Tools (xcode-select --install)
@@ -20,7 +20,7 @@ if [[ -z "$SOURCE_DMG" ]]; then
   SOURCE_DMG="$(ls -t "$OBJ_DIR/dist/firefox-"*.dmg 2>/dev/null | head -1)" || true
 fi
 WORK_DIR="/tmp/tmrw-notarize"
-APP_NAME="TMRW W3 Browser"
+APP_NAME="TMRW Browser"
 APP_PATH="$WORK_DIR/$APP_NAME.app"
 ZIP_PATH="$WORK_DIR/$APP_NAME.zip"
 OUT_DMG="$OBJ_DIR/dist/$APP_NAME.dmg"
