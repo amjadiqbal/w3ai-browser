@@ -25,3 +25,7 @@ browser.jar:
     content/browser/sidebar/sidebar-tab-list.mjs
     content/browser/sidebar/sidebar-tab-row.css
     content/browser/sidebar/sidebar.css
+    content/browser/sidebar/sidebar-ql-apps.svg
+    content/browser/sidebar/sidebar-ql-agents.svg
+    content/browser/sidebar/sidebar-ql-deep-research.svg
+    content/browser/sidebar/sidebar-ql-codex.svg

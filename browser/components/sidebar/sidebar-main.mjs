@@ -15,6 +15,45 @@ import { MozLitElement } from "chrome://global/content/lit-utils.mjs";
 // eslint-disable-next-line import/no-unassigned-import
 import "chrome://browser/content/sidebar/sidebar-pins-promo.mjs";
 
+const QUICK_LINKS = [
+  {
+    label: "New Chat",
+    url: "https://chatgpt.com/",
+    iconUrl: "chrome://global/skin/icons/edit.svg",
+  },
+  {
+    label: "Scheduled",
+    url: "https://chatgpt.com/scheduled",
+    iconUrl: "chrome://browser/skin/calendar-24.svg",
+  },
+  {
+    label: "Library",
+    url: "https://chatgpt.com/library",
+    iconUrl: "chrome://browser/skin/library.svg",
+  },
+  {
+    label: "Apps",
+    url: "https://chatgpt.com/apps",
+    iconUrl: "chrome://browser/content/sidebar/sidebar-ql-apps.svg",
+  },
+  {
+    label: "Agents",
+    url: "https://chatgpt.com/agents",
+    iconUrl: "chrome://browser/content/sidebar/sidebar-ql-agents.svg",
+  },
+  {
+    label: "Deep Research",
+    url: "https://chatgpt.com/deep-research",
+    iconUrl:
+      "chrome://browser/content/sidebar/sidebar-ql-deep-research.svg",
+  },
+  {
+    label: "Codex",
+    url: "https://chatgpt.com/codex",
+    iconUrl: "chrome://browser/content/sidebar/sidebar-ql-codex.svg",
+  },
+];
+
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   ASRouter: "resource:///modules/asrouter/ASRouter.sys.mjs",
@@ -35,6 +74,7 @@ export default class SidebarMain extends MozLitElement {
     open: { type: Boolean },
     shouldShowOverflowButton: { type: Boolean },
     isOverflowMenuOpen: { type: Boolean },
+    chatProvider: { type: String },
   };
 
   static queries = {
@@ -72,6 +112,10 @@ export default class SidebarMain extends MozLitElement {
     };
     this.shouldShowOverflowButton = false;
     this.overflowMenuOpen = false;
+    this.chatProvider = Services.prefs.getStringPref(
+      "browser.ml.chat.provider",
+      ""
+    );
   }
 
   tooltips = {
@@ -137,6 +181,19 @@ export default class SidebarMain extends MozLitElement {
     window.addEventListener("SidebarItemChanged", this);
     window.addEventListener("SidebarItemRemoved", this);
 
+    this._chatProviderObserver = {
+      observe: () => {
+        this.chatProvider = Services.prefs.getStringPref(
+          "browser.ml.chat.provider",
+          ""
+        );
+      },
+    };
+    Services.prefs.addObserver(
+      "browser.ml.chat.provider",
+      this._chatProviderObserver
+    );
+
     this.setCustomize();
     this.createSplitter();
     this.createToolsObservers();
@@ -161,6 +218,10 @@ export default class SidebarMain extends MozLitElement {
     this.ownerDocument
       .getElementById("drag-to-pin-promo-card")
       ?.disconnectedCallback();
+    Services.prefs.removeObserver(
+      "browser.ml.chat.provider",
+      this._chatProviderObserver
+    );
   }
 
   get isToolsDragging() {
@@ -636,6 +697,52 @@ export default class SidebarMain extends MozLitElement {
     return this.expanded && window.SidebarController.sidebarVerticalTabsEnabled;
   }
 
+  quickLinkTemplate({ label, url, iconUrl }) {
+    return html`
+      <moz-button
+        class="quick-link-button"
+        type="icon ghost"
+        title=${label}
+        .iconSrc=${iconUrl}
+        @click=${() => window.openTrustedLinkIn(url, "current")}
+      ></moz-button>
+    `;
+  }
+
+  getVisibleChatProviders() {
+    const providers = [];
+    for (const [url, info] of lazy.GenAI.chatProviders) {
+      if (!info.hidden && info.iconUrl) {
+        providers.push([url, info]);
+      }
+    }
+    return providers;
+  }
+
+  async switchChatProvider(url) {
+    Services.prefs.setStringPref("browser.ml.chat.provider", url);
+    await window.SidebarController.show("viewGenaiChatSidebar");
+  }
+
+  providerButtonTemplate(url, info) {
+    const activeId = lazy.GenAI.currentChatProviderInfo?.id;
+    const isActive =
+      this.open &&
+      !!activeId &&
+      info.id === activeId &&
+      this.selectedView === "viewGenaiChatSidebar";
+    return html`
+      <moz-button
+        class="provider-button"
+        type=${isActive ? "icon" : "icon ghost"}
+        aria-pressed=${isActive}
+        title=${info.name}
+        .iconSrc=${info.iconUrl}
+        @click=${() => this.switchChatProvider(url)}
+      ></moz-button>
+    `;
+  }
+
   willUpdate() {
     this._toolsIntersectionObserver?.disconnect();
     this._toolsResizeObserver?.disconnect();
@@ -794,6 +901,22 @@ export default class SidebarMain extends MozLitElement {
     let moreToolsTooltip = attributes?.find(
       attr => attr.name === "label"
     )?.value;
+    const visibleProviders = this.getVisibleChatProviders();
+    const allTools = [...this.getToolsAndExtensions().values()];
+    const extensionTools = allTools.filter(
+      a =>
+        a.view !== "viewGenaiChatSidebar" &&
+        a.view !== "viewTabsSidebar" &&
+        a.view?.includes("-sidebar-action")
+    );
+    const navTools = allTools.filter(
+      a =>
+        a.view !== "viewGenaiChatSidebar" &&
+        a.view !== "viewTabsSidebar" &&
+        !a.view?.includes("-sidebar-action")
+    );
+    const syncedTabsTool =
+      this.getToolsAndExtensions().get("viewTabsSidebar");
     return html`
       <link
         rel="stylesheet"
@@ -817,6 +940,19 @@ export default class SidebarMain extends MozLitElement {
           class="buttons-wrapper"
           ?overflowing=${this.shouldShowOverflowButton}
         >
+          ${when(
+            visibleProviders.length > 0,
+            () => html`
+              <div class="provider-buttons actions-list">
+                ${visibleProviders.map(([url, info]) =>
+                  this.providerButtonTemplate(url, info)
+                )}
+              </div>
+            `
+          )}
+          <div class="quick-links actions-list">
+            ${QUICK_LINKS.map(link => this.quickLinkTemplate(link))}
+          </div>
           <button-group
             class="tools-and-extensions actions-list"
             orientation=${this.isToolsOverflowing() ? "horizontal" : "vertical"}
@@ -824,7 +960,7 @@ export default class SidebarMain extends MozLitElement {
           >
             ${when(!this.isToolsOverflowing(), () =>
               repeat(
-                this.getToolsAndExtensions().values(),
+                extensionTools,
                 action => action.view,
                 action => this.entrypointTemplate(action)
               )
@@ -838,7 +974,7 @@ export default class SidebarMain extends MozLitElement {
             )}
             ${when(this.isToolsOverflowing(), () =>
               repeat(
-                this.getToolsAndExtensions().values(),
+                extensionTools,
                 action => action.view,
                 action => this.entrypointTemplate(action)
               )
@@ -848,6 +984,15 @@ export default class SidebarMain extends MozLitElement {
             !window.SidebarController.sidebarVerticalTabsEnabled,
             () =>
               html` <div class="bottom-actions actions-list">
+                ${repeat(
+                  navTools,
+                  action => action.view,
+                  action => this.entrypointTemplate(action)
+                )}
+                ${when(
+                  syncedTabsTool,
+                  () => this.entrypointTemplate(syncedTabsTool)
+                )}
                 ${repeat(
                   this.bottomActions,
                   action => action.view,

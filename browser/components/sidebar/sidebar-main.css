@@ -2,20 +2,22 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-/* stylelint-disable-next-line media-query-no-invalid */
-@media -moz-pref("sidebar.verticalTabs") {
-  :host {
-    --button-size-icon: var(--tab-min-height);
-    --button-min-height: var(--button-size-icon);
-  }
-}
-
 [hidden] {
   display: none !important;
 }
 
 :host {
   width: 100%;
+  --button-size-icon: 36px;
+  --button-min-height: 36px;
+}
+
+/* stylelint-disable-next-line media-query-no-invalid */
+@media -moz-pref("sidebar.verticalTabs") {
+  :host {
+    --button-size-icon: var(--tab-min-height);
+    --button-min-height: var(--button-size-icon);
+  }
 }
 
 .wrapper {
@@ -78,6 +80,7 @@
   > moz-button {
     --button-icon-fill: var(--toolbarbutton-icon-fill);
     --button-attention-dot-color: light-dark(#53b93a, #73d25d);
+    --icon-size: var(--icon-size-medium);
   }
 
   > moz-button:not(.tools-overflow) {
@@ -85,11 +88,12 @@
     --button-outer-padding-block: var(--space-xxsmall);
 
     &:first-of-type {
-      --button-outer-padding-block-start: var(--space-small);
+      --button-outer-padding-block-start: var(--space-xsmall);
+      --button-outer-padding-block-end: var(--space-xsmall);
     }
 
     &:last-of-type {
-      --button-outer-padding-block-end: var(--space-small);
+      --button-outer-padding-block-end: var(--space-xsmall);
     }
   }
 
@@ -165,6 +169,18 @@
   }
 }
 
+.provider-buttons {
+  border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  padding-block-end: var(--space-small);
+  margin-block-end: var(--space-xsmall);
+}
+
+.quick-links {
+  border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  padding-block-end: var(--space-small);
+  margin-block-end: var(--space-xsmall);
+}
+
 .bottom-actions > moz-button:last-of-type {
   --button-outer-padding-block-end: var(--space-medium);
 }
@@ -178,4 +194,5 @@
 
 .bottom-actions {
   align-self: end;
+  margin-block-start: auto;
 }
