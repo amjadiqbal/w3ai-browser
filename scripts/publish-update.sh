@@ -70,6 +70,21 @@ if [[ -n "$BUMP" ]]; then
   VERSION="$MAJOR.$MINOR.$PATCH"
   sync_version "$VERSION"
   echo "Bumped version: $VERSION (synced to .env, version.txt, mozconfig, configure.sh)"
+
+  # Commit version bump files and create a matching git tag.
+  # Multiple pushes to the same version reuse the existing tag (--force).
+  git -C "$REPO_ROOT" add \
+    browser/config/version.txt \
+    browser/config/version_display.txt \
+    mozconfig \
+    "browser/branding/w3ai/configure.sh" 2>/dev/null || true
+  git -C "$REPO_ROOT" diff --cached --quiet || \
+    git -C "$REPO_ROOT" commit -m "chore(release): bump version to $VERSION"
+  git -C "$REPO_ROOT" tag -f -a "v${VERSION}" -m "Release v${VERSION}"
+  git -C "$REPO_ROOT" push origin HEAD --follow-tags --force-with-lease 2>/dev/null || \
+    git -C "$REPO_ROOT" push origin HEAD
+  git -C "$REPO_ROOT" push origin "v${VERSION}" --force 2>/dev/null || true
+  echo "    Git tag v${VERSION} pushed."
 fi
 
 # ── Validate required vars ─────────────────────────────────────────────────────
@@ -243,3 +258,9 @@ echo "  Manifest: https://tmrw.w3ai.io/updates/update.xml"
 echo "  Installed browsers will prompt for update within 6 hours."
 echo "  Trigger manually: Help menu → Check for Updates"
 echo "============================================================"
+
+# Tag the publish commit so every released version is traceable in git.
+# If --bump already tagged above, this is a no-op (same tag, --force).
+git -C "$REPO_ROOT" tag -f -a "v${VERSION}" -m "Release v${VERSION} (published build ${BUILD_ID})"
+git -C "$REPO_ROOT" push origin "v${VERSION}" --force 2>/dev/null || true
+echo "  Git tag: v${VERSION}"
