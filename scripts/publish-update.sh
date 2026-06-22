@@ -181,6 +181,7 @@ const blob = await put(blobName, createReadStream(localPath), {
   token,
   contentType: 'application/octet-stream',
   multipart: true,
+  allowOverwrite: true,
 });
 
 // Verify size via metadata (retry for CDN propagation delay).
