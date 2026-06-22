@@ -130,6 +130,18 @@ PLIST
   echo "    Info.plist written."
 fi
 
+# ── Step 1b-extra: Inject plugin-container (artifact builds omit the .app bundle) ──
+# Official Firefox ships plugin-container as Contents/MacOS/plugin-container.app/
+# Artifact builds only provide a flat binary in dist/bin/; the package manifest
+# skips it silently (MOZ_PKG_FATAL_WARNINGS is disabled for artifact builds).
+# Without it, the content process never starts and all tabs stay blank.
+PLUGIN_CONTAINER_SRC="$REPO_ROOT/obj-x86_64-apple-darwin25.5.0/dist/bin/plugin-container"
+if [[ -f "$PLUGIN_CONTAINER_SRC" ]]; then
+  cp "$PLUGIN_CONTAINER_SRC" "$APP_PATH/Contents/Resources/plugin-container"
+  chmod 755 "$APP_PATH/Contents/Resources/plugin-container"
+  echo "    plugin-container injected."
+fi
+
 # ── Step 1c: Replace updater binary with our custom build (no MAR sig check) ──
 CUSTOM_UPDATER="$REPO_ROOT/obj-x86_64-apple-darwin25.5.0/dist/bin/org.mozilla.updater"
 if [[ -f "$CUSTOM_UPDATER" ]]; then

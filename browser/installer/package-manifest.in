@@ -91,6 +91,12 @@
 @BINPATH@/@MOZ_PKCS11_PROCESS_NAME@.app/
 #endif
 #endif
+#ifdef MOZ_ARTIFACT_BUILDS
+; Artifact builds ship plugin-container as a flat binary (no .app bundle).
+; The .app/ entry above is silently skipped; include the flat binary so the
+; content process binary is actually present in the packaged DMG.
+@RESPATH@/@MOZ_CHILD_PROCESS_NAME@
+#endif
 #endif
 #ifdef XP_WIN
 @BINPATH@/@MOZ_CHILD_PROCESS_NAME@

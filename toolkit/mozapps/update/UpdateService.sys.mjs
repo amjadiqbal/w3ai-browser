@@ -5668,7 +5668,6 @@ export class CheckerService {
       request.addEventListener("error", onError);
 
       LOG("CheckerService:#updateCheck - sending request to: " + url);
-      console.error("[TMRW-UPDATE] Fetching update URL:", url);
       request.send(null);
       this.#updateCheckData[requestKey].request = request;
     });
@@ -5730,10 +5729,6 @@ export class CheckerService {
     try {
       // Analyze the resulting DOM and determine the set of updates.
       updates = this.#parseUpdates(request);
-      console.error("[TMRW-UPDATE] Parsed updates from XML:", updates.length, "update(s)");
-      for (const u of updates) {
-        console.error("[TMRW-UPDATE]  appVersion=" + u.appVersion + " type=" + u.type + " isOld=" + updateIsAtLeastAsOldAsCurrentVersion(u));
-      }
     } catch (e) {
       LOG(
         "CheckerService:#updateCheck - there was a problem checking for " +
