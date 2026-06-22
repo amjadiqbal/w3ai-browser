@@ -104,7 +104,7 @@ ifdef MOZ_NOTIFICATION_SERVER
 DEFINES += -DMOZ_NOTIFICATION_SERVER=1
 endif
 
-MOZ_PKG_APPNAME := tmrw-w3-browser
+MOZ_PKG_APPNAME := tmrw-browser
 
 include $(topsrcdir)/toolkit/mozapps/installer/packager.mk
 

@@ -106,7 +106,7 @@ if [[ -n "$TEST_VERSION" ]]; then
   RESPONSE="$(curl -s -X POST "$PUBLISH_URL" \
     -H "Authorization: Bearer $PUBLISH_SECRET" \
     -H "Content-Type: application/json" \
-    -H "User-Agent: TMRW-W3-Publisher/1.0" \
+    -H "User-Agent: TMRW-Publisher/1.0" \
     -H "x-vercel-protection-bypass: ${VERCEL_BYPASS_SECRET}" \
     -d "{\"version\":\"$TEST_VERSION\",\"buildID\":\"$BUILD_ID\",\"dmgHash\":\"$DMG_HASH\",\"dmgSize\":$DMG_SIZE,\"dmgUrl\":\"$DMG_URL\"}" \
     -w "\n%{http_code}")"
@@ -199,8 +199,8 @@ trap "rm -rf '$UPLOAD_TMPDIR' '$MAR_TMPDIR'" EXIT
   echo '{"name":"uploader","type":"module"}' > package.json && \
   npm install @vercel/blob --silent 2>/dev/null)
 
-DMG_BLOB_NAME="TMRW-W3-Browser-v${VERSION}.dmg"
-MAR_BLOB_NAME="TMRW-W3-Browser-v${VERSION}.complete.mar"
+DMG_BLOB_NAME="TMRW-Browser-v${VERSION}.dmg"
+MAR_BLOB_NAME="TMRW-Browser-v${VERSION}.complete.mar"
 
 cat > "$UPLOAD_TMPDIR/upload.mjs" << 'JSEOF'
 import { put, del, list, head } from '@vercel/blob';
@@ -275,7 +275,7 @@ for attempt in 1 2 3 4 5; do
   RESPONSE="$(curl -s -X POST "$PUBLISH_URL" \
     -H "Authorization: Bearer $PUBLISH_SECRET" \
     -H "Content-Type: application/json" \
-    -H "User-Agent: TMRW-W3-Publisher/1.0" \
+    -H "User-Agent: TMRW-Publisher/1.0" \
     -H "x-vercel-protection-bypass: ${VERCEL_BYPASS_SECRET}" \
     -d "$PAYLOAD" \
     -w "\n%{http_code}")"
