@@ -130,6 +130,22 @@ PLIST
   echo "    Info.plist written."
 fi
 
+# ── Step 1c: Replace updater binary with our custom build (no MAR sig check) ──
+CUSTOM_UPDATER="$REPO_ROOT/obj-x86_64-apple-darwin25.5.0/dist/bin/org.mozilla.updater"
+if [[ -f "$CUSTOM_UPDATER" ]]; then
+  for UPDATER_BIN in \
+    "$APP_PATH/Contents/MacOS/updater.app/Contents/MacOS/org.mozilla.updater" \
+    "$APP_PATH/Contents/Library/LaunchServices/org.mozilla.updater" \
+    "$APP_PATH/Contents/Resources/org.mozilla.updater"
+  do
+    if [[ -f "$UPDATER_BIN" ]]; then
+      cp "$CUSTOM_UPDATER" "$UPDATER_BIN"
+      chmod 755 "$UPDATER_BIN"
+    fi
+  done
+  echo "    Custom updater binary installed."
+fi
+
 # ── Step 2: Deep codesign with hardened runtime ───────────────────────────────
 echo ""
 echo "==> [2/6] Codesigning (deep, hardened runtime)..."

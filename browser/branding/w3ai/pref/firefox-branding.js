@@ -12,11 +12,10 @@ pref("app.update.interval", 21600); // 6 hours
 // Give the user x seconds to react before showing the big UI. default=192 hours
 pref("app.update.promptWaitTime", 691200);
 
-// TMRW uses DMG-based updates via TMRWUpdateGate (startup check).
-// The built-in MAR-based update service does not support DMG patches,
-// so we disable it to avoid "Failed to check for updates" in About dialog.
+// TMRW uses a custom updater (no MAR signature check) with MAR-based patches.
+// update.xml served at this URL describes complete .mar packages.
 pref("app.update.url", "https://tmrw.w3ai.io/updates/update.xml");
-pref("app.update.enabled", false);
+pref("app.update.enabled", true);
 pref("app.update.auto", false);
 
 #if MOZ_UPDATE_CHANNEL == beta

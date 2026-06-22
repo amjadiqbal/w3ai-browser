@@ -129,7 +129,7 @@ echo "============================================================"
 echo ""
 
 # ── Step 1: Notarize ──────────────────────────────────────────────────────────
-echo "==> [1/4] Notarizing build..."
+echo "==> [1/5] Notarizing build..."
 "$REPO_ROOT/scripts/notarize.sh"
 
 SIGNED_DMG="$OBJ_DIR/dist/TMRW Browser.dmg"
@@ -142,24 +142,65 @@ DMG_SIZE="$(stat -f%z "$SIGNED_DMG")"
 DMG_HASH="$(shasum -a 512 "$SIGNED_DMG" | awk '{print $1}')"
 echo "    DMG size: $DMG_SIZE bytes"
 
-# ── Step 2: Get build ID ───────────────────────────────────────────────────────
+# ── Step 2: Create complete MAR update package ────────────────────────────────
 echo ""
-echo "==> [2/4] Reading build ID..."
+echo "==> [2/5] Creating complete MAR update package..."
+
+MAR_TMPDIR="$(mktemp -d)"
+MAR_OUTPUT="$MAR_TMPDIR/tmrw-${VERSION}.complete.mar"
+APP_LINK="$MAR_TMPDIR/app"
+
+# Use a symlink to avoid spaces in path (make_full_update.sh workdir issues)
+ln -sfn "$OBJ_DIR/dist/firefox/TMRW Browser.app" "$APP_LINK"
+
+# Run from MAR_TMPDIR so the Python mar tool places output.mar there
+# (Python mar v3.2.1 ignores -C for the output file path and uses CWD instead)
+(cd "$MAR_TMPDIR" && \
+  MAR=/usr/local/bin/mar \
+  MOZ_PRODUCT_VERSION="$VERSION" \
+  MAR_CHANNEL_ID=default \
+  XZ=/usr/local/bin/xz \
+    "$REPO_ROOT/tools/update-packaging/make_full_update.sh" \
+    "$MAR_OUTPUT" \
+    "$APP_LINK" \
+    2>&1 | grep -v "^        add\|^ add-if-not\|^      rmdir\|^     remove" || true
+)
+
+# The script tries to mv $APP_LINK.work/output.mar but Python mar puts it in CWD.
+# If the mv failed, pick up the file from MAR_TMPDIR.
+if [[ ! -f "$MAR_OUTPUT" && -f "$MAR_TMPDIR/output.mar" ]]; then
+  /bin/mv "$MAR_TMPDIR/output.mar" "$MAR_OUTPUT"
+fi
+
+if [[ ! -f "$MAR_OUTPUT" ]]; then
+  echo "ERROR: MAR creation failed — $MAR_OUTPUT not found"
+  exit 1
+fi
+
+MAR_SIZE="$(stat -f%z "$MAR_OUTPUT")"
+MAR_HASH="$(shasum -a 512 "$MAR_OUTPUT" | awk '{print $1}')"
+echo "    MAR size: $MAR_SIZE bytes"
+echo "    MAR hash: ${MAR_HASH:0:16}..."
+
+# ── Step 3: Get build ID ───────────────────────────────────────────────────────
+echo ""
+echo "==> [3/5] Reading build ID..."
 BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
 echo "    Build ID: $BUILD_ID"
 
-# ── Step 3: Upload DMG to Vercel Blob ─────────────────────────────────────────
+# ── Step 4: Upload DMG + MAR to Vercel Blob ───────────────────────────────────
 echo ""
-echo "==> [3/4] Uploading DMG to Vercel Blob (~215MB, please wait)..."
+echo "==> [4/5] Uploading DMG + MAR to Vercel Blob (please wait)..."
 
 UPLOAD_TMPDIR="$(mktemp -d)"
-trap "rm -rf '$UPLOAD_TMPDIR'" EXIT
+trap "rm -rf '$UPLOAD_TMPDIR' '$MAR_TMPDIR'" EXIT
 
 (cd "$UPLOAD_TMPDIR" && \
   echo '{"name":"uploader","type":"module"}' > package.json && \
   npm install @vercel/blob --silent 2>/dev/null)
 
 DMG_BLOB_NAME="TMRW-W3-Browser-v${VERSION}.dmg"
+MAR_BLOB_NAME="TMRW-W3-Browser-v${VERSION}.complete.mar"
 
 cat > "$UPLOAD_TMPDIR/upload.mjs" << 'JSEOF'
 import { put, del, list, head } from '@vercel/blob';
@@ -170,7 +211,7 @@ const token = process.env.BLOB_READ_WRITE_TOKEN;
 const localSize = statSync(localPath).size;
 
 // Delete existing blob before uploading to prevent stale chunks from a
-// previous partial upload mixing with new data (causes corrupted DMG).
+// previous partial upload mixing with new data (causes corrupted file).
 try {
   const { blobs } = await list({ token, prefix: blobName });
   for (const b of blobs) await del(b.url, { token });
@@ -199,21 +240,36 @@ for (let i = 0; i <= 5; i++) {
 console.log(blob.url);
 JSEOF
 
+echo "    Uploading DMG (~215MB)..."
 DMG_URL="$(cd "$UPLOAD_TMPDIR" && \
   BLOB_READ_WRITE_TOKEN="$BLOB_READ_WRITE_TOKEN" \
   node upload.mjs "$SIGNED_DMG" "$DMG_BLOB_NAME")"
 
 if [[ -z "$DMG_URL" ]]; then
-  echo "ERROR: Upload returned empty URL"
+  echo "ERROR: DMG upload returned empty URL"
   exit 1
 fi
-echo "    Uploaded and verified: $DMG_URL"
+echo "    DMG: $DMG_URL"
 
-# ── Step 4: Publish manifest (retry until server can reach the CDN URL) ────────
+echo "    Uploading MAR..."
+MAR_URL="$(cd "$UPLOAD_TMPDIR" && \
+  BLOB_READ_WRITE_TOKEN="$BLOB_READ_WRITE_TOKEN" \
+  node upload.mjs "$MAR_OUTPUT" "$MAR_BLOB_NAME")"
+
+if [[ -z "$MAR_URL" ]]; then
+  echo "ERROR: MAR upload returned empty URL"
+  exit 1
+fi
+echo "    MAR: $MAR_URL"
+
+# ── Step 5: Publish manifest (retry until server can reach the CDN URL) ────────
 echo ""
-echo "==> [4/4] Publishing update manifest to tmrw.w3ai.io..."
+echo "==> [5/5] Publishing update manifest to tmrw.w3ai.io..."
 
-PAYLOAD="{\"version\":\"$VERSION\",\"buildID\":\"$BUILD_ID\",\"dmgHash\":\"$DMG_HASH\",\"dmgSize\":$DMG_SIZE,\"dmgUrl\":\"$DMG_URL\",\"notes\":\"${RELEASE_NOTES:-}\"}"
+# update.xml patch URL points to the MAR (for Firefox's built-in MAR updater).
+# The dmgUrl/dmgHash/dmgSize fields are what the server places in the XML patch element.
+# DMG is also uploaded above for direct download links.
+PAYLOAD="{\"version\":\"$VERSION\",\"buildID\":\"$BUILD_ID\",\"dmgHash\":\"$MAR_HASH\",\"dmgSize\":$MAR_SIZE,\"dmgUrl\":\"$MAR_URL\",\"marHash\":\"$MAR_HASH\",\"marSize\":$MAR_SIZE,\"marUrl\":\"$MAR_URL\",\"directDmgUrl\":\"$DMG_URL\",\"notes\":\"${RELEASE_NOTES:-}\"}"
 
 for attempt in 1 2 3 4 5; do
   RESPONSE="$(curl -s -X POST "$PUBLISH_URL" \
@@ -252,8 +308,8 @@ echo ""
 echo "============================================================"
 echo "  Published v$VERSION (build $BUILD_ID)"
 echo ""
-echo "  Direct download:"
-echo "  $DMG_URL"
+echo "  DMG download: $DMG_URL"
+echo "  MAR update:   $MAR_URL"
 echo ""
 echo "  Manifest: https://tmrw.w3ai.io/updates/update.xml"
 echo "  Installed browsers will prompt for update within 6 hours."
