@@ -51,7 +51,7 @@ export const TMRWUpdateGate = {
 
     await new Promise(resolve => {
       window.openDialog(
-        "chrome://browser/content/update-gate.xhtml",
+        "chrome://browser/content/browser/update-gate.xhtml",
         "tmrw-update-gate",
         "chrome,centerscreen,modal,resizable=no,width=480,height=420",
         { serverVersion, currentVersion, dmgUrl, resolve }
