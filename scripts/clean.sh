@@ -3,15 +3,16 @@
 #
 # Usage:
 #   ./scripts/clean.sh            # safe clean (dist artifacts only)
-#   ./scripts/clean.sh --all      # deep clean (also wipes the entire obj- dir + icon caches)
+#   ./scripts/clean.sh --all      # deep clean (wipes obj- dir, then auto-recovers artifacts)
 #
-# After --all you MUST run: ./mach configure && ./mach build faster && ./mach package
+# --all automatically runs: configure → extract cached jars → restore missing bundles → build faster
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OBJ_DIR="$REPO_ROOT/obj-x86_64-apple-darwin25.5.0"
 DIST_DIR="$OBJ_DIR/dist"
+MOZBUILD_CACHE="$HOME/.mozbuild/package-frontend"
 
 DEEP=0
 for arg in "$@"; do
@@ -24,26 +25,14 @@ echo "  Mode: $([ $DEEP -eq 1 ] && echo "DEEP (--all)" || echo "safe")"
 echo "============================================================"
 echo ""
 
-# ── 1. Stale DMGs in dist (keep only the newest one per version) ──────────────
+# ── 1. Stale DMGs and build artifacts from dist/ ──────────────────────────────
 echo "==> Removing stale DMGs and build artifacts from dist/..."
 if [[ -d "$DIST_DIR" ]]; then
-  # Delete every .dmg whose name doesn't match the current app name
-  find "$DIST_DIR" -maxdepth 1 -name "*.dmg" | while read -r f; do
-    echo "    rm $f"
-    rm -f "$f"
-  done
-  # Delete stale app bundles (any .app that isn't the current one)
-  find "$DIST_DIR" -maxdepth 1 -name "*.app" -not -name "TMRW Browser.app" | while read -r f; do
-    echo "    rm -rf $f"
-    rm -rf "$f"
-  done
-  # Delete leftover package artifacts
-  find "$DIST_DIR" -maxdepth 1 \( \
-    -name "*.txt" -o -name "*.zip" -o -name "*.mar" \
-  \) | while read -r f; do
-    echo "    rm $f"
-    rm -f "$f"
-  done
+  find "$DIST_DIR" -maxdepth 1 -name "*.dmg" -delete 2>/dev/null || true
+  find "$DIST_DIR" -maxdepth 1 -name "*.app" -not -name "TMRW Browser.app" \
+    -exec rm -rf {} + 2>/dev/null || true
+  find "$DIST_DIR" -maxdepth 1 \( -name "*.txt" -o -name "*.zip" -o -name "*.mar" \) \
+    -delete 2>/dev/null || true
 fi
 echo "    Done."
 
@@ -53,19 +42,14 @@ echo "==> Removing notarization temp files..."
 rm -rf /tmp/tmrw-notarize
 echo "    Done."
 
-# ── 3. Stale MozillaUpdateLock files ──────────────────────────────────────────
+# ── 3. Stale MozillaUpdateLock + icon temp files in /tmp ──────────────────────
 echo ""
-echo "==> Removing stale MozillaUpdateLock files from /tmp..."
+echo "==> Removing stale lock and icon temp files from /tmp..."
 find /tmp -maxdepth 1 -name "MozillaUpdateLock-*" -delete 2>/dev/null || true
-echo "    Done."
-
-# ── 4. Leftover iconset/icns temp files ───────────────────────────────────────
-echo ""
-echo "==> Removing icon temp files from /tmp..."
 find /tmp -maxdepth 1 \( -name "*.iconset" -o -name "*.icns" \) -exec rm -rf {} + 2>/dev/null || true
 echo "    Done."
 
-# ── 5. macOS icon + dock cache (always safe to clear) ─────────────────────────
+# ── 4. macOS icon + dock cache ─────────────────────────────────────────────────
 echo ""
 echo "==> Resetting macOS icon and dock cache..."
 rm -rf ~/Library/Caches/com.apple.dock.iconcache 2>/dev/null || true
@@ -76,18 +60,74 @@ sudo rm -rf /Library/Caches/com.apple.iconservices.store 2>/dev/null || true
 killall Dock 2>/dev/null || true
 echo "    Icon cache cleared and Dock restarted."
 
+# ── 5. Deep clean: wipe obj- and auto-recover ─────────────────────────────────
 if [[ $DEEP -eq 1 ]]; then
   echo ""
-  echo "==> [--all] Wiping entire obj- build directory (~2-3 GB)..."
+  echo "==> [--all] Wiping entire obj- build directory..."
   rm -rf "$OBJ_DIR"
-  echo "    Done. IMPORTANT — artifact build requires 3 steps to rebuild:"
-  echo "      1. ./mach configure           (recreate obj- dir)"
-  echo "      2. ./mach artifact install    (re-download pre-built Firefox binaries ~1 GB)"
-  echo "      3. ./mach build faster        (compile only our JS/frontend changes)"
-  echo "      4. ./mach package             (optional: create DMG)"
+  echo "    Done."
+
   echo ""
-  echo "    NOTE: 'mach artifact install' is mandatory after --all. Without it,"
-  echo "    './mach build' searches 500 pushheads and fails with 'no built artifacts found'."
+  echo "==> [--all] Reconfiguring..."
+  cd "$REPO_ROOT"
+  ./mach configure
+  echo "    Done."
+
+  echo ""
+  echo "==> [--all] Restoring artifact binaries from local cache (~/.mozbuild)..."
+  # mach artifact install fails on custom forks ("Tried 500 pushheads").
+  # Instead extract the most recent cached processed jars directly.
+  LATEST_DMG_JAR="$(ls -t "$MOZBUILD_CACHE"/*-target.dmg.processed.jar 2>/dev/null | head -1)"
+  LATEST_XPT_JAR="$(ls -t "$MOZBUILD_CACHE"/*-target.xpt_artifacts.zip.processed.jar 2>/dev/null | head -1)"
+  LATEST_UPD_JAR="$(ls -t "$MOZBUILD_CACHE"/*-target.update_framework_artifacts.zip.processed.jar 2>/dev/null | head -1)"
+
+  if [[ -z "$LATEST_DMG_JAR" ]]; then
+    echo "ERROR: No cached artifact jars found in $MOZBUILD_CACHE"
+    echo "Run on a machine that previously built successfully, or do a full ./mach build."
+    exit 1
+  fi
+
+  echo "    Using: $(basename "$LATEST_DMG_JAR")"
+  unzip -q -o "$LATEST_DMG_JAR" -d "$OBJ_DIR"
+  [[ -n "$LATEST_XPT_JAR" ]] && unzip -q -o "$LATEST_XPT_JAR" -d "$OBJ_DIR"
+  [[ -n "$LATEST_UPD_JAR" ]] && unzip -q -o "$LATEST_UPD_JAR" -d "$OBJ_DIR"
+
+  # Jars extract to bin/ but the build expects dist/bin/
+  echo "    Linking bin/ → dist/bin/..."
+  cp -pn "$OBJ_DIR/bin/"* "$OBJ_DIR/dist/bin/" 2>/dev/null || true
+
+  # Build the updater.app sub-bundle that the repackage step requires
+  echo "    Building updater.app bundle..."
+  UPDATER_APP="$OBJ_DIR/dist/bin/updater.app"
+  rm -rf "$UPDATER_APP"
+  mkdir -p "$UPDATER_APP/Contents/MacOS"
+  mkdir -p "$UPDATER_APP/Contents/Frameworks/UpdateSettings.framework/Resources"
+  rsync -a --exclude "*.in" \
+    "$REPO_ROOT/toolkit/mozapps/update/updater/macbuild/Contents/" \
+    "$UPDATER_APP/Contents/"
+  cp "$OBJ_DIR/dist/bin/org.mozilla.updater" "$UPDATER_APP/Contents/MacOS/org.mozilla.updater"
+  chmod +x "$UPDATER_APP/Contents/MacOS/org.mozilla.updater"
+  UPSETTINGS="$(find "$OBJ_DIR/update_framework_artifacts" -name "UpdateSettings" 2>/dev/null | head -1)"
+  [[ -n "$UPSETTINGS" ]] && cp "$UPSETTINGS" \
+    "$UPDATER_APP/Contents/Frameworks/UpdateSettings.framework/UpdateSettings" || true
+  cp "$REPO_ROOT/toolkit/mozapps/update/updater/macos-frameworks/UpdateSettings/Info.plist" \
+    "$UPDATER_APP/Contents/Frameworks/UpdateSettings.framework/Resources/Info.plist" 2>/dev/null || true
+
+  # Build ChannelPrefs.framework that repackage moves to Contents/Frameworks/
+  echo "    Building ChannelPrefs.framework..."
+  CHANNEL_DEST="$OBJ_DIR/dist/bin/ChannelPrefs.framework"
+  mkdir -p "$CHANNEL_DEST/Resources"
+  CHANNEL_BIN="$(find "$OBJ_DIR/update_framework_artifacts" -name "ChannelPrefs" 2>/dev/null | head -1)"
+  [[ -n "$CHANNEL_BIN" ]] && cp "$CHANNEL_BIN" "$CHANNEL_DEST/ChannelPrefs" || true
+  cp "$REPO_ROOT/toolkit/mozapps/macos-frameworks/ChannelPrefs/Info.plist" \
+    "$CHANNEL_DEST/Resources/Info.plist" 2>/dev/null || true
+
+  echo "    Artifact recovery complete."
+  echo ""
+  echo "==> [--all] Building (./mach build faster)..."
+  ./mach build faster
+  echo ""
+  echo "    Build complete. Run './mach package' to create a fresh DMG."
 fi
 
 echo ""
