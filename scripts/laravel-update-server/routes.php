@@ -36,4 +36,6 @@ Route::middleware(['verify.publish', 'throttle:30,1'])->group(function () {
         ->where('type', 'mar|dmg');
 
     Route::post('/publish', [UpdateController::class, 'publish']);
+
+    Route::post('/clear', [UpdateController::class, 'clear']);
 });

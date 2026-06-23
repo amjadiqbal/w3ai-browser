@@ -148,4 +148,10 @@ class UpdateController extends Controller
             'activeAt' => $update->created_at,
         ] : ['version' => null]);
     }
+
+    public function clear(): \Illuminate\Http\JsonResponse
+    {
+        $count = BrowserUpdate::where('active', true)->update(['active' => false]);
+        return response()->json(['ok' => true, 'deactivated' => $count]);
+    }
 }

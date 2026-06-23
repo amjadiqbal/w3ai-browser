@@ -70,6 +70,23 @@ fi
 
 mkdir -p "$PROFILE"
 
+# macOS Tahoe (26) blocks unnotarized child process spawning via Gatekeeper.
+# Write user.js prefs to disable multi-process mode so websites load in dev.
+# Remove this block once the Apple Developer Agreement is renewed and notarized.
+SPCTL_RESULT=$(spctl --assess -v "$PKG_APP" 2>&1 || true)
+if echo "$SPCTL_RESULT" | grep -q "rejected\|Unnotarized"; then
+  echo "    NOTE: Unnotarized build — disabling multi-process mode so websites load."
+  cat > "$PROFILE/user.js" << 'USERJS'
+// Workaround: macOS Tahoe Gatekeeper blocks unnotarized child processes.
+// Single-process mode lets websites load until the build is notarized.
+user_pref("browser.tabs.remote.autostart", false);
+user_pref("browser.tabs.remote.autostart.2", false);
+user_pref("dom.ipc.processCount", 0);
+user_pref("dom.ipc.processCount.webIsolated", 0);
+user_pref("layers.acceleration.disabled", true);
+USERJS
+fi
+
 echo "==> Launching TMRW Browser (packaged build)..."
 echo "    Profile: $PROFILE"
 echo ""
