@@ -419,3 +419,6 @@ CLAUDE.local.md
 # lint-ignore-next-line: git-only
 /*.json.gz
 browser/app/profile/local-secrets.js
+
+# MAR signing keys — never commit private keys
+browser/branding/w3ai/mar-keys/
