@@ -162,10 +162,12 @@ fi
 echo ""
 echo "==> [2/6] Codesigning (deep, hardened runtime)..."
 
-# Sign binaries that --deep misses because they live outside MacOS/Frameworks
+# Sign binaries that --deep misses because they live outside MacOS/Frameworks,
+# and plugin-container which must be explicitly signed before the bundle seal.
 SKIP_SIGN=(
   "$APP_PATH/Contents/Resources/gmp-clearkey/0.1/libclearkey.dylib"
   "$APP_PATH/Contents/Library/LaunchServices/org.mozilla.updater"
+  "$APP_PATH/Contents/Resources/plugin-container"
 )
 for bin in "${SKIP_SIGN[@]}"; do
   if [[ -f "$bin" ]]; then

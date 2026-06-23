@@ -1,49 +1,39 @@
 <?php
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Add these to your Laravel routes/web.php (or routes/api.php — see note below)
-// ─────────────────────────────────────────────────────────────────────────────
-//
-// NOTE: Put the public routes in routes/web.php (no CSRF).
-//       Put the private API routes in routes/api.php so they use the
-//       api middleware group (stateless, throttled).
-//
-// In routes/web.php:
-// ─────────────────────────────────────────────────────────────────────────────
-
 use App\Http\Controllers\UpdateController;
 use Illuminate\Support\Facades\Route;
 
-// Public — browser polls this to check for updates
-Route::get('/updates/update.xml', [UpdateController::class, 'xml'])
-    ->name('update.xml');
+// ─────────────────────────────────────────────────────────────────────────────
+// FILE: routes/web.php  — add these GET routes to your existing web.php
+// GET requests are never subject to CSRF, so they are safe here.
+// ─────────────────────────────────────────────────────────────────────────────
 
-// Public — browser/user downloads MAR patch or DMG installer
-Route::get('/download/{filename}', [UpdateController::class, 'download'])
-    ->where('filename', '[A-Za-z0-9\-\.\_]+')
-    ->name('update.download')
+// Public: Firefox polls this every 6 hours
+Route::get('/updates/update.xml', [UpdateController::class, 'xml'])
     ->middleware('throttle:120,1');
 
-// Public status check (useful for monitoring)
-Route::get('/api/status', [UpdateController::class, 'status'])
-    ->name('update.status');
+// Public: streams MAR / DMG files from private storage
+Route::get('/download/{filename}', [UpdateController::class, 'download'])
+    ->middleware('throttle:120,1')
+    ->where('filename', '[A-Za-z0-9\-\.\_]+');
 
 // ─────────────────────────────────────────────────────────────────────────────
-// In routes/api.php  (or add to web.php inside a middleware group):
+// FILE: routes/api.php  — add these to your existing api.php
+//
+// Laravel automatically prefixes api.php with /api and uses the 'api'
+// middleware group which has NO CSRF protection.
+// POST /upload/{type} → /api/upload/{type}
+// POST /publish       → /api/publish
+// GET  /status        → /api/status
 // ─────────────────────────────────────────────────────────────────────────────
 
-Route::middleware(['throttle:30,1', \App\Http\Middleware\VerifyPublishRequest::class])
-    ->prefix('api')
-    ->group(function () {
-        // Step 1: Upload the MAR (and optionally DMG) file
-        // POST /api/upload/mar   multipart: file, version
-        // POST /api/upload/dmg   multipart: file, version
-        Route::post('/upload/{type}', [UpdateController::class, 'upload'])
-            ->where('type', 'dmg|mar')
-            ->name('update.upload');
+// Public status check
+Route::get('/status', [UpdateController::class, 'status']);
 
-        // Step 2: Register the build as the live update
-        // POST /api/publish   JSON: { version, buildID, marHash, marSize, dmgHash?, dmgSize?, notes? }
-        Route::post('/publish', [UpdateController::class, 'publish'])
-            ->name('update.publish');
-    });
+// Private: Bearer token + HMAC-SHA256 signature required
+Route::middleware(['verify.publish', 'throttle:30,1'])->group(function () {
+    Route::post('/upload/{type}', [UpdateController::class, 'upload'])
+        ->where('type', 'mar|dmg');
+
+    Route::post('/publish', [UpdateController::class, 'publish']);
+});
