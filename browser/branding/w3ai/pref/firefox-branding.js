@@ -30,6 +30,18 @@ pref("app.update.url", "https://tmrw-update.w3ai.io/updates/update.xml");
 pref("app.update.enabled", true);
 pref("app.update.auto", false);
 
+// Disable multi-process mode — required on macOS Tahoe where Gatekeeper blocks
+// unnotarized child process spawning. All content runs in-process instead.
+// Also disables GPU process (software rendering fallback) and network process.
+pref("browser.tabs.remote.autostart", false);
+pref("browser.tabs.remote.autostart.2", false);
+pref("dom.ipc.processCount", 0);
+pref("dom.ipc.processCount.webIsolated", 0);
+pref("layers.acceleration.disabled", true);
+pref("gfx.webrender.force-disabled", true);
+pref("media.gpu-process-decoder", false);
+pref("network.process.enabled", false);
+
 #if MOZ_UPDATE_CHANNEL == beta
   pref("app.update.url.manual", "https://tmrw.w3ai.io/download");
   pref("app.update.url.details", "https://tmrw.w3ai.io/releases");
