@@ -35,10 +35,12 @@ fi
 
 BUMP=""
 TEST_VERSION=""
+PUBLISH_ONLY=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --bump) BUMP="$2"; shift 2 ;;
     --test-update) TEST_VERSION="$2"; shift 2 ;;
+    --publish-only) PUBLISH_ONLY=true; shift ;;
     *) echo "Unknown flag: $1"; exit 1 ;;
   esac
 done
@@ -111,6 +113,26 @@ echo "  TMRW Browser v$VERSION — publishing update"
 echo "============================================================"
 echo ""
 
+# ── --publish-only: skip notarize + upload, just call the publish endpoint ────
+if [[ "$PUBLISH_ONLY" == "true" ]]; then
+  echo "==> --publish-only: skipping notarize and upload (files already on server)"
+  BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
+  STATUS=$(curl -sf "$BASE_URL/api/status" || echo '{}')
+  MAR_HASH=$(echo "$STATUS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('marHash',''))" 2>/dev/null || echo "")
+  MAR_SIZE=$(echo "$STATUS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('marSize',0))" 2>/dev/null || echo "0")
+
+  BODY="{\"version\":\"$VERSION\",\"buildID\":\"$BUILD_ID\",\"marHash\":\"${MAR_HASH:-0}\",\"marSize\":${MAR_SIZE:-1}}"
+  SIG="sha256=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$PUBLISH_HMAC_SECRET" | awk '{print $2}')"
+  RESPONSE="$(curl -sf -X POST "$BASE_URL/api/publish" \
+    -H "Authorization: Bearer $PUBLISH_SECRET" \
+    -H "X-Signature: $SIG" \
+    -H "Content-Type: application/json" \
+    -d "$BODY")"
+  echo "    Published: $RESPONSE"
+  echo "    Manifest: $BASE_URL/updates/update.xml"
+  exit 0
+fi
+
 # ── Step 1: Notarize ──────────────────────────────────────────────────────────
 echo "==> [1/5] Notarizing build..."
 "$REPO_ROOT/scripts/notarize.sh"
@@ -162,31 +184,58 @@ echo "    MAR hash: ${MAR_HASH:0:16}..."
 
 BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
 
+upload_file() {
+  local type="$1" file="$2" label="$3"
+  local http_status response tmpout
+  tmpout="$(mktemp)"
+
+  http_status=$(curl \
+    -X POST "$BASE_URL/api/upload/$type" \
+    -H "Authorization: Bearer $PUBLISH_SECRET" \
+    -F "version=$VERSION" \
+    -F "file=@$file;type=application/octet-stream" \
+    --progress-bar \
+    -o "$tmpout" \
+    -w "%{http_code}" 2>/dev/null)
+
+  response="$(cat "$tmpout")"
+  rm -f "$tmpout"
+
+  if [[ "$http_status" == "413" ]]; then
+    echo ""
+    echo "  ╔══════════════════════════════════════════════════════════════╗"
+    echo "  ║  NGINX 413 — file too large for HTTP upload                  ║"
+    echo "  ║  Upload the $label file manually via SFTP instead:            ║"
+    echo "  ║                                                              ║"
+    echo "  ║  Local file:                                                 ║"
+    echo "  ║    $file"
+    echo "  ║                                                              ║"
+    echo "  ║  Upload to server:                                           ║"
+    echo "  ║    storage/app/updates/TMRW-Browser-v${VERSION}.${type}     ║"
+    echo "  ║                                                              ║"
+    echo "  ║  Then run:                                                   ║"
+    echo "  ║    ./scripts/publish-update.sh --publish-only               ║"
+    echo "  ╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    return 1
+  elif [[ "$http_status" != "200" ]]; then
+    echo "  ERROR: HTTP $http_status uploading $label"
+    echo "  Response: $response"
+    return 1
+  fi
+
+  echo "    $label: $(echo "$response" | python3 -c "import sys,json; print(json.load(sys.stdin).get('url','uploaded'))" 2>/dev/null || echo "uploaded")"
+}
+
 # ── Step 3: Upload MAR to update server ───────────────────────────────────────
 echo ""
-echo "==> [3/5] Uploading MAR to update server..."
-
-MAR_UPLOAD=$(curl -sf \
-  -X POST "$BASE_URL/api/upload/mar" \
-  -H "Authorization: Bearer $PUBLISH_SECRET" \
-  -F "version=$VERSION" \
-  -F "file=@$MAR_OUTPUT;type=application/octet-stream" \
-  --progress-bar 2>&1 | tail -1)
-
-echo "    MAR: $(echo "$MAR_UPLOAD" | python3 -c "import sys,json; print(json.load(sys.stdin).get('url','?'))" 2>/dev/null || echo "$MAR_UPLOAD")"
+echo "==> [3/5] Uploading MAR to update server ($(( MAR_SIZE / 1024 / 1024 ))MB)..."
+upload_file "mar" "$MAR_OUTPUT" "MAR" || { rm -rf "$MAR_TMPDIR"; exit 1; }
 
 # ── Step 4: Upload DMG to update server ───────────────────────────────────────
 echo ""
 echo "==> [4/5] Uploading DMG to update server (~$(( DMG_SIZE / 1024 / 1024 ))MB)..."
-
-DMG_UPLOAD=$(curl -sf \
-  -X POST "$BASE_URL/api/upload/dmg" \
-  -H "Authorization: Bearer $PUBLISH_SECRET" \
-  -F "version=$VERSION" \
-  -F "file=@$SIGNED_DMG;type=application/octet-stream" \
-  --progress-bar 2>&1 | tail -1)
-
-echo "    DMG: $(echo "$DMG_UPLOAD" | python3 -c "import sys,json; print(json.load(sys.stdin).get('url','?'))" 2>/dev/null || echo "$DMG_UPLOAD")"
+upload_file "dmg" "$SIGNED_DMG" "DMG" || echo "    WARNING: DMG upload failed — MAR update will still work"
 
 rm -rf "$MAR_TMPDIR"
 

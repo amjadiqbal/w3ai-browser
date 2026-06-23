@@ -78,7 +78,7 @@ class UpdateController extends Controller
         $ext      = $type === 'dmg' ? 'dmg' : 'complete.mar';
         $filename = "TMRW-Browser-v{$version}.{$ext}";
 
-        $request->file('file')->storeAs('', $filename, self::STORAGE_DISK);
+        $request->file('file')->storeAs('/', $filename, self::STORAGE_DISK);
 
         return response()->json([
             'ok'       => true,
