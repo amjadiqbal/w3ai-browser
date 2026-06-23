@@ -2,13 +2,11 @@
 # publish-update.sh — notarize + upload to self-hosted update server + update manifest
 #
 # Usage:
-#   ./scripts/publish-update.sh                      # publish at current APP_VERSION
-#   ./scripts/publish-update.sh --bump patch          # 1.0.6 → 1.0.7 then publish
-#   ./scripts/publish-update.sh --bump minor          # 1.0.6 → 1.1.0 then publish
-#   ./scripts/publish-update.sh --bump major          # 1.0.6 → 2.0.0 then publish
+#   ./scripts/publish-update.sh                      # auto date-version (1.0.YYYYMMDD) then publish
 #   ./scripts/publish-update.sh --test-update 1.0.7   # push fake xml for testing only (no build)
+#   ./scripts/publish-update.sh --publish-only        # skip notarize/upload, just push manifest
 # Prerequisites: ./mach build faster && ./mach package (unless using --test-update)
-# Version is controlled via APP_VERSION in .env — all other version files sync from there.
+# Version is controlled via APP_VERSION in .env — format is 1.0.YYYYMMDD.
 
 set -euo pipefail
 
@@ -33,12 +31,10 @@ else
   VERSION="$(tr -d '[:space:]' < "$VERSION_FILE")"
 fi
 
-BUMP=""
 TEST_VERSION=""
 PUBLISH_ONLY=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --bump) BUMP="$2"; shift 2 ;;
     --test-update) TEST_VERSION="$2"; shift 2 ;;
     --publish-only) PUBLISH_ONLY=true; shift ;;
     *) echo "Unknown flag: $1"; exit 1 ;;
@@ -56,29 +52,28 @@ sync_version() {
   sed -i '' "s/MOZ_APP_VERSION_DISPLAY=.*/MOZ_APP_VERSION_DISPLAY=$v/" "$REPO_ROOT/browser/branding/w3ai/configure.sh" 2>/dev/null || true
 }
 
-if [[ -n "$BUMP" ]]; then
-  IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
-  case "$BUMP" in
-    patch) PATCH=$((PATCH + 1)) ;;
-    minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
-    major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
-    *) echo "ERROR: --bump must be patch, minor, or major"; exit 1 ;;
-  esac
-  VERSION="$MAJOR.$MINOR.$PATCH"
-  sync_version "$VERSION"
-  echo "Bumped version: $VERSION"
-  git -C "$REPO_ROOT" add \
-    browser/config/version.txt \
-    browser/config/version_display.txt \
-    mozconfig \
-    "browser/branding/w3ai/configure.sh" 2>/dev/null || true
-  git -C "$REPO_ROOT" diff --cached --quiet || \
-    git -C "$REPO_ROOT" commit -m "chore(release): bump version to $VERSION"
-  git -C "$REPO_ROOT" tag -f -a "v${VERSION}" -m "Release v${VERSION}"
-  git -C "$REPO_ROOT" push origin HEAD --follow-tags --force-with-lease 2>/dev/null || \
-    git -C "$REPO_ROOT" push origin HEAD
-  git -C "$REPO_ROOT" push origin "v${VERSION}" --force 2>/dev/null || true
-  echo "    Git tag v${VERSION} pushed."
+# Auto date-version: 1.0.YYYYMMDD. If re-publishing on the same day, version stays the same.
+if [[ -z "$TEST_VERSION" && "$PUBLISH_ONLY" != "true" ]]; then
+  DATE_VERSION="1.0.$(date +%Y%m%d)"
+  if [[ "$VERSION" != "$DATE_VERSION" ]]; then
+    VERSION="$DATE_VERSION"
+    sync_version "$VERSION"
+    echo "Date build version: $VERSION"
+    git -C "$REPO_ROOT" add \
+      browser/config/version.txt \
+      browser/config/version_display.txt \
+      mozconfig \
+      "browser/branding/w3ai/configure.sh" 2>/dev/null || true
+    git -C "$REPO_ROOT" diff --cached --quiet || \
+      git -C "$REPO_ROOT" commit -m "chore(release): date build $VERSION"
+    git -C "$REPO_ROOT" tag -f -a "v${VERSION}" -m "Release v${VERSION}"
+    git -C "$REPO_ROOT" push origin HEAD --follow-tags --force-with-lease 2>/dev/null || \
+      git -C "$REPO_ROOT" push origin HEAD
+    git -C "$REPO_ROOT" push origin "v${VERSION}" --force 2>/dev/null || true
+    echo "    Git tag v${VERSION} pushed."
+  else
+    echo "Re-publishing existing date build: $VERSION"
+  fi
 fi
 
 for var in PUBLISH_SECRET PUBLISH_HMAC_SECRET UPDATE_SERVER_URL; do
