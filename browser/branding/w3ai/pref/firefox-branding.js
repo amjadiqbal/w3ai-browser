@@ -32,15 +32,25 @@ pref("app.update.auto", false);
 
 // Disable multi-process mode — required on macOS Tahoe where Gatekeeper blocks
 // unnotarized child process spawning. All content runs in-process instead.
-// Also disables GPU process (software rendering fallback) and network process.
 pref("browser.tabs.remote.autostart", false);
 pref("browser.tabs.remote.autostart.2", false);
 pref("dom.ipc.processCount", 0);
 pref("dom.ipc.processCount.webIsolated", 0);
+// Disable GPU/compositor subprocesses — force software rendering in main process
 pref("layers.acceleration.disabled", true);
 pref("gfx.webrender.force-disabled", true);
+pref("gfx.canvas.accelerated", false);
+pref("layers.mlgpu.enabled", false);
 pref("media.gpu-process-decoder", false);
+// Disable network subprocess — use in-process networking
 pref("network.process.enabled", false);
+// Disable DNS-over-HTTPS and OCSP — both can hang in single-process mode
+pref("network.trr.mode", 0);
+pref("security.OCSP.enabled", 0);
+pref("security.ssl.enable_ocsp_must_staple", false);
+// Disable prefetch to reduce startup network pressure
+pref("network.dns.disablePrefetch", true);
+pref("network.prefetch-next", false);
 
 #if MOZ_UPDATE_CHANNEL == beta
   pref("app.update.url.manual", "https://tmrw.w3ai.io/download");
