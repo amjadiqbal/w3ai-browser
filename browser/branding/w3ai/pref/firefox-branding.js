@@ -31,24 +31,30 @@ pref("app.update.enabled", true);
 pref("app.update.auto", false);
 
 // Disable multi-process mode — required on macOS Tahoe where Gatekeeper blocks
-// unnotarized child process spawning. All content runs in-process instead.
+// unnotarized child process spawning (posix_spawnp Error:0). All processes run
+// in the main process instead. Two things must be disabled: legacy e10s AND
+// Fission (Firefox 86+ successor to e10s), plus the GPU process.
 pref("browser.tabs.remote.autostart", false);
 pref("browser.tabs.remote.autostart.2", false);
+pref("fission.autostart", false);
 pref("dom.ipc.processCount", 0);
 pref("dom.ipc.processCount.webIsolated", 0);
-// Disable GPU/compositor subprocesses — force software rendering in main process
+pref("dom.ipc.processCount.file", 0);
+pref("dom.ipc.processCount.extension", 0);
+// GPU process — layers.gpu-process.enabled is the actual control pref
+pref("layers.gpu-process.enabled", false);
+pref("layers.gpu-process.force-enabled", false);
 pref("layers.acceleration.disabled", true);
 pref("gfx.webrender.force-disabled", true);
 pref("gfx.canvas.accelerated", false);
 pref("layers.mlgpu.enabled", false);
 pref("media.gpu-process-decoder", false);
-// Disable network subprocess — use in-process networking
+// Network process — use in-process networking
 pref("network.process.enabled", false);
-// Disable DNS-over-HTTPS and OCSP — both can hang in single-process mode
+// OCSP and DoH hang in single-process mode — disable both
 pref("network.trr.mode", 0);
 pref("security.OCSP.enabled", 0);
 pref("security.ssl.enable_ocsp_must_staple", false);
-// Disable prefetch to reduce startup network pressure
 pref("network.dns.disablePrefetch", true);
 pref("network.prefetch-next", false);
 
