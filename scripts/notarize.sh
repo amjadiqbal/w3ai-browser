@@ -13,6 +13,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$REPO_ROOT/scripts/lib/ui.sh"
 OBJ_DIR="$REPO_ROOT/obj-x86_64-apple-darwin25.5.0"
 SOURCE_DMG="$(ls -t "$OBJ_DIR/dist/tmrw-browser-"*.dmg 2>/dev/null | head -1)" || true
 # Fallback: older builds used the default firefox-* naming; pick newest
@@ -59,12 +60,12 @@ if [[ ! -f "$SOURCE_DMG" ]]; then
   exit 1
 fi
 
-echo "==> Signer: $APPLE_SIGNING_IDENTITY"
-echo "==> Bundle: $APPLE_BUNDLE_ID"
+ui_info "Signer: $APPLE_SIGNING_IDENTITY"
+ui_info "Bundle: $APPLE_BUNDLE_ID"
 echo ""
 
 # ── Step 1: Extract .app from mach package DMG ────────────────────────────────
-echo "==> [1/6] Extracting app from packaged DMG..."
+ui_step 1 6 "Extracting app from packaged DMG"
 rm -rf "$WORK_DIR"
 mkdir -p "$WORK_DIR"
 
@@ -72,9 +73,9 @@ hdiutil attach "$SOURCE_DMG" -nobrowse -mountpoint /tmp/tmrw-src-dmg -quiet
 cp -R "/tmp/tmrw-src-dmg/$APP_NAME.app" "$APP_PATH"
 hdiutil detach /tmp/tmrw-src-dmg -quiet
 
-echo "    Extracted to $APP_PATH"
+ui_info "Extracted to $APP_PATH"
 
-echo "    Stripping extended attributes..."
+ui_spinner_start "Stripping extended attributes…"
 xattr -cr "$APP_PATH"
 
 # ── Step 1b: Patch updater.app Info.plist if missing ─────────────────────────
@@ -82,7 +83,7 @@ xattr -cr "$APP_PATH"
 # Contents/Info.plist — codesign --deep fails on an invalid sub-bundle.
 UPDATER_PLIST="$APP_PATH/Contents/MacOS/updater.app/Contents/Info.plist"
 if [[ ! -f "$UPDATER_PLIST" ]]; then
-  echo "    Patching missing updater.app/Contents/Info.plist..."
+  ui_info "Patching missing updater.app Info.plist…"
   mkdir -p "$(dirname "$UPDATER_PLIST")"
   SMReq="identifier \"${APPLE_BUNDLE_ID}\" and anchor apple generic and certificate leaf[subject.OU] = \"${APPLE_TEAM_ID}\""
   cat > "$UPDATER_PLIST" <<PLIST
@@ -127,7 +128,7 @@ if [[ ! -f "$UPDATER_PLIST" ]]; then
 </dict>
 </plist>
 PLIST
-  echo "    Info.plist written."
+  ui_ok "Info.plist written"
 fi
 
 # ── Step 1b-extra: Inject plugin-container (artifact builds omit the .app bundle) ──
@@ -139,7 +140,7 @@ PLUGIN_CONTAINER_SRC="$REPO_ROOT/obj-x86_64-apple-darwin25.5.0/dist/bin/plugin-c
 if [[ -f "$PLUGIN_CONTAINER_SRC" ]]; then
   cp "$PLUGIN_CONTAINER_SRC" "$APP_PATH/Contents/Resources/plugin-container"
   chmod 755 "$APP_PATH/Contents/Resources/plugin-container"
-  echo "    plugin-container injected."
+  ui_ok "plugin-container injected"
 fi
 
 # ── Step 1c: Replace updater binary with our custom build (no MAR sig check) ──
@@ -155,12 +156,12 @@ if [[ -f "$CUSTOM_UPDATER" ]]; then
       chmod 755 "$UPDATER_BIN"
     fi
   done
-  echo "    Custom updater binary installed."
+  ui_ok "Custom updater binary installed"
 fi
 
 # ── Step 2: Deep codesign with hardened runtime ───────────────────────────────
 echo ""
-echo "==> [2/6] Codesigning (deep, hardened runtime)..."
+ui_step 2 6 "Codesigning (deep, hardened runtime)"
 
 # Sign binaries that --deep misses because they live outside MacOS/Frameworks,
 # and plugin-container which must be explicitly signed before the bundle seal.
@@ -171,7 +172,7 @@ SKIP_SIGN=(
 )
 for bin in "${SKIP_SIGN[@]}"; do
   if [[ -f "$bin" ]]; then
-    echo "    Pre-signing: $(basename "$bin")"
+    ui_info "Pre-signing: $(basename "$bin")"
     codesign --force --timestamp --options runtime \
       --sign "$APPLE_SIGNING_IDENTITY" "$bin"
   fi
@@ -187,17 +188,17 @@ codesign \
   --sign "$APPLE_SIGNING_IDENTITY" \
   "$APP_PATH"
 
-echo "==> Verifying signature..."
-codesign --verify --deep --strict "$APP_PATH" && echo "    Signature OK"
+ui_spinner_start "Verifying signature…"
+codesign --verify --deep --strict "$APP_PATH" && ui_spinner_stop ok
 
 # ── Step 3: Zip for notarization ──────────────────────────────────────────────
 echo ""
-echo "==> [3/6] Creating zip for notarization..."
+ui_step 3 6 "Creating zip for notarization"
 ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
 
 # ── Step 4: Submit to Apple Notary Service ────────────────────────────────────
 echo ""
-echo "==> [4/6] Submitting to Apple Notary Service (takes 1-5 min)..."
+ui_step 4 6 "Submitting to Apple Notary Service (1–5 min)"
 xcrun notarytool submit "$ZIP_PATH" \
   --apple-id "$APPLE_ID" \
   --password "$APPLE_APP_SPECIFIC_PASSWORD" \
@@ -207,23 +208,23 @@ xcrun notarytool submit "$ZIP_PATH" \
 
 # ── Step 5: Staple ────────────────────────────────────────────────────────────
 echo ""
-echo "==> [5/6] Stapling notarization ticket..."
+ui_step 5 6 "Stapling notarization ticket"
 STAPLE_OK=0
 for attempt in 1 2 3; do
   if xcrun stapler staple "$APP_PATH" 2>&1; then
     STAPLE_OK=1
     break
   fi
-  echo "    Staple attempt $attempt failed (CloudKit propagation delay). Retrying in 30s..."
+  ui_warn "Staple attempt $attempt failed (CloudKit propagation delay). Retrying in 30s..."
   sleep 30
 done
 if [[ $STAPLE_OK -eq 0 ]]; then
-  echo "    WARNING: Stapling failed after 3 attempts. App is still notarized — Gatekeeper will verify online."
+  ui_warn "Stapling failed after 3 attempts. App is still notarized — Gatekeeper will verify online."
 fi
 
 # ── Step 6: Create signed installer DMG with branded layout ───────────────────
 echo ""
-echo "==> [6/6] Creating distributable DMG..."
+ui_step 6 6 "Creating distributable DMG"
 STAGING_DMG="/tmp/tmrw-installer-rw.dmg"
 MOUNT_POINT="/tmp/tmrw-installer-mount"
 rm -f "$OUT_DMG" "$STAGING_DMG"
@@ -259,13 +260,8 @@ rm -f "$STAGING_DMG"
 
 codesign --sign "$APPLE_SIGNING_IDENTITY" --timestamp "$OUT_DMG"
 
-echo ""
-echo "============================================================"
-echo "  Done!"
-echo "  DMG: $OUT_DMG"
-echo ""
-echo "  Share this DMG with testers — it is fully notarized."
-echo "  macOS will not show any security warning on install."
-echo "============================================================"
+printf "\n${UI_BOLD}${UI_GREEN}  Notarization complete!${UI_RESET}\n\n"
+ui_ok "DMG: $OUT_DMG"
+printf "  ${UI_DIM}Share this DMG — fully notarized, no security warnings on install.${UI_RESET}\n\n"
 
 rm -rf "$WORK_DIR"

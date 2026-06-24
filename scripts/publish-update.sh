@@ -15,6 +15,8 @@ OBJ_DIR="$REPO_ROOT/obj-x86_64-apple-darwin25.5.0"
 ENV_FILE="$REPO_ROOT/.env"
 VERSION_FILE="$REPO_ROOT/browser/config/version.txt"
 
+source "$REPO_ROOT/scripts/lib/ui.sh"
+
 while IFS= read -r line || [[ -n "$line" ]]; do
   [[ "$line" =~ ^[[:space:]]*# ]] && continue
   [[ -z "${line//[[:space:]]/}" ]] && continue
@@ -103,10 +105,7 @@ if [[ -n "$TEST_VERSION" ]]; then
   exit 0
 fi
 
-echo "============================================================"
-echo "  TMRW Browser v$VERSION — publishing update"
-echo "============================================================"
-echo ""
+ui_banner "TMRW Browser v${VERSION} — publishing update"
 
 # ── --publish-only: skip notarize + upload, just call the publish endpoint ────
 if [[ "$PUBLISH_ONLY" == "true" ]]; then
@@ -128,28 +127,28 @@ if [[ "$PUBLISH_ONLY" == "true" ]]; then
   exit 0
 fi
 
-# ── Step 1: Notarize ──────────────────────────────────────────────────────────
-echo "==> [1/5] Notarizing build..."
+BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
+
+# ── Step 1: Notarize ────────────────────────────────────────────
+ui_step 1 5 "Notarizing build"
 "$REPO_ROOT/scripts/notarize.sh"
 
 SIGNED_DMG="$OBJ_DIR/dist/TMRW Browser.dmg"
 if [[ ! -f "$SIGNED_DMG" ]]; then
-  echo "ERROR: Notarized DMG not found at $SIGNED_DMG"
+  ui_fail "Notarized DMG not found at $SIGNED_DMG"
   exit 1
 fi
-
 DMG_SIZE="$(stat -f%z "$SIGNED_DMG")"
 DMG_HASH="$(shasum -a 512 "$SIGNED_DMG" | awk '{print $1}')"
-echo "    DMG size: $DMG_SIZE bytes"
+ui_ok "$(( DMG_SIZE / 1024 / 1024 )) MB — ${DMG_HASH:0:16}…"
 
-# ── Step 2: Create complete MAR update package ────────────────────────────────
-echo ""
-echo "==> [2/5] Creating complete MAR update package..."
+# ── Step 2: Create MAR ────────────────────────────────────────────
+ui_step 2 5 "Creating MAR update package"
+ui_spinner_start "Packaging…"
 
 MAR_TMPDIR="$(mktemp -d)"
 MAR_OUTPUT="$MAR_TMPDIR/tmrw-${VERSION}.complete.mar"
 APP_LINK="$MAR_TMPDIR/app"
-
 ln -sfn "$OBJ_DIR/dist/firefox/TMRW Browser.app" "$APP_LINK"
 
 (cd "$MAR_TMPDIR" && \
@@ -158,95 +157,58 @@ ln -sfn "$OBJ_DIR/dist/firefox/TMRW Browser.app" "$APP_LINK"
   MAR_CHANNEL_ID=default \
   XZ=/usr/local/bin/xz \
     "$REPO_ROOT/tools/update-packaging/make_full_update.sh" \
-    "$MAR_OUTPUT" \
-    "$APP_LINK" \
+    "$MAR_OUTPUT" "$APP_LINK" \
     2>&1 | grep -v "^        add\|^ add-if-not\|^      rmdir\|^     remove" || true
 )
 
-if [[ ! -f "$MAR_OUTPUT" && -f "$MAR_TMPDIR/output.mar" ]]; then
-  /bin/mv "$MAR_TMPDIR/output.mar" "$MAR_OUTPUT"
-fi
+[[ ! -f "$MAR_OUTPUT" && -f "$MAR_TMPDIR/output.mar" ]] && \
+  mv "$MAR_TMPDIR/output.mar" "$MAR_OUTPUT"
 
 if [[ ! -f "$MAR_OUTPUT" ]]; then
-  echo "ERROR: MAR creation failed — $MAR_OUTPUT not found"
-  exit 1
+  ui_spinner_stop fail
+  ui_fail "MAR creation failed"; rm -rf "$MAR_TMPDIR"; exit 1
 fi
-
+ui_spinner_stop ok
 MAR_SIZE="$(stat -f%z "$MAR_OUTPUT")"
 MAR_HASH="$(shasum -a 512 "$MAR_OUTPUT" | awk '{print $1}')"
-echo "    MAR size: $MAR_SIZE bytes"
-echo "    MAR hash: ${MAR_HASH:0:16}..."
+ui_ok "$(( MAR_SIZE / 1024 / 1024 )) MB — ${MAR_HASH:0:16}…"
 
-BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
+# ── Step 3: Upload MAR ────────────────────────────────────────────
+ui_step 3 5 "Uploading MAR"
+printf "\n"
+mar_http=$(ui_upload_with_progress \
+  "$BASE_URL/api/upload/mar" \
+  "$MAR_OUTPUT" \
+  "MAR  •  $(( MAR_SIZE / 1024 / 1024 )) MB" \
+  "$VERSION")
 
-upload_file() {
-  local type="$1" file="$2" label="$3"
-  local http_status response tmpout
-  tmpout="$(mktemp)"
-
-  http_status=$(curl \
-    -X POST "$BASE_URL/api/upload/$type" \
-    -H "Authorization: Bearer $PUBLISH_SECRET" \
-    -F "version=$VERSION" \
-    -F "file=@$file;type=application/octet-stream" \
-    --progress-bar \
-    -o "$tmpout" \
-    -w "%{http_code}" 2>/dev/null)
-
-  response="$(cat "$tmpout")"
-  rm -f "$tmpout"
-
-  if [[ "$http_status" == "413" ]]; then
-    echo ""
-    echo "  ╔══════════════════════════════════════════════════════════════╗"
-    echo "  ║  NGINX 413 — file too large for HTTP upload                  ║"
-    echo "  ║  Upload the $label file manually via SFTP instead:            ║"
-    echo "  ║                                                              ║"
-    echo "  ║  Local file:                                                 ║"
-    echo "  ║    $file"
-    echo "  ║                                                              ║"
-    echo "  ║  Upload to server:                                           ║"
-    echo "  ║    storage/app/updates/TMRW-Browser-v${VERSION}.${type}     ║"
-    echo "  ║                                                              ║"
-    echo "  ║  Then run:                                                   ║"
-    echo "  ║    ./scripts/publish-update.sh --publish-only               ║"
-    echo "  ╚══════════════════════════════════════════════════════════════╝"
-    echo ""
-    return 1
-  elif [[ "$http_status" != "200" ]]; then
-    echo "  ERROR: HTTP $http_status uploading $label"
-    echo "  Response: $response"
-    return 1
-  fi
-
-  echo "    $label: $(echo "$response" | python3 -c "import sys,json; print(json.load(sys.stdin).get('url','uploaded'))" 2>/dev/null || echo "uploaded")"
-}
-
-# ── Step 3: Upload MAR to update server ───────────────────────────────────────
-echo ""
-echo "==> [3/5] Uploading MAR to update server ($(( MAR_SIZE / 1024 / 1024 ))MB)..."
-if upload_file "mar" "$MAR_OUTPUT" "MAR"; then
+if [[ "$mar_http" == "200" ]]; then
   rm -rf "$MAR_TMPDIR"
-  echo "    Local MAR deleted."
+  ui_ok "Local MAR deleted"
 else
-  rm -rf "$MAR_TMPDIR"
-  exit 1
+  rm -rf "$MAR_TMPDIR"; exit 1
 fi
 
-# ── Step 4: Upload DMG to update server ───────────────────────────────────────
-echo ""
-echo "==> [4/5] Uploading DMG to update server (~$(( DMG_SIZE / 1024 / 1024 ))MB)..."
-if upload_file "dmg" "$SIGNED_DMG" "DMG"; then
+# ── Step 4: Upload DMG ────────────────────────────────────────────
+ui_step 4 5 "Uploading DMG"
+printf "\n"
+dmg_http=$(ui_upload_with_progress \
+  "$BASE_URL/api/upload/dmg" \
+  "$SIGNED_DMG" \
+  "DMG  •  $(( DMG_SIZE / 1024 / 1024 )) MB" \
+  "$VERSION")
+
+if [[ "$dmg_http" == "200" ]]; then
   rm -f "$SIGNED_DMG"
-  echo "    Local DMG deleted."
+  ui_ok "Local DMG deleted"
 else
-  echo "    WARNING: DMG upload failed — MAR update will still work. DMG kept at:"
-  echo "    $SIGNED_DMG"
+  ui_warn "DMG upload failed — MAR update will still work"
+  ui_info "DMG kept at: $SIGNED_DMG"
 fi
 
-# ── Step 5: Publish manifest ───────────────────────────────────────────────────
-echo ""
-echo "==> [5/5] Publishing update manifest..."
+# ── Step 5: Publish manifest ────────────────────────────────────────────
+ui_step 5 5 "Publishing update manifest"
+ui_spinner_start "Publishing…"
 
 BODY="{\"version\":\"$VERSION\",\"buildID\":\"$BUILD_ID\",\"marHash\":\"$MAR_HASH\",\"marSize\":$MAR_SIZE,\"dmgHash\":\"$DMG_HASH\",\"dmgSize\":$DMG_SIZE}"
 SIG="sha256=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$PUBLISH_HMAC_SECRET" | awk '{print $2}')"
@@ -255,22 +217,18 @@ RESPONSE="$(curl -sf -X POST "$BASE_URL/api/publish" \
   -H "Authorization: Bearer $PUBLISH_SECRET" \
   -H "X-Signature: $SIG" \
   -H "Content-Type: application/json" \
-  -d "$BODY")"
+  -d "$BODY" 2>/dev/null)"
 
-echo "    Success: $RESPONSE"
+ui_spinner_stop ok
+ui_ok "Manifest live"
 
-echo ""
-echo "============================================================"
-echo "  Published v$VERSION (build $BUILD_ID)"
-echo ""
-echo "  Manifest: $BASE_URL/updates/update.xml"
-echo "  MAR:      $BASE_URL/download/TMRW-Browser-v${VERSION}.complete.mar"
-echo "  DMG:      $BASE_URL/download/TMRW-Browser-v${VERSION}.dmg"
-echo ""
-echo "  Installed browsers will prompt for update within 6 hours."
-echo "  Trigger manually: Help menu → Check for Updates"
-echo "============================================================"
+printf "\n${UI_BOLD}${UI_GREEN}  Published v%s  (build %s)${UI_RESET}\n\n" "$VERSION" "$BUILD_ID"
+printf "  ${UI_DIM}Manifest${UI_RESET}  %s/updates/update.xml\n" "$BASE_URL"
+printf "  ${UI_DIM}MAR${UI_RESET}       %s/download/TMRW-Browser-v%s.complete.mar\n" "$BASE_URL" "$VERSION"
+printf "  ${UI_DIM}DMG${UI_RESET}       %s/download/TMRW-Browser-v%s.dmg\n\n" "$BASE_URL" "$VERSION"
+printf "  ${UI_DIM}Installed browsers update within 6 hours.${UI_RESET}\n"
+printf "  ${UI_DIM}Trigger now: Help menu → Check for Updates${UI_RESET}\n\n"
 
-git -C "$REPO_ROOT" tag -f -a "v${VERSION}" -m "Release v${VERSION} (published build ${BUILD_ID})"
+git -C "$REPO_ROOT" tag -f -a "v${VERSION}" -m "Release v${VERSION} (build ${BUILD_ID})" 2>/dev/null || true
 git -C "$REPO_ROOT" push origin "v${VERSION}" --force 2>/dev/null || true
-echo "  Git tag: v${VERSION}"
+printf "  ${UI_DIM}Git tag v%s pushed.${UI_RESET}\n\n" "$VERSION"
