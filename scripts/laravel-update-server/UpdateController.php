@@ -47,6 +47,41 @@ class UpdateController extends Controller
     {
         $filename = basename($filename);
 
+        // Clean alias resolution:
+        // /download/TMRW-Browser.dmg        → latest versioned DMG, served as "TMRW Browser.dmg"
+        // /download/TMRW-Browser.complete.mar → latest versioned MAR, served as "TMRW-Browser.complete.mar"
+        $cleanAliases = [
+            'TMRW-Browser.dmg'          => ['field' => 'dmg_filename', 'displayName' => 'TMRW Browser.dmg'],
+            'TMRW-Browser.complete.mar'  => ['field' => 'mar_filename', 'displayName' => 'TMRW-Browser.complete.mar'],
+        ];
+
+        if (isset($cleanAliases[$filename])) {
+            $update = BrowserUpdate::current();
+
+            abort_unless($update, 404, 'No active release found');
+
+            $alias        = $cleanAliases[$filename];
+            $realFilename = $update->{$alias['field']};
+            $displayName  = $alias['displayName'];
+
+            abort_unless(
+                $realFilename && Storage::disk(self::STORAGE_DISK)->exists($realFilename),
+                404,
+                'Release file not found on server'
+            );
+
+            $mimeType = str_ends_with($realFilename, '.dmg')
+                ? 'application/x-apple-diskimage'
+                : 'application/octet-stream';
+
+            return Storage::disk(self::STORAGE_DISK)->download($realFilename, $displayName, [
+                'Content-Type'        => $mimeType,
+                'Content-Disposition' => 'attachment; filename="' . $displayName . '"',
+                'Cache-Control'       => 'no-cache',
+            ]);
+        }
+
+        // Versioned direct download (e.g. /download/TMRW-Browser-v1.0.20260624.dmg)
         if (!Storage::disk(self::STORAGE_DISK)->exists($filename)) {
             abort(404, 'File not found');
         }
