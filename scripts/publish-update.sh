@@ -127,7 +127,12 @@ if [[ "$PUBLISH_ONLY" == "true" ]]; then
   exit 0
 fi
 
-BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
+# Read buildID from the actual built application.ini so the server manifest
+# matches what the MAR installs — mismatched buildIDs cause an infinite update loop.
+BUILD_ID="$(grep "^BuildID=" "$OBJ_DIR/dist/bin/application.ini" 2>/dev/null | cut -d= -f2)"
+if [[ -z "$BUILD_ID" ]]; then
+  BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
+fi
 
 # ── Step 1: Notarize ────────────────────────────────────────────
 ui_step 1 5 "Notarizing build"
