@@ -47,45 +47,62 @@ class UpdateController extends Controller
     {
         $filename = basename($filename);
 
-        // ── Clean alias: redirect to the versioned URL ────────────────────────
-        // Avoids PHP buffering 150 MB in memory (→ ERR_INVALID_RESPONSE).
-        // The versioned handler below sets a clean Content-Disposition so the
-        // user still saves the file as "TMRW Browser.dmg".
+        // ── Resolve real filename + display name ──────────────────────────────
         $cleanAliases = [
-            'TMRW-Browser.dmg'          => 'dmg_filename',
-            'TMRW-Browser.complete.mar'  => 'mar_filename',
+            'TMRW-Browser.dmg'          => ['field' => 'dmg_filename', 'ext' => 'dmg',         'display' => 'TMRW Browser.dmg'],
+            'TMRW-Browser.complete.mar'  => ['field' => 'mar_filename', 'ext' => 'complete.mar', 'display' => 'TMRW-Browser.complete.mar'],
         ];
 
         if (isset($cleanAliases[$filename])) {
-            $update = BrowserUpdate::current();
-            abort_unless($update, 404, 'No active release found');
+            $alias   = $cleanAliases[$filename];
+            $update  = BrowserUpdate::current();
+            $real    = $update ? $update->{$alias['field']} : null;
 
-            $realFilename = $update->{$cleanAliases[$filename]};
-            abort_unless(
-                $realFilename && Storage::disk(self::STORAGE_DISK)->exists($realFilename),
-                404,
-                'Release file not found on server'
-            );
+            // If DB record missing or file not on disk, fall back to latest file on disk
+            if (!$real || !Storage::disk(self::STORAGE_DISK)->exists($real)) {
+                $ext   = $alias['ext'];
+                $files = collect(Storage::disk(self::STORAGE_DISK)->files('/'))
+                    ->filter(fn($f) => str_ends_with($f, '.' . $ext))
+                    ->sort()
+                    ->values();
+                $real = $files->last();
+                abort_unless($real, 404, 'No release files found on server');
+            }
 
-            return redirect($request->root() . '/download/' . $realFilename, 302);
+            return $this->streamFile($real, $alias['display']);
         }
 
-        // ── Versioned direct download ──────────────────────────────────────────
-        if (!Storage::disk(self::STORAGE_DISK)->exists($filename)) {
-            abort(404, 'File not found');
-        }
+        // ── Versioned direct download ─────────────────────────────────────────
+        abort_unless(Storage::disk(self::STORAGE_DISK)->exists($filename), 404, 'File not found');
 
-        // Strip version tag so user saves as clean name:
-        // TMRW-Browser-v1.0.20260624.dmg → TMRW Browser.dmg
-        $displayName = preg_replace('/^TMRW-Browser-v[\d.]+\.dmg$/', 'TMRW Browser.dmg', $filename);
-        $displayName = preg_replace('/^TMRW-Browser-v[\d.]+\.complete\.mar$/', 'TMRW-Browser.complete.mar', $displayName);
+        $display = preg_replace('/^TMRW-Browser-v[\d.]+\.dmg$/',          'TMRW Browser.dmg',          $filename);
+        $display = preg_replace('/^TMRW-Browser-v[\d.]+\.complete\.mar$/', 'TMRW-Browser.complete.mar', $display);
 
+        return $this->streamFile($filename, $display, immutable: true);
+    }
+
+    private function streamFile(string $filename, string $displayName, bool $immutable = false): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $path     = Storage::disk(self::STORAGE_DISK)->path($filename);
+        $size     = filesize($path);
         $mimeType = str_ends_with($filename, '.dmg') ? 'application/x-apple-diskimage' : 'application/octet-stream';
+        $cache    = $immutable ? 'public, max-age=31536000, immutable' : 'no-cache, no-store';
 
-        return Storage::disk(self::STORAGE_DISK)->download($filename, $displayName, [
+        return response()->stream(function () use ($path) {
+            if (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            $fh = fopen($path, 'rb');
+            while (!feof($fh)) {
+                echo fread($fh, 1048576);
+                flush();
+            }
+            fclose($fh);
+        }, 200, [
             'Content-Type'        => $mimeType,
             'Content-Disposition' => 'attachment; filename="' . $displayName . '"',
-            'Cache-Control'       => 'public, max-age=31536000, immutable',
+            'Content-Length'      => $size,
+            'Cache-Control'       => $cache,
         ]);
     }
 
