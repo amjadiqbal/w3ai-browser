@@ -144,6 +144,33 @@ ui_ok "$(( DMG_SIZE / 1024 / 1024 )) MB — ${DMG_HASH:0:16}…"
 
 # ── Step 2: Create MAR ────────────────────────────────────────────
 ui_step 2 5 "Creating MAR update package"
+
+# Ensure all updater binaries in the firefox package are patched before MAR creation.
+ui_spinner_start "Patching updater binary in MAR source (fix XPC loop)…"
+REPO_ROOT="$REPO_ROOT" python3 - <<'PYEOF'
+import os
+PATCH  = bytes([0xb8,0x01,0x00,0x00,0x00,0xc3,0x90,0x90,0x90,0x90])
+OFFSET = 0xeb10
+obj    = os.environ['REPO_ROOT'] + '/obj-x86_64-apple-darwin25.5.0'
+targets = [
+    obj + '/dist/firefox/TMRW Browser.app/Contents/MacOS/updater.app/Contents/MacOS/org.mozilla.updater',
+    obj + '/dist/firefox/TMRW Browser.app/Contents/Library/LaunchServices/org.mozilla.updater',
+    obj + '/dist/firefox/TMRW Browser.app/Contents/Resources/org.mozilla.updater',
+    obj + '/dist/bin/org.mozilla.updater',
+]
+patched = 0
+for path in targets:
+    if not os.path.exists(path): continue
+    with open(path, 'r+b') as f:
+        f.seek(OFFSET)
+        if f.read(2) == bytes([0xb8,0x01]): continue
+        f.seek(OFFSET)
+        f.write(PATCH)
+        patched += 1
+print(f'  Patched {patched} binaries')
+PYEOF
+ui_spinner_stop ok
+
 ui_spinner_start "Packaging…"
 
 MAR_TMPDIR="$(mktemp -d)"
@@ -161,6 +188,8 @@ ln -sfn "$OBJ_DIR/dist/firefox/TMRW Browser.app" "$APP_LINK"
     2>&1 | grep -v "^        add\|^ add-if-not\|^      rmdir\|^     remove" || true
 )
 
+# make_full_update.sh writes output.mar in the CWD ($MAR_TMPDIR), not at argv[1]
+# when the app path contains spaces (the `mv` inside the script fails silently).
 [[ ! -f "$MAR_OUTPUT" && -f "$MAR_TMPDIR/output.mar" ]] && \
   mv "$MAR_TMPDIR/output.mar" "$MAR_OUTPUT"
 

@@ -159,6 +159,40 @@ if [[ -f "$CUSTOM_UPDATER" ]]; then
   ui_ok "Custom updater binary installed"
 fi
 
+# ── Step 1d: Patch IsRecursivelyWritable → always return true ─────────────────
+# Artifact builds do not compile our C++ changes to updaterfileutils_osx.mm.
+# Binary-patch offset 0xeb10 (_IsRecursivelyWritable) to mov eax,1; ret so the
+# updater never takes the XPC elevation path (we do not ship a privileged helper).
+ui_spinner_start "Patching updater binary (fix XPC loop)…"
+APP_PATH="$APP_PATH" REPO_ROOT="$REPO_ROOT" python3 - <<'PYEOF'
+import os, sys
+PATCH  = bytes([0xb8,0x01,0x00,0x00,0x00,0xc3,0x90,0x90,0x90,0x90])
+OFFSET = 0xeb10
+app    = os.environ['APP_PATH']
+repo   = os.environ['REPO_ROOT']
+obj    = repo + '/obj-x86_64-apple-darwin25.5.0'
+targets = [
+    app  + '/Contents/MacOS/updater.app/Contents/MacOS/org.mozilla.updater',
+    app  + '/Contents/Library/LaunchServices/org.mozilla.updater',
+    app  + '/Contents/Resources/org.mozilla.updater',
+    obj  + '/dist/bin/org.mozilla.updater',
+    obj  + '/dist/firefox/TMRW Browser.app/Contents/MacOS/updater.app/Contents/MacOS/org.mozilla.updater',
+    obj  + '/dist/firefox/TMRW Browser.app/Contents/Library/LaunchServices/org.mozilla.updater',
+    obj  + '/dist/firefox/TMRW Browser.app/Contents/Resources/org.mozilla.updater',
+]
+patched = 0
+for path in targets:
+    if not os.path.exists(path): continue
+    with open(path, 'r+b') as f:
+        f.seek(OFFSET)
+        if f.read(2) == bytes([0xb8,0x01]): continue
+        f.seek(OFFSET)
+        f.write(PATCH)
+        patched += 1
+print(f'  Patched {patched} binaries')
+PYEOF
+ui_spinner_stop ok
+
 # ── Step 2: Deep codesign with hardened runtime ───────────────────────────────
 echo ""
 ui_step 2 6 "Codesigning (deep, hardened runtime)"
