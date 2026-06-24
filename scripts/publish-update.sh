@@ -99,6 +99,7 @@ if [[ -n "$TEST_VERSION" ]]; then
     -H "Authorization: Bearer $PUBLISH_SECRET" \
     -H "X-Signature: $SIG" \
     -H "Content-Type: application/json" \
+    -H "Accept: application/json" \
     -d "$BODY"
   echo ""
   echo "    update.xml now shows appVersion=$TEST_VERSION"
@@ -121,15 +122,21 @@ if [[ "$PUBLISH_ONLY" == "true" ]]; then
     -H "Authorization: Bearer $PUBLISH_SECRET" \
     -H "X-Signature: $SIG" \
     -H "Content-Type: application/json" \
+    -H "Accept: application/json" \
     -d "$BODY")"
   echo "    Published: $RESPONSE"
   echo "    Manifest: $BASE_URL/updates/update.xml"
   exit 0
 fi
 
-# Read buildID from the actual built application.ini so the server manifest
-# matches what the MAR installs — mismatched buildIDs cause an infinite update loop.
-BUILD_ID="$(grep "^BuildID=" "$OBJ_DIR/dist/bin/application.ini" 2>/dev/null | cut -d= -f2)"
+# Read the COMPILED-IN BuildID from the XUL binary — Services.appinfo.appBuildID
+# returns this value, which is what the update checker compares against the server.
+# Artifact builds have a fixed compile-time BuildID that cannot be changed without
+# a full C++ recompile; application.ini has a different value that is NOT used.
+BUILD_ID="$(strings "$OBJ_DIR/dist/bin/XUL" 2>/dev/null | grep -E "^202[0-9]{11}$" | head -1)"
+if [[ -z "$BUILD_ID" ]]; then
+  BUILD_ID="$(grep "^BuildID=" "$OBJ_DIR/dist/bin/application.ini" 2>/dev/null | cut -d= -f2)"
+fi
 if [[ -z "$BUILD_ID" ]]; then
   BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
 fi
@@ -251,6 +258,7 @@ RESPONSE="$(curl -sf -X POST "$BASE_URL/api/publish" \
   -H "Authorization: Bearer $PUBLISH_SECRET" \
   -H "X-Signature: $SIG" \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
   -d "$BODY" 2>/dev/null)"
 
 ui_spinner_stop ok

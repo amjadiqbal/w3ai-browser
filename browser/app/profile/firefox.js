@@ -114,9 +114,13 @@ pref("app.update.log", true);
 // logging, even if app.update.log is false.
 pref("app.update.log.file", true);
 
-// TMRW: Disable the macOS XPC privileged-helper service (we don't ship one).
-// IsRecursivelyWritable() is patched to always return true so this is a belt-
-// and-suspenders guard in case the JS-side also checks.
+// TMRW: Auto-updates disabled. Artifact builds have a fixed compiled-in
+// BuildID (from the Mozilla CI artifact date) that cannot be changed without a
+// full C++ recompile. Any server-published buildID newer than the artifact date
+// causes an infinite update loop. Ship updates via manual DMG downloads until
+// we move to full source builds.
+pref("app.update.enabled", false);
+pref("app.update.auto", false);
 pref("app.update.service.enabled", false);
 
 // The number of general background check failures to allow before notifying the
