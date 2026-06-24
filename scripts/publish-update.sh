@@ -225,14 +225,24 @@ upload_file() {
 # ── Step 3: Upload MAR to update server ───────────────────────────────────────
 echo ""
 echo "==> [3/5] Uploading MAR to update server ($(( MAR_SIZE / 1024 / 1024 ))MB)..."
-upload_file "mar" "$MAR_OUTPUT" "MAR" || { rm -rf "$MAR_TMPDIR"; exit 1; }
+if upload_file "mar" "$MAR_OUTPUT" "MAR"; then
+  rm -rf "$MAR_TMPDIR"
+  echo "    Local MAR deleted."
+else
+  rm -rf "$MAR_TMPDIR"
+  exit 1
+fi
 
 # ── Step 4: Upload DMG to update server ───────────────────────────────────────
 echo ""
 echo "==> [4/5] Uploading DMG to update server (~$(( DMG_SIZE / 1024 / 1024 ))MB)..."
-upload_file "dmg" "$SIGNED_DMG" "DMG" || echo "    WARNING: DMG upload failed — MAR update will still work"
-
-rm -rf "$MAR_TMPDIR"
+if upload_file "dmg" "$SIGNED_DMG" "DMG"; then
+  rm -f "$SIGNED_DMG"
+  echo "    Local DMG deleted."
+else
+  echo "    WARNING: DMG upload failed — MAR update will still work. DMG kept at:"
+  echo "    $SIGNED_DMG"
+fi
 
 # ── Step 5: Publish manifest ───────────────────────────────────────────────────
 echo ""
