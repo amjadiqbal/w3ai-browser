@@ -43,54 +43,48 @@ class UpdateController extends Controller
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
 
-    public function download(string $filename): \Symfony\Component\HttpFoundation\StreamedResponse
+    public function download(Request $request, string $filename): mixed
     {
         $filename = basename($filename);
 
-        // Clean alias resolution:
-        // /download/TMRW-Browser.dmg        → latest versioned DMG, served as "TMRW Browser.dmg"
-        // /download/TMRW-Browser.complete.mar → latest versioned MAR, served as "TMRW-Browser.complete.mar"
+        // ── Clean alias: redirect to the versioned URL ────────────────────────
+        // Avoids PHP buffering 150 MB in memory (→ ERR_INVALID_RESPONSE).
+        // The versioned handler below sets a clean Content-Disposition so the
+        // user still saves the file as "TMRW Browser.dmg".
         $cleanAliases = [
-            'TMRW-Browser.dmg'          => ['field' => 'dmg_filename', 'displayName' => 'TMRW Browser.dmg'],
-            'TMRW-Browser.complete.mar'  => ['field' => 'mar_filename', 'displayName' => 'TMRW-Browser.complete.mar'],
+            'TMRW-Browser.dmg'          => 'dmg_filename',
+            'TMRW-Browser.complete.mar'  => 'mar_filename',
         ];
 
         if (isset($cleanAliases[$filename])) {
             $update = BrowserUpdate::current();
-
             abort_unless($update, 404, 'No active release found');
 
-            $alias        = $cleanAliases[$filename];
-            $realFilename = $update->{$alias['field']};
-            $displayName  = $alias['displayName'];
-
+            $realFilename = $update->{$cleanAliases[$filename]};
             abort_unless(
                 $realFilename && Storage::disk(self::STORAGE_DISK)->exists($realFilename),
                 404,
                 'Release file not found on server'
             );
 
-            $mimeType = str_ends_with($realFilename, '.dmg')
-                ? 'application/x-apple-diskimage'
-                : 'application/octet-stream';
-
-            return Storage::disk(self::STORAGE_DISK)->download($realFilename, $displayName, [
-                'Content-Type'        => $mimeType,
-                'Content-Disposition' => 'attachment; filename="' . $displayName . '"',
-                'Cache-Control'       => 'no-cache',
-            ]);
+            return redirect($request->root() . '/download/' . $realFilename, 302);
         }
 
-        // Versioned direct download (e.g. /download/TMRW-Browser-v1.0.20260624.dmg)
+        // ── Versioned direct download ──────────────────────────────────────────
         if (!Storage::disk(self::STORAGE_DISK)->exists($filename)) {
             abort(404, 'File not found');
         }
 
+        // Strip version tag so user saves as clean name:
+        // TMRW-Browser-v1.0.20260624.dmg → TMRW Browser.dmg
+        $displayName = preg_replace('/^TMRW-Browser-v[\d.]+\.dmg$/', 'TMRW Browser.dmg', $filename);
+        $displayName = preg_replace('/^TMRW-Browser-v[\d.]+\.complete\.mar$/', 'TMRW-Browser.complete.mar', $displayName);
+
         $mimeType = str_ends_with($filename, '.dmg') ? 'application/x-apple-diskimage' : 'application/octet-stream';
 
-        return Storage::disk(self::STORAGE_DISK)->download($filename, $filename, [
+        return Storage::disk(self::STORAGE_DISK)->download($filename, $displayName, [
             'Content-Type'        => $mimeType,
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="' . $displayName . '"',
             'Cache-Control'       => 'public, max-age=31536000, immutable',
         ]);
     }
