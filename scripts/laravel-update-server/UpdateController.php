@@ -81,27 +81,19 @@ class UpdateController extends Controller
         return $this->streamFile($filename, $display, immutable: true);
     }
 
-    private function streamFile(string $filename, string $displayName, bool $immutable = false): \Symfony\Component\HttpFoundation\StreamedResponse
+    private function streamFile(string $filename, string $displayName, bool $immutable = false): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
         $path     = Storage::disk(self::STORAGE_DISK)->path($filename);
-        $size     = filesize($path);
         $mimeType = str_ends_with($filename, '.dmg') ? 'application/x-apple-diskimage' : 'application/octet-stream';
         $cache    = $immutable ? 'public, max-age=31536000, immutable' : 'no-cache, no-store';
 
-        return response()->stream(function () use ($path) {
-            if (ob_get_level() > 0) {
-                ob_end_clean();
-            }
-            $fh = fopen($path, 'rb');
-            while (!feof($fh)) {
-                echo fread($fh, 1048576);
-                flush();
-            }
-            fclose($fh);
-        }, 200, [
+        // BinaryFileResponse handles Range requests correctly (returns 206 with proper
+        // Content-Length for the range). StreamedResponse ignores Range headers and
+        // always returns 200 with full Content-Length, causing Firefox's
+        // nsIncrementalDownload to fail with NS_ERROR_NET_INADEQUATE_SECURITY.
+        return response()->file($path, [
             'Content-Type'        => $mimeType,
             'Content-Disposition' => 'attachment; filename="' . $displayName . '"',
-            'Content-Length'      => $size,
             'Cache-Control'       => $cache,
         ]);
     }
