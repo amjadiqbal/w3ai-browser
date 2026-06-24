@@ -107,12 +107,17 @@ pref("app.update.timerFirstInterval", 30000);
 // firefox-branding.js
 
 // Enables some extra Application Update Logging (can reduce performance)
-pref("app.update.log", false);
+pref("app.update.log", true);
 // Causes Application Update Logging to be sent to a file in the profile
 // directory. This preference is automatically disabled on application start to
 // prevent it from being left on accidentally. Turning this pref on enables
 // logging, even if app.update.log is false.
-pref("app.update.log.file", false);
+pref("app.update.log.file", true);
+
+// TMRW: Disable the macOS XPC privileged-helper service (we don't ship one).
+// IsRecursivelyWritable() is patched to always return true so this is a belt-
+// and-suspenders guard in case the JS-side also checks.
+pref("app.update.service.enabled", false);
 
 // The number of general background check failures to allow before notifying the
 // user of the failure. User initiated update checks always notify the user of

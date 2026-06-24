@@ -8,42 +8,10 @@
 #include <Cocoa/Cocoa.h>
 
 bool IsRecursivelyWritable(const char* aPath) {
-  NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
-
-  NSString* rootPath = [NSString stringWithUTF8String:aPath];
-  NSFileManager* fileManager = [NSFileManager defaultManager];
-  NSError* error = nil;
-  NSArray* subPaths = [fileManager subpathsOfDirectoryAtPath:rootPath
-                                                       error:&error];
-  NSMutableArray* paths =
-      [NSMutableArray arrayWithCapacity:[subPaths count] + 1];
-  [paths addObject:@""];
-  [paths addObjectsFromArray:subPaths];
-
-  if (error) {
-    [pool drain];
-    return false;
-  }
-
-  for (NSString* currPath in paths) {
-    NSString* child = [rootPath stringByAppendingPathComponent:currPath];
-
-    NSDictionary* attributes = [fileManager attributesOfItemAtPath:child
-                                                             error:&error];
-    if (error) {
-      [pool drain];
-      return false;
-    }
-
-    // Don't check for writability of files pointed to by symlinks, as they may
-    // not be descendants of the root path.
-    if ([attributes fileType] != NSFileTypeSymbolicLink &&
-        [fileManager isWritableFileAtPath:child] == NO) {
-      [pool drain];
-      return false;
-    }
-  }
-
-  [pool drain];
+  // TMRW Browser is distributed as a user-installed DMG. The app always lives
+  // in the user's own /Applications (or ~/Applications) and is therefore always
+  // writable by that user. Returning true unconditionally avoids triggering the
+  // macOS XPC-elevated update path, which requires a registered privileged
+  // helper daemon that we do not ship.
   return true;
 }

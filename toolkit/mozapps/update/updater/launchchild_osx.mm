@@ -379,6 +379,13 @@ bool ObtainUpdaterArguments(int* aArgc, char*** aArgv,
 
 bool ServeElevatedUpdate(int aArgc, const char** aArgv,
                          const char* aMARChannelID) {
+  // When MOZ_VERIFY_MAR_SIGNATURE is disabled, gMARStrings.MARChannelID is
+  // never populated and aMARChannelID arrives as nullptr. Guard here so we
+  // return false cleanly instead of crashing via [NSString stringWithUTF8String:nil].
+  if (!aMARChannelID) {
+    return false;
+  }
+
   MacAutoreleasePool pool;
 
   NSMutableArray* updaterArguments = [NSMutableArray arrayWithCapacity:aArgc];
