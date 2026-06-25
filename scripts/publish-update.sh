@@ -129,17 +129,25 @@ if [[ "$PUBLISH_ONLY" == "true" ]]; then
   exit 0
 fi
 
-# Read the COMPILED-IN BuildID from the XUL binary — Services.appinfo.appBuildID
-# returns this value, which is what the update checker compares against the server.
-# Artifact builds have a fixed compile-time BuildID that cannot be changed without
-# a full C++ recompile; application.ini has a different value that is NOT used.
-BUILD_ID="$(strings "$OBJ_DIR/dist/bin/XUL" 2>/dev/null | grep -E "^202[0-9]{11}$" | head -1)"
-if [[ -z "$BUILD_ID" ]]; then
-  BUILD_ID="$(grep "^BuildID=" "$OBJ_DIR/dist/bin/application.ini" 2>/dev/null | cut -d= -f2)"
-fi
-if [[ -z "$BUILD_ID" ]]; then
-  BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
-fi
+# Generate a monotonically-increasing BuildID for this release, then write it to
+# application.ini BEFORE building the MAR. nsXULAppInfo::GetAppBuildID() reads
+# gAppData->buildID which is parsed from application.ini at startup — so the
+# server buildID, the MAR's application.ini, and the running browser all agree.
+BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
+
+python3 - <<PYEOF
+import re, pathlib
+build_id = "$BUILD_ID"
+for path in [
+    "$OBJ_DIR/build/application.ini",
+    "$OBJ_DIR/dist/firefox/TMRW Browser.app/Contents/Resources/application.ini",
+]:
+    p = pathlib.Path(path)
+    if not p.exists(): continue
+    txt = re.sub(r'^BuildID=.*', f'BuildID={build_id}', p.read_text(), flags=re.M)
+    p.write_text(txt)
+    print(f'  BuildID={build_id} → {path}')
+PYEOF
 
 # ── Step 1: Notarize ────────────────────────────────────────────
 ui_step 1 5 "Notarizing build"
