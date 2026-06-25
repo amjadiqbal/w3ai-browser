@@ -157,7 +157,7 @@ PYEOF
 
 # Repackage so the source DMG (used by notarize.sh) contains the patched application.ini.
 # Without this, notarize.sh extracts the OLD source DMG and the DMG ships the wrong Version/BuildID.
-ui_info "Repackaging with Version=$VERSION BuildID=$BUILD_ID…"
+ui_info "Repackaging with Version=${VERSION} BuildID=${BUILD_ID}..."
 "$REPO_ROOT/mach" package >> /tmp/publish_pkg.log 2>&1 || { ui_fail "mach package failed"; exit 1; }
 ui_ok "Repackaged"
 
