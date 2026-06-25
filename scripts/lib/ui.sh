@@ -151,6 +151,9 @@ ui_upload_with_progress() {
       -F "version=$version" \
       -F "file=@$file;type=application/octet-stream" \
       --progress-bar \
+      --max-time 1800 \
+      --retry 2 \
+      --retry-delay 5 \
       -o "$response_file" \
       -w "%{http_code}" \
       2>"$progress_file" \
