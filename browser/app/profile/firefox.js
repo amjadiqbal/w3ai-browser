@@ -114,14 +114,16 @@ pref("app.update.log", true);
 // logging, even if app.update.log is false.
 pref("app.update.log.file", true);
 
-// TMRW: Auto-updates disabled. Artifact builds have a fixed compiled-in
-// BuildID (from the Mozilla CI artifact date) that cannot be changed without a
-// full C++ recompile. Any server-published buildID newer than the artifact date
-// causes an infinite update loop. Ship updates via manual DMG downloads until
-// we move to full source builds.
-pref("app.update.enabled", false);
-pref("app.update.auto", false);
+// TMRW: Updates enabled. publish-update.sh writes a date-stamped BuildID into
+// application.ini before MAR creation, so the server buildID always matches
+// what the installed browser reports after applying — no update loop.
+// Dev profiles override via user.js (app.update.enabled=false).
+pref("app.update.enabled", true);
+pref("app.update.auto", true);
 pref("app.update.service.enabled", false);
+// Stage updates in background so the 150MB decompression happens while Firefox
+// is still running. Restart only copies staged files (fast, no UI freeze).
+pref("app.update.staging.enabled", true);
 
 // The number of general background check failures to allow before notifying the
 // user of the failure. User initiated update checks always notify the user of

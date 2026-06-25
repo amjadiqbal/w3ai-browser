@@ -130,7 +130,7 @@ if [[ "$PUBLISH_ONLY" == "true" ]]; then
 fi
 
 # Generate a monotonically-increasing BuildID for this release, then write it to
-# application.ini BEFORE building the MAR. nsXULAppInfo::GetAppBuildID() reads
+# application.ini BEFORE repackaging. nsXULAppInfo::GetAppBuildID() reads
 # gAppData->buildID which is parsed from application.ini at startup — so the
 # server buildID, the MAR's application.ini, and the running browser all agree.
 BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
@@ -138,16 +138,28 @@ BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
 python3 - <<PYEOF
 import re, pathlib
 build_id = "$BUILD_ID"
+version  = "$VERSION"
+update_url = "https://tmrw-update.w3ai.io/updates/update.xml"
 for path in [
     "$OBJ_DIR/build/application.ini",
-    "$OBJ_DIR/dist/firefox/TMRW Browser.app/Contents/Resources/application.ini",
+    "$OBJ_DIR/dist/bin/application.ini",
 ]:
     p = pathlib.Path(path)
     if not p.exists(): continue
-    txt = re.sub(r'^BuildID=.*', f'BuildID={build_id}', p.read_text(), flags=re.M)
+    txt = p.read_text()
+    txt = re.sub(r'^BuildID=.*',  f'BuildID={build_id}', txt, flags=re.M)
+    txt = re.sub(r'^Version=.*',  f'Version={version}',  txt, flags=re.M)
+    # Point AppUpdate to our server, not Mozilla's AUS
+    txt = re.sub(r'^URL=https://aus5\.mozilla\.org/.*', f'URL={update_url}', txt, flags=re.M)
     p.write_text(txt)
-    print(f'  BuildID={build_id} → {path}')
+    print(f'  Patched {path}: Version={version} BuildID={build_id}')
 PYEOF
+
+# Repackage so the source DMG (used by notarize.sh) contains the patched application.ini.
+# Without this, notarize.sh extracts the OLD source DMG and the DMG ships the wrong Version/BuildID.
+ui_info "Repackaging with Version=$VERSION BuildID=$BUILD_ID…"
+"$REPO_ROOT/mach" package >> /tmp/publish_pkg.log 2>&1 || { ui_fail "mach package failed"; exit 1; }
+ui_ok "Repackaged"
 
 # ── Step 1: Notarize ────────────────────────────────────────────
 ui_step 1 5 "Notarizing build"
