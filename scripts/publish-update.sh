@@ -195,8 +195,6 @@ ui_spinner_start "Packaging…"
 
 MAR_TMPDIR="$(mktemp -d)"
 MAR_OUTPUT="$MAR_TMPDIR/tmrw-${VERSION}.complete.mar"
-APP_LINK="$MAR_TMPDIR/app"
-ln -sfn "$OBJ_DIR/dist/firefox/TMRW Browser.app" "$APP_LINK"
 
 (cd "$MAR_TMPDIR" && \
   MAR=/usr/local/bin/mar \
@@ -204,8 +202,8 @@ ln -sfn "$OBJ_DIR/dist/firefox/TMRW Browser.app" "$APP_LINK"
   MAR_CHANNEL_ID=default \
   XZ=/usr/local/bin/xz \
     "$REPO_ROOT/tools/update-packaging/make_full_update.sh" \
-    "$MAR_OUTPUT" "$APP_LINK" \
-    2>&1 | grep -v "^        add\|^ add-if-not\|^      rmdir\|^     remove" || true
+    "$MAR_OUTPUT" "$OBJ_DIR/dist/firefox/TMRW Browser.app" \
+    2>&1 | grep -v "^        add\|^ add-if-not\|^      rmdir\|^     remove\|^mv: rename" || true
 )
 
 # make_full_update.sh writes output.mar in the CWD ($MAR_TMPDIR), not at argv[1]
