@@ -131,81 +131,26 @@ ui_upload_with_progress() {
 
   _UI_PROG_DRAWN=0
 
-  local progress_file status_file response_file
-  progress_file=$(mktemp)
-  status_file=$(mktemp)
+  local response_file
   response_file=$(mktemp)
 
-  # Initial display (0%)
-  _ui_draw_bar 0 0 "$total_mb" 0 "--" "$label"
+  ui_info "Uploading ${label} (${total_mb} MB)…"
 
-  local start_ns
-  start_ns=$(python3 -c "import time; print(int(time.time_ns()))" 2>/dev/null || \
-             awk 'BEGIN{print int(systime() * 1e9)}')
-
-  # Run curl in background; -# writes progress to stderr as '#####  XX.X%\r'
-  (
-    curl \
-      -X POST "$url" \
-      -H "Authorization: Bearer $PUBLISH_SECRET" \
-      -F "version=$version" \
-      -F "file=@$file;type=application/octet-stream" \
-      --progress-bar \
-      --max-time 1800 \
-      --retry 2 \
-      --retry-delay 5 \
-      -o "$response_file" \
-      -w "%{http_code}" \
-      2>"$progress_file" \
-    > "$status_file"
-  ) &
-  local curl_pid=$!
-
-  # ── Monitor loop ────────────────────────────────────────────────────────────
-  local pct=0 speed_mb=0 eta="--"
-  while kill -0 "$curl_pid" 2>/dev/null; do
-    # curl -# writes "######  XX.X%\r" to stderr; grab the latest percentage
-    local raw_pct
-    raw_pct=$(tr '\r' '\n' < "$progress_file" 2>/dev/null \
-      | grep -oE '[0-9]+\.[0-9]+%' | tail -1 | tr -d '%')
-
-    if [[ -n "$raw_pct" ]] && awk "BEGIN{exit !($raw_pct > 0)}"; then
-      pct="$raw_pct"
-
-      local now_ns elapsed_s uploaded_mb
-      now_ns=$(python3 -c "import time; print(int(time.time_ns()))" 2>/dev/null || \
-               awk 'BEGIN{print int(systime() * 1e9)}')
-      elapsed_s=$(awk "BEGIN{printf \"%.2f\", ($now_ns - $start_ns) / 1e9}")
-      uploaded_mb=$(awk "BEGIN{printf \"%.1f\", $file_size * $pct / 100 / 1048576}")
-
-      if awk "BEGIN{exit !($elapsed_s > 0.5 && $pct > 0)}"; then
-        speed_mb=$(awk "BEGIN{printf \"%.1f\", $file_size * $pct / 100 / 1048576 / $elapsed_s}")
-        eta=$(awk "BEGIN{
-          remaining = $file_size * (100 - $pct) / 100 / 1048576
-          speed = $speed_mb + 0
-          if (speed > 0) printf \"%.0f\", remaining / speed
-          else print \"--\"
-        }")
-      fi
-
-      _ui_draw_bar "$pct" "$uploaded_mb" "$total_mb" "$speed_mb" "$eta" "$label"
-    fi
-
-    sleep 0.25
-  done
-
-  wait "$curl_pid" 2>/dev/null || true
-
-  # Show 100% completion
-  _ui_draw_bar 100 "$total_mb" "$total_mb" "$speed_mb" 0 "$label"
-  printf "\n"
-  _UI_PROG_DRAWN=0
-
+  # Run curl in foreground — backgrounding + stderr redirect silently drops the
+  # HTTP status code when the shell is non-interactive (publish-update.sh context).
   local http_code response
-  http_code=$(cat "$status_file" 2>/dev/null | tr -d '[:space:]' || echo "000")
+  http_code=$(curl -s \
+    -X POST "$url" \
+    -H "Authorization: Bearer $PUBLISH_SECRET" \
+    -F "version=$version" \
+    -F "file=@$file;type=application/octet-stream" \
+    --max-time 1800 \
+    -o "$response_file" \
+    -w "%{http_code}" \
+    2>/dev/null || echo "000")
   response=$(cat "$response_file" 2>/dev/null || echo "")
 
-  rm -f "$progress_file" "$status_file" "$response_file"
+  rm -f "$response_file"
 
   # Print parsed response URL
   if [[ "$http_code" == "200" ]]; then
