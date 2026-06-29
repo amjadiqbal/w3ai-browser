@@ -134,7 +134,7 @@ ui_upload_with_progress() {
   local response_file
   response_file=$(mktemp)
 
-  ui_info "Uploading ${label} (${total_mb} MB)…"
+  ui_info "Uploading ${label} (${total_mb} MB)…" >&2
 
   # Run curl in foreground — backgrounding + stderr redirect silently drops the
   # HTTP status code when the shell is non-interactive (publish-update.sh context).
@@ -152,16 +152,16 @@ ui_upload_with_progress() {
 
   rm -f "$response_file"
 
-  # Print parsed response URL
+  # UI output goes to stderr so callers using $(...) capture only the HTTP code
   if [[ "$http_code" == "200" ]]; then
     local resp_url
     resp_url=$(echo "$response" | python3 -c \
       "import sys,json; print(json.load(sys.stdin).get('url',''))" 2>/dev/null || true)
-    [[ -n "$resp_url" ]] && ui_ok "Available at: $resp_url"
+    [[ -n "$resp_url" ]] && ui_ok "Available at: $resp_url" >&2
     printf '%s' "$http_code"
     return 0
   else
-    ui_fail "HTTP $http_code — $response"
+    ui_fail "HTTP $http_code — $response" >&2
     printf '%s' "$http_code"
     return 1
   fi
