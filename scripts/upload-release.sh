@@ -47,13 +47,18 @@ done
 
 BASE_URL="${UPDATE_SERVER_URL}"
 
-# ── Detect version from built app, fall back to .env ──────────────────────────
+# ── Detect version and build ID from built app, fall back to .env ──────────────
 APP_INI="$OBJ_DIR/dist/firefox/TMRW Browser.app/Contents/Resources/application.ini"
 VERSION=""
-[[ -f "$APP_INI" ]] && VERSION="$(grep "^Version=" "$APP_INI" | cut -d= -f2)"
+BUILD_ID=""
+if [[ -f "$APP_INI" ]]; then
+  VERSION="$(grep "^Version=" "$APP_INI" | cut -d= -f2)"
+  BUILD_ID="$(grep "^BuildID=" "$APP_INI" | cut -d= -f2)"
+fi
 [[ -z "$VERSION" ]] && VERSION="${APP_VERSION:-1.0.0}"
+[[ -z "$BUILD_ID" ]] && BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
 
-BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
+eval "$(PRODUCT_NAME='TMRW-Browser' PRINT_EXPORTS=1 "$REPO_ROOT/scripts/tmrw-release-names.sh" "$VERSION" "$BUILD_ID")"
 SIGNED_DMG="$OBJ_DIR/dist/TMRW Browser.dmg"
 MAR_TMPDIR=""
 MAR_OUTPUT=""
@@ -87,7 +92,7 @@ if [[ "$DMG_ONLY" != "true" ]]; then
 
   ui_spinner_start "Packaging…"
   MAR_TMPDIR="$(mktemp -d)"
-  MAR_OUTPUT="$MAR_TMPDIR/tmrw-${VERSION}.complete.mar"
+  MAR_OUTPUT="$MAR_TMPDIR/$TMRW_COMPLETE_MAR_NAME"
   APP_LINK="$MAR_TMPDIR/app"
   ln -sfn "$PKG_APP" "$APP_LINK"
 
@@ -115,6 +120,27 @@ if [[ "$DMG_ONLY" != "true" ]]; then
   MAR_SIZE="$(stat -f%z "$MAR_OUTPUT")"
   MAR_HASH="$(shasum -a 512 "$MAR_OUTPUT" | awk '{print $1}')"
   ui_ok "$(( MAR_SIZE / 1024 / 1024 )) MB — ${MAR_HASH:0:16}…"
+
+  UPDATE_XML_TMP="$(mktemp /tmp/tmrw-update-XXXXXX.xml)"
+  cat > "$UPDATE_XML_TMP" <<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<updates>
+  <update type="minor" displayVersion="${VERSION}" appVersion="${VERSION}" platformVersion="151.0a1" buildID="${BUILD_ID}">
+    <patch type="complete" URL="${BASE_URL}/download/${TMRW_COMPLETE_MAR_NAME}" hashFunction="sha512" hashValue="${MAR_HASH}" size="${MAR_SIZE}"/>
+  </update>
+</updates>
+XML
+
+  ui_info "Verifying app + MAR + update.xml before upload..."
+  EXPECTED_VERSION="$VERSION" \
+  EXPECTED_BUILD_ID="$BUILD_ID" \
+  APP_PATH="$OBJ_DIR/dist/firefox/TMRW Browser.app" \
+  MAR_PATH="$MAR_OUTPUT" \
+  UPDATE_XML_PATH="$UPDATE_XML_TMP" \
+    "$REPO_ROOT/scripts/verify-tmrw-release.sh" \
+    || { ui_fail "Pre-upload verification failed — aborting release"; rm -f "$UPDATE_XML_TMP"; rm -rf "$MAR_TMPDIR"; exit 1; }
+  rm -f "$UPDATE_XML_TMP"
+  ui_ok "Pre-upload verification passed"
 fi
 
 # ── Step 3: Upload ────────────────────────────────────────────────────────────
@@ -126,7 +152,8 @@ if [[ "$DMG_ONLY" != "true" && -n "$MAR_OUTPUT" ]]; then
     "$BASE_URL/api/upload/mar" \
     "$MAR_OUTPUT" \
     "MAR  •  $(( MAR_SIZE / 1024 / 1024 )) MB" \
-    "$VERSION")
+    "$VERSION" \
+    "$BUILD_ID")
 
   if [[ "$http_code" == "200" ]]; then
     rm -rf "$MAR_TMPDIR" && MAR_TMPDIR=""
@@ -143,7 +170,8 @@ if [[ "$MAR_ONLY" != "true" ]]; then
     "$BASE_URL/api/upload/dmg" \
     "$SIGNED_DMG" \
     "DMG  •  $(( DMG_SIZE / 1024 / 1024 )) MB" \
-    "$VERSION") && dmg_ok=true || dmg_ok=false
+    "$VERSION" \
+    "$BUILD_ID") && dmg_ok=true || dmg_ok=false
 
   if $dmg_ok; then
     rm -f "$SIGNED_DMG"
@@ -186,8 +214,8 @@ ui_ok "Manifest live"
 # ── Summary ───────────────────────────────────────────────────────────────────
 printf "\n${UI_BOLD}${UI_GREEN}  Published v%s  (build %s)${UI_RESET}\n\n" "$VERSION" "$BUILD_ID"
 printf "  ${UI_DIM}Manifest${UI_RESET}  %s/updates/update.xml\n" "$BASE_URL"
-printf "  ${UI_DIM}MAR${UI_RESET}       %s/download/TMRW-Browser-v%s.complete.mar\n" "$BASE_URL" "$VERSION"
-printf "  ${UI_DIM}DMG${UI_RESET}       %s/download/TMRW-Browser-v%s.dmg\n\n" "$BASE_URL" "$VERSION"
+printf "  ${UI_DIM}MAR${UI_RESET}       %s/download/%s\n" "$BASE_URL" "$TMRW_COMPLETE_MAR_NAME"
+printf "  ${UI_DIM}DMG${UI_RESET}       %s/download/%s\n\n" "$BASE_URL" "$TMRW_DMG_NAME"
 printf "  ${UI_DIM}Installed browsers update within 6 hours.${UI_RESET}\n"
 printf "  ${UI_DIM}Trigger now: Help menu → Check for Updates${UI_RESET}\n\n"
 

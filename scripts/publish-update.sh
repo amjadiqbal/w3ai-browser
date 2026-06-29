@@ -111,8 +111,9 @@ ui_banner "TMRW Browser v${VERSION} — publishing update"
 # ── --publish-only: skip notarize + upload, just call the publish endpoint ────
 if [[ "$PUBLISH_ONLY" == "true" ]]; then
   echo "==> --publish-only: skipping notarize and upload (files already on server)"
-  BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
   STATUS=$(curl -sf "$BASE_URL/api/status" || echo '{}')
+  BUILD_ID=$(echo "$STATUS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('buildID',''))" 2>/dev/null || echo "")
+  [[ -z "$BUILD_ID" ]] && BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
   MAR_HASH=$(echo "$STATUS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('marHash',''))" 2>/dev/null || echo "")
   MAR_SIZE=$(echo "$STATUS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('marSize',0))" 2>/dev/null || echo "0")
 
@@ -134,6 +135,7 @@ fi
 # gAppData->buildID which is parsed from application.ini at startup — so the
 # server buildID, the MAR's application.ini, and the running browser all agree.
 BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
+eval "$(PRODUCT_NAME='TMRW-Browser' PRINT_EXPORTS=1 "$REPO_ROOT/scripts/tmrw-release-names.sh" "$VERSION" "$BUILD_ID")"
 
 python3 - <<PYEOF
 import re, pathlib
@@ -302,6 +304,14 @@ ui_info "Repackaging with Version=${VERSION} BuildID=${BUILD_ID}..."
 "$REPO_ROOT/mach" package >> /tmp/publish_pkg.log 2>&1 || { ui_fail "mach package failed"; exit 1; }
 ui_ok "Repackaged"
 
+ui_info "Verifying app bundle (Version=${VERSION} BuildID=${BUILD_ID})..."
+EXPECTED_VERSION="$VERSION" \
+EXPECTED_BUILD_ID="$BUILD_ID" \
+APP_PATH="$OBJ_DIR/dist/firefox/TMRW Browser.app" \
+  "$REPO_ROOT/scripts/verify-tmrw-release.sh" \
+  || { ui_fail "App bundle verification failed — aborting release"; exit 1; }
+ui_ok "App bundle verified"
+
 # ── Step 1: Notarize ────────────────────────────────────────────
 ui_step 1 5 "Notarizing build"
 "$REPO_ROOT/scripts/notarize.sh"
@@ -347,7 +357,7 @@ ui_spinner_stop ok
 ui_spinner_start "Packaging…"
 
 MAR_TMPDIR="$(mktemp -d)"
-MAR_OUTPUT="$MAR_TMPDIR/tmrw-${VERSION}.complete.mar"
+MAR_OUTPUT="$MAR_TMPDIR/$TMRW_COMPLETE_MAR_NAME"
 
 (cd "$MAR_TMPDIR" && \
   MAR=/usr/local/bin/mar \
@@ -373,6 +383,27 @@ MAR_SIZE="$(stat -f%z "$MAR_OUTPUT")"
 MAR_HASH="$(shasum -a 512 "$MAR_OUTPUT" | awk '{print $1}')"
 ui_ok "$(( MAR_SIZE / 1024 / 1024 )) MB — ${MAR_HASH:0:16}…"
 
+UPDATE_XML_TMP="$(mktemp /tmp/tmrw-update-XXXXXX.xml)"
+cat > "$UPDATE_XML_TMP" <<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<updates>
+  <update type="minor" displayVersion="${VERSION}" appVersion="${VERSION}" platformVersion="151.0a1" buildID="${BUILD_ID}">
+    <patch type="complete" URL="${BASE_URL}/download/${TMRW_COMPLETE_MAR_NAME}" hashFunction="sha512" hashValue="${MAR_HASH}" size="${MAR_SIZE}"/>
+  </update>
+</updates>
+XML
+
+ui_info "Verifying MAR + update.xml before upload..."
+EXPECTED_VERSION="$VERSION" \
+EXPECTED_BUILD_ID="$BUILD_ID" \
+APP_PATH="$OBJ_DIR/dist/firefox/TMRW Browser.app" \
+MAR_PATH="$MAR_OUTPUT" \
+UPDATE_XML_PATH="$UPDATE_XML_TMP" \
+  "$REPO_ROOT/scripts/verify-tmrw-release.sh" \
+  || { ui_fail "Pre-upload verification failed — aborting release"; rm -f "$UPDATE_XML_TMP"; rm -rf "$MAR_TMPDIR"; exit 1; }
+rm -f "$UPDATE_XML_TMP"
+ui_ok "Pre-upload verification passed"
+
 # ── Step 3: Upload MAR ────────────────────────────────────────────
 ui_step 3 5 "Uploading MAR"
 printf "\n"
@@ -380,7 +411,8 @@ mar_http=$(ui_upload_with_progress \
   "$BASE_URL/api/upload/mar" \
   "$MAR_OUTPUT" \
   "MAR  •  $(( MAR_SIZE / 1024 / 1024 )) MB" \
-  "$VERSION")
+  "$VERSION" \
+  "$BUILD_ID")
 
 if [[ "$mar_http" == "200" ]]; then
   rm -rf "$MAR_TMPDIR"
@@ -396,7 +428,8 @@ dmg_http=$(ui_upload_with_progress \
   "$BASE_URL/api/upload/dmg" \
   "$SIGNED_DMG" \
   "DMG  •  $(( DMG_SIZE / 1024 / 1024 )) MB" \
-  "$VERSION")
+  "$VERSION" \
+  "$BUILD_ID")
 
 if [[ "$dmg_http" == "200" ]]; then
   rm -f "$SIGNED_DMG"
@@ -425,8 +458,8 @@ ui_ok "Manifest live"
 
 printf "\n${UI_BOLD}${UI_GREEN}  Published v%s  (build %s)${UI_RESET}\n\n" "$VERSION" "$BUILD_ID"
 printf "  ${UI_DIM}Manifest${UI_RESET}  %s/updates/update.xml\n" "$BASE_URL"
-printf "  ${UI_DIM}MAR${UI_RESET}       %s/download/TMRW-Browser-v%s.complete.mar\n" "$BASE_URL" "$VERSION"
-printf "  ${UI_DIM}DMG${UI_RESET}       %s/download/TMRW-Browser-v%s.dmg\n\n" "$BASE_URL" "$VERSION"
+printf "  ${UI_DIM}MAR${UI_RESET}       %s/download/%s\n" "$BASE_URL" "$TMRW_COMPLETE_MAR_NAME"
+printf "  ${UI_DIM}DMG${UI_RESET}       %s/download/%s\n\n" "$BASE_URL" "$TMRW_DMG_NAME"
 printf "  ${UI_DIM}Installed browsers update within 6 hours.${UI_RESET}\n"
 printf "  ${UI_DIM}Trigger now: Help menu → Check for Updates${UI_RESET}\n\n"
 
