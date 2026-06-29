@@ -163,6 +163,7 @@ python3 - <<PYEOF
 import io, os, re, zipfile
 
 build_id = "$BUILD_ID"
+version  = "$VERSION"
 obj = "$OBJ_DIR"
 
 # Patch all expanded AppConstants.sys.mjs files that mach package reads when creating omni.ja.
@@ -177,9 +178,27 @@ for expanded in expanded_sources:
     if not os.path.exists(expanded): continue
     text = open(expanded).read()
     new_text = re.sub(r'(MOZ_BUILDID:\s*")[^"]*(")', rf'\g<1>{build_id}\2', text)
+    new_text = re.sub(r'(MOZ_APP_VERSION:\s*")[^"]*(")', rf'\g<1>{version}\2', new_text)
+    new_text = re.sub(r'(MOZ_APP_VERSION_DISPLAY:\s*")[^"]*(")', rf'\g<1>{version}\2', new_text)
     if new_text != text:
         open(expanded, 'w').write(new_text)
-        print(f'  Patched MOZ_BUILDID={build_id} in {os.path.relpath(expanded, obj)}')
+        print(f'  Patched MOZ_BUILDID={build_id} MOZ_APP_VERSION={version} in {os.path.relpath(expanded, obj)}')
+
+# Patch Info.plist CFBundleShortVersionString and CFBundleVersion in the source app bundle
+# so that mach package copies the correct version into the distributable DMG.
+import subprocess
+info_plists = [
+    obj + "/dist/TMRW Browser.app/Contents/Info.plist",
+    obj + "/dist/bin/TMRW Browser.app/Contents/Info.plist",
+]
+for plist in info_plists:
+    if not os.path.exists(plist): continue
+    for key in ("CFBundleShortVersionString", "CFBundleVersion"):
+        subprocess.run(
+            ["/usr/libexec/PlistBuddy", "-c", f"Set :{key} {version}", plist],
+            capture_output=True
+        )
+    print(f'  Patched Info.plist {version} in {os.path.relpath(plist, obj)}')
 
 # Also patch any pre-assembled omni.ja files in case mach package uses them directly.
 jar_targets = [
@@ -198,6 +217,8 @@ for path in jar_targets:
                 if item.filename == 'modules/AppConstants.sys.mjs':
                     text = data.decode('utf-8')
                     new_text = re.sub(r'(MOZ_BUILDID:\s*")[^"]*(")', rf'\g<1>{build_id}\2', text)
+                    new_text = re.sub(r'(MOZ_APP_VERSION:\s*")[^"]*(")', rf'\g<1>{version}\2', new_text)
+                    new_text = re.sub(r'(MOZ_APP_VERSION_DISPLAY:\s*")[^"]*(")', rf'\g<1>{version}\2', new_text)
                     if new_text != text:
                         data = new_text.encode('utf-8')
                         modified = True
@@ -205,7 +226,7 @@ for path in jar_targets:
     if modified:
         with open(path, 'wb') as f:
             f.write(buf.getvalue())
-        print(f'  Patched MOZ_BUILDID={build_id} in {os.path.basename(path)}')
+        print(f'  Patched MOZ_BUILDID={build_id} MOZ_APP_VERSION={version} in {os.path.basename(path)}')
 PYEOF
 
 # Repackage so the source DMG (used by notarize.sh) contains the patched application.ini
