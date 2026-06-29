@@ -84,10 +84,22 @@ else
     INI_BUILDID=""
   fi
 
+  PLATFORM_INI="$APP_PATH/Contents/Resources/platform.ini"
+  if [[ -f "$PLATFORM_INI" ]]; then
+    PLAT_BUILDID="$(grep '^BuildID=' "$PLATFORM_INI" | cut -d= -f2)"
+    if [[ -n "$INI_BUILDID" ]]; then
+      check_eq "platform.ini BuildID matches application.ini BuildID" "$PLAT_BUILDID" "$INI_BUILDID"
+    else
+      info "platform.ini BuildID: $PLAT_BUILDID"
+    fi
+  else
+    fail "platform.ini not found at $PLATFORM_INI"
+  fi
+
   INFO_PLIST="$APP_PATH/Contents/Info.plist"
   if [[ -f "$INFO_PLIST" ]]; then
     PLIST_VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$INFO_PLIST" 2>/dev/null || echo '')"
-    check_eq "Info.plist CFBundleShortVersionString" "$PLIST_VERSION" "$EXPECTED_VERSION"
+    check_eq "Info.plist CFBundleShortVersionString matches application.ini Version" "$PLIST_VERSION" "$INI_VERSION"
   else
     fail "Info.plist not found"
   fi
@@ -96,7 +108,7 @@ else
   if [[ -f "$OMNI_JA" ]]; then
     APPC_VERSION="$(unzip -p "$OMNI_JA" modules/AppConstants.sys.mjs 2>/dev/null | grep 'MOZ_APP_VERSION:' | sed "s/.*\"\([^\"]*\)\".*/\1/")"
     APPC_BUILDID="$(unzip -p "$OMNI_JA" modules/AppConstants.sys.mjs 2>/dev/null | grep 'MOZ_BUILDID:' | sed "s/.*\"\([^\"]*\)\".*/\1/")"
-    check_eq "omni.ja AppConstants MOZ_APP_VERSION" "$APPC_VERSION" "$EXPECTED_VERSION"
+    check_eq "omni.ja AppConstants MOZ_APP_VERSION matches application.ini Version" "$APPC_VERSION" "$INI_VERSION"
     if [[ -n "$INI_BUILDID" ]]; then
       check_eq "omni.ja AppConstants MOZ_BUILDID matches application.ini BuildID" "$APPC_BUILDID" "$INI_BUILDID"
     else
@@ -187,16 +199,14 @@ if XML="$(curl -sf --max-time 15 "$UPDATE_XML_URL" 2>/dev/null)"; then
   XML_URL="$(echo "$XML" | grep -o 'URL="[^"]*"' | head -1 | cut -d'"' -f2)"
   XML_HASH_FN="$(echo "$XML" | grep -o 'hashFunction="[^"]*"' | head -1 | cut -d'"' -f2)"
 
-  check_eq "update.xml appVersion" "$XML_VERSION" "$EXPECTED_VERSION"
-  info "update.xml buildID: $XML_BUILDID"
+  check_eq "update.xml appVersion matches application.ini Version" "$XML_VERSION" "$INI_VERSION"
+  if [[ -n "$INI_BUILDID" ]]; then
+    check_eq "update.xml buildID matches application.ini BuildID" "$XML_BUILDID" "$INI_BUILDID"
+  else
+    info "update.xml buildID: $XML_BUILDID"
+  fi
   info "update.xml patch URL: $XML_URL"
   info "update.xml hashFunction: $XML_HASH_FN"
-
-  if echo "$XML" | grep -q "20260624"; then
-    fail "update.xml still references stale version 1.0.20260624!"
-  else
-    ok "update.xml does not reference stale version"
-  fi
 
   if [[ -n "$MAR_PATH" && -f "$MAR_PATH" ]]; then
     check_eq "update.xml size matches MAR file size" "$XML_SIZE" "$MAR_SIZE"

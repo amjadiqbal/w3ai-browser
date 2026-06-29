@@ -140,6 +140,8 @@ import re, pathlib
 build_id = "$BUILD_ID"
 version  = "$VERSION"
 update_url = "https://tmrw-update.w3ai.io/updates/update.xml"
+
+# Patch application.ini: Version, BuildID, and update URL
 for path in [
     "$OBJ_DIR/build/application.ini",
     "$OBJ_DIR/dist/bin/application.ini",
@@ -149,10 +151,26 @@ for path in [
     txt = p.read_text()
     txt = re.sub(r'^BuildID=.*',  f'BuildID={build_id}', txt, flags=re.M)
     txt = re.sub(r'^Version=.*',  f'Version={version}',  txt, flags=re.M)
-    # Point AppUpdate to our server, not Mozilla's AUS
     txt = re.sub(r'^URL=https://aus5\.mozilla\.org/.*', f'URL={update_url}', txt, flags=re.M)
     p.write_text(txt)
-    print(f'  Patched {path}: Version={version} BuildID={build_id}')
+    print(f'  Patched application.ini: Version={version} BuildID={build_id}')
+
+# Patch platform.ini BuildID to match application.ini.
+# platform.ini contains the Gecko/platform compile-time BuildID; without patching it,
+# Firefox reports two different BuildIDs (application vs platform), which triggers
+# the update checker to offer an update immediately after a clean install.
+for path in [
+    "$OBJ_DIR/build/platform.ini",
+    "$OBJ_DIR/dist/bin/platform.ini",
+    "$OBJ_DIR/dist/TMRW Browser.app/Contents/Resources/platform.ini",
+]:
+    p = pathlib.Path(path)
+    if not p.exists(): continue
+    txt = p.read_text()
+    new_txt = re.sub(r'^BuildID=.*', f'BuildID={build_id}', txt, flags=re.M)
+    if new_txt != txt:
+        p.write_text(new_txt)
+        print(f'  Patched platform.ini: BuildID={build_id} in {p}')
 PYEOF
 
 # Patch MOZ_BUILDID in AppConstants.sys.mjs inside omni.ja so the running browser reports
