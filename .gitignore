@@ -422,3 +422,5 @@ browser/app/profile/local-secrets.js
 
 # MAR signing keys — never commit private keys
 browser/branding/w3ai/mar-keys/
+browser-operator-core/
+output.mar
