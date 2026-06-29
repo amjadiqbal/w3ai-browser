@@ -75,8 +75,8 @@ class UpdateController extends Controller
         // ── Versioned direct download ─────────────────────────────────────────
         abort_unless(Storage::disk(self::STORAGE_DISK)->exists($filename), 404, 'File not found');
 
-        $display = preg_replace('/^TMRW-Browser-v[\d.]+\.dmg$/',          'TMRW Browser.dmg',          $filename);
-        $display = preg_replace('/^TMRW-Browser-v[\d.]+\.complete\.mar$/', 'TMRW-Browser.complete.mar', $display);
+        $display = preg_replace('/^TMRW-Browser-v[\d.]+(?:-build\d+)?\.dmg$/',          'TMRW Browser.dmg',          $filename);
+        $display = preg_replace('/^TMRW-Browser-v[\d.]+(?:-build\d+)?\.complete\.mar$/', 'TMRW-Browser.complete.mar', $display);
 
         return $this->streamFile($filename, $display, immutable: true);
     }
@@ -108,13 +108,15 @@ class UpdateController extends Controller
         abort_unless(in_array($type, ['dmg', 'mar'], true), 400, 'type must be dmg or mar');
 
         $request->validate([
-            'file'    => 'required|file|max:512000',
-            'version' => 'required|string|regex:/^\d+\.\d+\.\d+$/',
+            'file'     => 'required|file|max:512000',
+            'version'  => 'required|string|regex:/^\d+\.\d+\.\d+$/',
+            'build_id' => 'required|string|regex:/^\d+$/',
         ]);
 
         $version  = $request->input('version');
+        $buildId  = $request->input('build_id');
         $ext      = $type === 'dmg' ? 'dmg' : 'complete.mar';
-        $filename = "TMRW-Browser-v{$version}.{$ext}";
+        $filename = "TMRW-Browser-v{$version}-build{$buildId}.{$ext}";
 
         $request->file('file')->storeAs('/', $filename, self::STORAGE_DISK);
 
@@ -143,11 +145,12 @@ class UpdateController extends Controller
         ]);
 
         $version     = $data['version'];
-        $marFilename = "TMRW-Browser-v{$version}.complete.mar";
-        $dmgFilename = "TMRW-Browser-v{$version}.dmg";
+        $buildId     = $data['buildID'];
+        $marFilename = "TMRW-Browser-v{$version}-build{$buildId}.complete.mar";
+        $dmgFilename = "TMRW-Browser-v{$version}-build{$buildId}.dmg";
 
         if (!Storage::disk(self::STORAGE_DISK)->exists($marFilename)) {
-            return response()->json(['error' => "MAR file not found on server: {$marFilename}. Upload it first via POST /api/upload/mar"], 422);
+            return response()->json(['error' => "MAR not found: {$marFilename}. Upload via POST /api/upload/mar with version={$version}&build_id={$buildId}"], 422);
         }
 
         BrowserUpdate::where('active', true)->update(['active' => false]);

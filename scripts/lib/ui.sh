@@ -118,12 +118,12 @@ _ui_draw_bar() {
 }
 
 # Public: upload a file with live progress bar
-# Usage: ui_upload_with_progress URL FILE LABEL VERSION
+# Usage: ui_upload_with_progress URL FILE LABEL VERSION [BUILD_ID]
 # Reads PUBLISH_SECRET from environment.
 # Echoes http status code on stdout (last line).
 # Returns 0 on HTTP 200, 1 otherwise.
 ui_upload_with_progress() {
-  local url="$1" file="$2" label="$3" version="$4"
+  local url="$1" file="$2" label="$3" version="$4" build_id="${5:-}"
 
   local file_size total_mb
   file_size=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo 1)
@@ -138,16 +138,17 @@ ui_upload_with_progress() {
 
   # Run curl in foreground — backgrounding + stderr redirect silently drops the
   # HTTP status code when the shell is non-interactive (publish-update.sh context).
+  local curl_args=(-s -X POST "$url"
+    -H "Authorization: Bearer $PUBLISH_SECRET"
+    -F "version=$version")
+  [[ -n "$build_id" ]] && curl_args+=(-F "build_id=$build_id")
+  curl_args+=(-F "file=@$file;type=application/octet-stream"
+    --max-time 1800
+    -o "$response_file"
+    -w "%{http_code}")
+
   local http_code response
-  http_code=$(curl -s \
-    -X POST "$url" \
-    -H "Authorization: Bearer $PUBLISH_SECRET" \
-    -F "version=$version" \
-    -F "file=@$file;type=application/octet-stream" \
-    --max-time 1800 \
-    -o "$response_file" \
-    -w "%{http_code}" \
-    2>/dev/null || echo "000")
+  http_code=$(curl "${curl_args[@]}" 2>/dev/null || echo "000")
   response=$(cat "$response_file" 2>/dev/null || echo "")
 
   rm -f "$response_file"
