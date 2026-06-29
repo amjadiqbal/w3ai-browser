@@ -155,8 +155,62 @@ for path in [
     print(f'  Patched {path}: Version={version} BuildID={build_id}')
 PYEOF
 
-# Repackage so the source DMG (used by notarize.sh) contains the patched application.ini.
-# Without this, notarize.sh extracts the OLD source DMG and the DMG ships the wrong Version/BuildID.
+# Patch MOZ_BUILDID in AppConstants.sys.mjs inside omni.ja so the running browser reports
+# the same BuildID that application.ini and the update server advertise. Without this patch
+# the compiled-in MOZ_BUILDID (from mach build) stays stale after the update, causing Firefox
+# to see a buildID mismatch on every restart and download the same update forever.
+python3 - <<PYEOF
+import io, os, re, zipfile
+
+build_id = "$BUILD_ID"
+obj = "$OBJ_DIR"
+
+# Patch all expanded AppConstants.sys.mjs files that mach package reads when creating omni.ja.
+# The artifact build places the expanded app under dist/<AppName>.app and dist/bin/; mach package
+# zips it into dist/firefox/<AppName>.app/Contents/Resources/omni.ja. Without patching the source
+# files first, the regenerated omni.ja will always have the stale compile-time MOZ_BUILDID.
+expanded_sources = [
+    obj + "/dist/bin/modules/AppConstants.sys.mjs",
+    obj + "/dist/TMRW Browser.app/Contents/Resources/modules/AppConstants.sys.mjs",
+]
+for expanded in expanded_sources:
+    if not os.path.exists(expanded): continue
+    text = open(expanded).read()
+    new_text = re.sub(r'(MOZ_BUILDID:\s*")[^"]*(")', rf'\g<1>{build_id}\2', text)
+    if new_text != text:
+        open(expanded, 'w').write(new_text)
+        print(f'  Patched MOZ_BUILDID={build_id} in {os.path.relpath(expanded, obj)}')
+
+# Also patch any pre-assembled omni.ja files in case mach package uses them directly.
+jar_targets = [
+    obj + "/dist/bin/omni.ja",
+    obj + "/dist/firefox/TMRW Browser.app/Contents/Resources/omni.ja",
+]
+for path in jar_targets:
+    if not os.path.exists(path):
+        continue
+    buf = io.BytesIO()
+    modified = False
+    with zipfile.ZipFile(path, 'r') as zin:
+        with zipfile.ZipFile(buf, 'w') as zout:
+            for item in zin.infolist():
+                data = zin.read(item.filename)
+                if item.filename == 'modules/AppConstants.sys.mjs':
+                    text = data.decode('utf-8')
+                    new_text = re.sub(r'(MOZ_BUILDID:\s*")[^"]*(")', rf'\g<1>{build_id}\2', text)
+                    if new_text != text:
+                        data = new_text.encode('utf-8')
+                        modified = True
+                zout.writestr(item, data, compress_type=item.compress_type)
+    if modified:
+        with open(path, 'wb') as f:
+            f.write(buf.getvalue())
+        print(f'  Patched MOZ_BUILDID={build_id} in {os.path.basename(path)}')
+PYEOF
+
+# Repackage so the source DMG (used by notarize.sh) contains the patched application.ini
+# and the patched omni.ja (with correct MOZ_BUILDID). Without this, notarize.sh extracts
+# the OLD source DMG and the DMG ships the wrong Version/BuildID.
 ui_info "Repackaging with Version=${VERSION} BuildID=${BUILD_ID}..."
 "$REPO_ROOT/mach" package >> /tmp/publish_pkg.log 2>&1 || { ui_fail "mach package failed"; exit 1; }
 ui_ok "Repackaged"
