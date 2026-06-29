@@ -63,10 +63,10 @@ function init() {
     versionAttributes.arch = arch;
   }
 
-  let version = Services.appinfo.version;
+  let version = AppConstants.MOZ_APP_VERSION;
   if (/a\d+$/.test(version)) {
     versionIdKey += "-nightly";
-    let buildID = Services.appinfo.appBuildID;
+    let buildID = AppConstants.MOZ_BUILDID;
     let year = buildID.slice(0, 4);
     let month = buildID.slice(4, 6);
     let day = buildID.slice(6, 8);

@@ -1972,7 +1972,7 @@ function updateIsAtLeastAsOldAsCurrentVersion(update) {
   return updateIsAtLeastAsOldAs(
     update,
     AppConstants.MOZ_APP_VERSION,
-    Services.appinfo.appBuildID
+    AppConstants.MOZ_BUILDID
   );
 }
 
@@ -3036,7 +3036,7 @@ export class UpdateService {
         updateIsAtLeastAsOldAs(
           lazy.UM.internal.readyUpdate,
           AppConstants.MOZ_APP_VERSION,
-          Services.appinfo.appBuildID
+          AppConstants.MOZ_BUILDID
         )
       ) {
         tooOldUpdate = lazy.UM.internal.readyUpdate;
@@ -3044,7 +3044,7 @@ export class UpdateService {
         updateIsAtLeastAsOldAs(
           lazy.UM.internal.downloadingUpdate,
           AppConstants.MOZ_APP_VERSION,
-          Services.appinfo.appBuildID
+          AppConstants.MOZ_BUILDID
         )
       ) {
         tooOldUpdate = lazy.UM.internal.downloadingUpdate;
@@ -3062,7 +3062,7 @@ export class UpdateService {
             "build ID: " +
             tooOldUpdate.buildID +
             ", application build ID: " +
-            Services.appinfo.appBuildID
+            AppConstants.MOZ_BUILDID
         );
         tooOldUpdate.state = STATE_FAILED;
         tooOldUpdate.statusText =
@@ -4263,7 +4263,7 @@ export class UpdateService {
           update.appVersion +
           "\n" +
           "current build ID: " +
-          Services.appinfo.appBuildID +
+          AppConstants.MOZ_BUILDID +
           "\n" +
           "update build ID : " +
           update.buildID

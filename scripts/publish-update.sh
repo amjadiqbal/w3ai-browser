@@ -216,9 +216,14 @@ for plist in info_plists:
             ["/usr/libexec/PlistBuddy", "-c", f"Set :{key} {version}", plist],
             capture_output=True
         )
+    subprocess.run(
+        ["/usr/libexec/PlistBuddy", "-c", f"Set :CFBundleGetInfoString TMRW Browser {version}", plist],
+        capture_output=True
+    )
     print(f'  Patched Info.plist {version} in {os.path.relpath(plist, obj)}')
 
 # Also patch any pre-assembled omni.ja files in case mach package uses them directly.
+# Toolkit omni.ja: patch AppConstants and UpdateService (buildID comparisons).
 jar_targets = [
     obj + "/dist/bin/omni.ja",
     obj + "/dist/firefox/TMRW Browser.app/Contents/Resources/omni.ja",
@@ -240,11 +245,54 @@ for path in jar_targets:
                     if new_text != text:
                         data = new_text.encode('utf-8')
                         modified = True
+                elif item.filename == 'modules/UpdateService.sys.mjs':
+                    # Use AppConstants.MOZ_BUILDID instead of the compiled-in
+                    # Services.appinfo.appBuildID so the update service matches
+                    # our patched build ID, preventing the infinite update loop.
+                    text = data.decode('utf-8')
+                    new_text = text.replace('Services.appinfo.appBuildID', 'AppConstants.MOZ_BUILDID')
+                    if new_text != text:
+                        data = new_text.encode('utf-8')
+                        modified = True
                 zout.writestr(item, data, compress_type=item.compress_type)
     if modified:
         with open(path, 'wb') as f:
             f.write(buf.getvalue())
-        print(f'  Patched MOZ_BUILDID={build_id} MOZ_APP_VERSION={version} in {os.path.basename(path)}')
+        print(f'  Patched AppConstants+UpdateService in {os.path.basename(path)}')
+
+# Browser omni.ja: patch aboutDialog so it uses AppConstants for version/buildID
+# instead of Services.appinfo which returns the compiled-in binary values.
+browser_jar_targets = [
+    obj + "/dist/bin/browser/omni.ja",
+    obj + "/dist/firefox/TMRW Browser.app/Contents/Resources/browser/omni.ja",
+]
+for path in browser_jar_targets:
+    if not os.path.exists(path):
+        continue
+    buf = io.BytesIO()
+    modified = False
+    with zipfile.ZipFile(path, 'r') as zin:
+        with zipfile.ZipFile(buf, 'w') as zout:
+            for item in zin.infolist():
+                data = zin.read(item.filename)
+                if item.filename == 'chrome/browser/content/browser/aboutDialog.js':
+                    text = data.decode('utf-8')
+                    new_text = text.replace(
+                        'let version = Services.appinfo.version;',
+                        'let version = AppConstants.MOZ_APP_VERSION;'
+                    )
+                    new_text = new_text.replace(
+                        'let buildID = Services.appinfo.appBuildID;',
+                        'let buildID = AppConstants.MOZ_BUILDID;'
+                    )
+                    if new_text != text:
+                        data = new_text.encode('utf-8')
+                        modified = True
+                zout.writestr(item, data, compress_type=item.compress_type)
+    if modified:
+        with open(path, 'wb') as f:
+            f.write(buf.getvalue())
+        print(f'  Patched aboutDialog.js in {os.path.basename(path)}')
 PYEOF
 
 # Repackage so the source DMG (used by notarize.sh) contains the patched application.ini
