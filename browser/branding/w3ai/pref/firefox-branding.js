@@ -5,32 +5,47 @@
 // This file contains branding-specific prefs.
 
 pref("startup.homepage_override_url", "");
-pref("startup.homepage_welcome_url", "about:newtab");
+pref("startup.homepage_welcome_url", "https://tmrw.w3ai.io/");
 pref("startup.homepage_welcome_url.additional", "");
+
+// Default homepage and new tab page
+pref("browser.startup.homepage", "https://tmrw.w3ai.io/");
+pref("browser.startup.page", 1);
+
+// Disable new tab preloading — prevents content process crash (NS_ERROR_UNEXPECTED
+// in nsIScriptSecurityManager.getLoadContextContentPrincipal) that stalls page loads
+pref("browser.newtab.preload", false);
+
+// Redirect about:newtab to our homepage instead of Activity Stream
+pref("browser.newtabpage.enabled", false);
+pref("browser.newtab.url", "https://tmrw.w3ai.io/");
 // Interval: Time between checks for a new version (in seconds)
 pref("app.update.interval", 21600); // 6 hours
 // Give the user x seconds to react before showing the big UI. default=192 hours
 pref("app.update.promptWaitTime", 691200);
-// app.update.url.manual: URL user can browse to manually if for some reason
-// all update installation attempts fail.
-// app.update.url.details: a default value for the "More information about this
-// update" link supplied in the "An update is available" page of the update
-// wizard.
+
+// TMRW uses a custom updater (no MAR signature check) with MAR-based patches.
+// update.xml served at this URL describes complete .mar packages.
+pref("app.update.url", "https://tmrw-update.w3ai.io/updates/update.xml");
+pref("app.update.enabled", true);
+pref("app.update.auto", false);
+
+
 #if MOZ_UPDATE_CHANNEL == beta
-  pref("app.update.url.manual", "");
-  pref("app.update.url.details", "");
-  pref("app.releaseNotesURL", "");
-  pref("app.releaseNotesURL.aboutDialog", "");
+  pref("app.update.url.manual", "https://tmrw.w3ai.io/download");
+  pref("app.update.url.details", "https://tmrw.w3ai.io/releases");
+  pref("app.releaseNotesURL", "https://tmrw.w3ai.io/releases");
+  pref("app.releaseNotesURL.aboutDialog", "https://tmrw.w3ai.io/releases");
 #elifdef MOZ_ESR
-  pref("app.update.url.manual", "");
-  pref("app.update.url.details", "");
-  pref("app.releaseNotesURL", "");
-  pref("app.releaseNotesURL.aboutDialog", "");
+  pref("app.update.url.manual", "https://tmrw.w3ai.io/download");
+  pref("app.update.url.details", "https://tmrw.w3ai.io/releases");
+  pref("app.releaseNotesURL", "https://tmrw.w3ai.io/releases");
+  pref("app.releaseNotesURL.aboutDialog", "https://tmrw.w3ai.io/releases");
 #else
-  pref("app.update.url.manual", "");
-  pref("app.update.url.details", "");
-  pref("app.releaseNotesURL", "");
-  pref("app.releaseNotesURL.aboutDialog", "");
+  pref("app.update.url.manual", "https://tmrw.w3ai.io/download");
+  pref("app.update.url.details", "https://tmrw.w3ai.io/releases");
+  pref("app.releaseNotesURL", "https://tmrw.w3ai.io/releases");
+  pref("app.releaseNotesURL.aboutDialog", "https://tmrw.w3ai.io/releases");
 #endif
 pref("app.releaseNotesURL.prompt", "");
 

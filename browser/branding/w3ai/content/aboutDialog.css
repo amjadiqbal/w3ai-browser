@@ -9,10 +9,9 @@
 }
 
 #rightBox {
-  background-size: 288px auto;
-  background-position: center 24px;
+  background-size: auto 44px;
   margin-inline: 30px;
-  padding-top: 130px;
+  padding-top: 76px;
 }
 
 #bottomBox {
