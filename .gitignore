@@ -6,6 +6,17 @@
 # W3Ai: local extension drops that are not part of the source tree
 browser/extensions/changelly-exchange/
 
+# W3Ai: private keys and secrets — never commit these
+.env
+browser/branding/w3ai/mar-keys/
+*.p8
+*.p12
+*.pem
+browser-operator-core/
+
+# W3Ai: build artifacts
+output.mar
+
 # Filenames that should be ignored wherever they appear
 *~
 *.pyc
