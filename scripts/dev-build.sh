@@ -100,6 +100,13 @@ apply_branding() {
   [[ -f "$BRANDING/firefox.icns"  ]] && cp "$BRANDING/firefox.icns"  "$RES/firefox.icns"
   [[ -f "$BRANDING/document.icns" ]] && cp "$BRANDING/document.icns" "$RES/document.icns"
 
+  # Tab favicon icons (icon16.png / icon32.png → default16/32.png from branding)
+  local FAVICON_DIR="$RES/browser/chrome/browser/content/branding"
+  if [[ -d "$FAVICON_DIR" ]]; then
+    [[ -f "$BRANDING/default16.png" ]] && cp "$BRANDING/default16.png" "$FAVICON_DIR/icon16.png"
+    [[ -f "$BRANDING/default32.png" ]] && cp "$BRANDING/default32.png" "$FAVICON_DIR/icon32.png"
+  fi
+
   # firefox-branding.js (processed — replaces symlink to unofficial/ which has Nightly prefs)
   local PREFS_FILE="$RES/browser/defaults/preferences/firefox-branding.js"
   if [[ -e "$PREFS_FILE" ]]; then
@@ -179,11 +186,15 @@ PREFS
   fi
 }
 
-# Replace unofficial/content/ logos so Nightly.app symlinks auto-pick up TMRW logos
+# Replace unofficial/ icons so Nightly.app symlinks auto-pick up TMRW logos and tab favicon
 UNOFFICIAL="$REPO_ROOT/browser/branding/unofficial"
 for LOGO in about-logo.png about-logo@2x.png about-logo-private.png about-logo-private@2x.png about-wordmark.svg firefox-wordmark.svg; do
     SRC="$BRANDING/content/$LOGO"
     [[ -f "$SRC" ]] && cp "$SRC" "$UNOFFICIAL/content/$LOGO"
+done
+for SIZE in 16 22 24 32 48 64 128 256; do
+    SRC="$BRANDING/default${SIZE}.png"
+    [[ -f "$SRC" ]] && cp "$SRC" "$UNOFFICIAL/default${SIZE}.png"
 done
 
 # Apply to all dev app locations (mach run uses Nightly.app on macOS artifact builds)
@@ -196,11 +207,15 @@ apply_branding "$BIN_DIR"
 for APP in "$OBJ_DIR/dist/Nightly.app" "$OBJ_DIR/dist/W3Ai.app"; do
     [[ -d "$APP" ]] || continue
     /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW Browser" "$APP/Contents/Info.plist" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Browser" "$APP/Contents/Info.plist" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Browser" "$APP/Contents/Info.plist" 2>/dev/null || true
     STRINGS="$APP/Contents/Resources/en.lproj/InfoPlist.strings"
     if [[ -f "$STRINGS" ]]; then
         plutil -convert xml1 "$STRINGS" 2>/dev/null
         /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW Browser" "$STRINGS" 2>/dev/null || \
           /usr/libexec/PlistBuddy -c "Add :CFBundleName string TMRW Browser" "$STRINGS" 2>/dev/null || true
+        /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Browser" "$STRINGS" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Browser" "$STRINGS" 2>/dev/null || true
         plutil -convert binary1 "$STRINGS" 2>/dev/null
     fi
 done

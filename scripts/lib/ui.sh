@@ -120,8 +120,7 @@ _ui_draw_bar() {
 # Public: upload a file with live progress bar
 # Usage: ui_upload_with_progress URL FILE LABEL VERSION
 # Reads PUBLISH_SECRET from environment.
-# Echoes http status code on stdout (last line).
-# Returns 0 on HTTP 200, 1 otherwise.
+# All UI output goes to stderr; returns 0 on HTTP 200, 1 otherwise.
 ui_upload_with_progress() {
   local url="$1" file="$2" label="$3" version="$4"
 
@@ -134,7 +133,7 @@ ui_upload_with_progress() {
   local response_file
   response_file=$(mktemp)
 
-  ui_info "Uploading ${label} (${total_mb} MB)…"
+  ui_info "Uploading ${label} (${total_mb} MB)…" >&2
 
   # Run curl in foreground — backgrounding + stderr redirect silently drops the
   # HTTP status code when the shell is non-interactive (publish-update.sh context).
@@ -142,6 +141,7 @@ ui_upload_with_progress() {
   http_code=$(curl -s \
     -X POST "$url" \
     -H "Authorization: Bearer $PUBLISH_SECRET" \
+    -H "Accept: application/json" \
     -F "version=$version" \
     -F "file=@$file;type=application/octet-stream" \
     --max-time 1800 \
@@ -152,17 +152,14 @@ ui_upload_with_progress() {
 
   rm -f "$response_file"
 
-  # Print parsed response URL
   if [[ "$http_code" == "200" ]]; then
     local resp_url
     resp_url=$(echo "$response" | python3 -c \
       "import sys,json; print(json.load(sys.stdin).get('url',''))" 2>/dev/null || true)
-    [[ -n "$resp_url" ]] && ui_ok "Available at: $resp_url"
-    printf '%s' "$http_code"
+    [[ -n "$resp_url" ]] && ui_ok "Available at: $resp_url" >&2
     return 0
   else
-    ui_fail "HTTP $http_code — $response"
-    printf '%s' "$http_code"
+    ui_fail "HTTP $http_code — $response" >&2
     return 1
   fi
 }

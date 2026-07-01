@@ -69,14 +69,22 @@ ui_step 1 6 "Extracting app from packaged DMG"
 rm -rf "$WORK_DIR"
 mkdir -p "$WORK_DIR"
 
+hdiutil detach /tmp/tmrw-src-dmg -force -quiet 2>/dev/null || true
 hdiutil attach "$SOURCE_DMG" -nobrowse -mountpoint /tmp/tmrw-src-dmg -quiet
-cp -R "/tmp/tmrw-src-dmg/$APP_NAME.app" "$APP_PATH"
+SRC_APP=$(find /tmp/tmrw-src-dmg -maxdepth 1 -name "*.app" | head -1)
+if [[ -z "$SRC_APP" ]]; then
+  ui_fail "No .app bundle found in source DMG"
+  hdiutil detach /tmp/tmrw-src-dmg -quiet 2>/dev/null || true
+  exit 1
+fi
+cp -R "$SRC_APP" "$APP_PATH"
 hdiutil detach /tmp/tmrw-src-dmg -quiet
 
 ui_info "Extracted to $APP_PATH"
 
 ui_spinner_start "Stripping extended attributes…"
 xattr -cr "$APP_PATH"
+ui_spinner_stop ok
 
 # ── Step 1a: Inject TMRW branding into omni.ja ────────────────────────────────
 # The source DMG was produced by mach package which packs Mozilla's locale files.
@@ -127,9 +135,24 @@ PYEOF
     DST="$APP_PATH/Contents/Resources/$ICON"
     [[ -f "$SRC" && -f "$DST" ]] && cp "$SRC" "$DST"
   done
-  # Update Info.plist CFBundleName
+  # Update Info.plist — CFBundleName and CFBundleDisplayName
   /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW Browser" \
     "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
+  /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Browser" \
+    "$APP_PATH/Contents/Info.plist" 2>/dev/null || \
+  /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Browser" \
+    "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
+  # Update en.lproj/InfoPlist.strings — macOS menu bar reads this over Info.plist
+  _STRINGS="$APP_PATH/Contents/Resources/en.lproj/InfoPlist.strings"
+  if [[ -f "$_STRINGS" ]]; then
+    plutil -convert xml1 "$_STRINGS" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW Browser" "$_STRINGS" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleName string TMRW Browser" "$_STRINGS" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Browser" "$_STRINGS" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Browser" "$_STRINGS" 2>/dev/null || true
+    plutil -convert binary1 "$_STRINGS" 2>/dev/null || true
+    ui_info "Patched InfoPlist.strings → TMRW Browser"
+  fi
 fi
 
 # ── Step 1b: Patch updater.app Info.plist if missing ─────────────────────────

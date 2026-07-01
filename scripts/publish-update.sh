@@ -54,28 +54,23 @@ sync_version() {
   sed -i '' "s/MOZ_APP_VERSION_DISPLAY=.*/MOZ_APP_VERSION_DISPLAY=$v/" "$REPO_ROOT/browser/branding/w3ai/configure.sh" 2>/dev/null || true
 }
 
-# Auto date-version: 1.0.YYYYMMDD. If re-publishing on the same day, version stays the same.
+# Use APP_VERSION from .env as-is (no date override).
+# To bump the version, update APP_VERSION in .env before running this script.
 if [[ -z "$TEST_VERSION" && "$PUBLISH_ONLY" != "true" ]]; then
-  DATE_VERSION="1.0.$(date +%Y%m%d)"
-  if [[ "$VERSION" != "$DATE_VERSION" ]]; then
-    VERSION="$DATE_VERSION"
-    sync_version "$VERSION"
-    echo "Date build version: $VERSION"
-    git -C "$REPO_ROOT" add \
-      browser/config/version.txt \
-      browser/config/version_display.txt \
-      mozconfig \
-      "browser/branding/w3ai/configure.sh" 2>/dev/null || true
-    git -C "$REPO_ROOT" diff --cached --quiet || \
-      git -C "$REPO_ROOT" commit -m "chore(release): date build $VERSION"
-    git -C "$REPO_ROOT" tag -f -a "v${VERSION}" -m "Release v${VERSION}"
-    git -C "$REPO_ROOT" push origin HEAD --follow-tags --force-with-lease 2>/dev/null || \
-      git -C "$REPO_ROOT" push origin HEAD
-    git -C "$REPO_ROOT" push origin "v${VERSION}" --force 2>/dev/null || true
-    echo "    Git tag v${VERSION} pushed."
-  else
-    echo "Re-publishing existing date build: $VERSION"
-  fi
+  echo "Publishing version: $VERSION"
+  sync_version "$VERSION"
+  git -C "$REPO_ROOT" add \
+    browser/config/version.txt \
+    browser/config/version_display.txt \
+    mozconfig \
+    "browser/branding/w3ai/configure.sh" 2>/dev/null || true
+  git -C "$REPO_ROOT" diff --cached --quiet || \
+    git -C "$REPO_ROOT" commit -m "chore(release): bump version to $VERSION"
+  git -C "$REPO_ROOT" tag -f -a "v${VERSION}" -m "Release v${VERSION}"
+  git -C "$REPO_ROOT" push origin HEAD --follow-tags --force-with-lease 2>/dev/null || \
+    git -C "$REPO_ROOT" push origin HEAD
+  git -C "$REPO_ROOT" push origin "v${VERSION}" --force 2>/dev/null || true
+  echo "    Git tag v${VERSION} pushed."
 fi
 
 for var in PUBLISH_SECRET PUBLISH_HMAC_SECRET UPDATE_SERVER_URL; do
@@ -300,6 +295,25 @@ PYEOF
 # the OLD source DMG and the DMG ships the wrong Version/BuildID.
 ui_info "Repackaging with Version=${VERSION} BuildID=${BUILD_ID}..."
 "$REPO_ROOT/mach" package >> /tmp/publish_pkg.log 2>&1 || { ui_fail "mach package failed"; exit 1; }
+
+# Artifact builds use unofficial branding → mach package produces Nightly.app.
+# Rename it so notarize.sh and make_full_update.sh can find TMRW Browser.app.
+FIREFOX_DIR="$OBJ_DIR/dist/firefox"
+rm -rf "$FIREFOX_DIR/TMRW Browser.app.work" 2>/dev/null || true
+if [[ -d "$FIREFOX_DIR/Nightly.app" ]]; then
+  rm -rf "$FIREFOX_DIR/TMRW Browser.app" 2>/dev/null || true
+  mv "$FIREFOX_DIR/Nightly.app" "$FIREFOX_DIR/TMRW Browser.app"
+  ui_info "Renamed Nightly.app → TMRW Browser.app"
+fi
+
+# mach package names the DMG "firefox-<version>.en-US.mac.dmg" when using unofficial branding.
+# Rename it to tmrw-browser-<version>.en-US.mac.dmg so notarize.sh always picks the freshest build.
+NEW_FF_DMG=$(ls -t "$OBJ_DIR/dist/firefox-"*.dmg 2>/dev/null | head -1 || true)
+if [[ -n "$NEW_FF_DMG" ]]; then
+  RENAMED_DMG="$OBJ_DIR/dist/tmrw-browser-${VERSION}.en-US.mac.dmg"
+  mv "$NEW_FF_DMG" "$RENAMED_DMG"
+  ui_info "Renamed $(basename "$NEW_FF_DMG") → tmrw-browser-${VERSION}.en-US.mac.dmg"
+fi
 ui_ok "Repackaged"
 
 # ── Step 1: Notarize ────────────────────────────────────────────
@@ -317,6 +331,29 @@ ui_ok "$(( DMG_SIZE / 1024 / 1024 )) MB — ${DMG_HASH:0:16}…"
 
 # ── Step 2: Create MAR ────────────────────────────────────────────
 ui_step 2 5 "Creating MAR update package"
+
+# Patch bundle name in the MAR source app before packaging.
+# Without this, the MAR ships Info.plist with CFBundleName=Nightly (from mach package)
+# and installed browsers show "Verifying Nightly…" on first launch after update.
+_MAR_APP="$OBJ_DIR/dist/firefox/TMRW Browser.app"
+if [[ -d "$_MAR_APP" ]]; then
+  /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW Browser" \
+    "$_MAR_APP/Contents/Info.plist" 2>/dev/null || true
+  /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Browser" \
+    "$_MAR_APP/Contents/Info.plist" 2>/dev/null || \
+  /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Browser" \
+    "$_MAR_APP/Contents/Info.plist" 2>/dev/null || true
+  _MAR_STRINGS="$_MAR_APP/Contents/Resources/en.lproj/InfoPlist.strings"
+  if [[ -f "$_MAR_STRINGS" ]]; then
+    plutil -convert xml1 "$_MAR_STRINGS" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW Browser" "$_MAR_STRINGS" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleName string TMRW Browser" "$_MAR_STRINGS" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Browser" "$_MAR_STRINGS" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Browser" "$_MAR_STRINGS" 2>/dev/null || true
+    plutil -convert binary1 "$_MAR_STRINGS" 2>/dev/null || true
+  fi
+  ui_info "Patched MAR source bundle name → TMRW Browser"
+fi
 
 # Ensure all updater binaries in the firefox package are patched before MAR creation.
 ui_spinner_start "Patching updater binary in MAR source (fix XPC loop)…"
@@ -376,13 +413,11 @@ ui_ok "$(( MAR_SIZE / 1024 / 1024 )) MB — ${MAR_HASH:0:16}…"
 # ── Step 3: Upload MAR ────────────────────────────────────────────
 ui_step 3 5 "Uploading MAR"
 printf "\n"
-mar_http=$(ui_upload_with_progress \
+if ui_upload_with_progress \
   "$BASE_URL/api/upload/mar" \
   "$MAR_OUTPUT" \
   "MAR  •  $(( MAR_SIZE / 1024 / 1024 )) MB" \
-  "$VERSION")
-
-if [[ "$mar_http" == "200" ]]; then
+  "$VERSION"; then
   rm -rf "$MAR_TMPDIR"
   ui_ok "Local MAR deleted"
 else
@@ -392,13 +427,11 @@ fi
 # ── Step 4: Upload DMG ────────────────────────────────────────────
 ui_step 4 5 "Uploading DMG"
 printf "\n"
-dmg_http=$(ui_upload_with_progress \
+if ui_upload_with_progress \
   "$BASE_URL/api/upload/dmg" \
   "$SIGNED_DMG" \
   "DMG  •  $(( DMG_SIZE / 1024 / 1024 )) MB" \
-  "$VERSION")
-
-if [[ "$dmg_http" == "200" ]]; then
+  "$VERSION"; then
   rm -f "$SIGNED_DMG"
   ui_ok "Local DMG deleted"
 else

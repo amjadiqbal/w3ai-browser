@@ -80,7 +80,7 @@ XPCOMUtils.defineLazyPreferenceGetter(
   lazy,
   "chatProviders",
   "browser.ml.chat.providers",
-  "claude,chatgpt,copilot,gemini,lechat",
+  "claude,chatgpt,copilot,gemini",
   reorderChatProviders
 );
 XPCOMUtils.defineLazyPreferenceGetter(
@@ -208,19 +208,6 @@ export const GenAI = {
         maxLength: 8192,
         name: "HuggingChat",
         tooltipId: "genai-onboarding-huggingchat-tooltip",
-      },
-    ],
-    [
-      "https://chat.mistral.ai/chat",
-      {
-        iconUrl: "chrome://browser/content/genai/assets/brands/lechat.svg",
-        id: "lechat",
-        link1: "https://mistral.ai/terms/#terms-of-service-le-chat",
-        link2: "https://mistral.ai/terms/#privacy-policy",
-        linksId: "genai-settings-chat-lechat-links",
-        maxLength: 13350,
-        name: "Le Chat Mistral",
-        tooltipId: "genai-onboarding-lechat-tooltip",
       },
     ],
     [

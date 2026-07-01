@@ -196,6 +196,8 @@
 	<string>@MOZ_MACBUNDLE_ID@</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleDisplayName</key>
+	<string>@MAC_APP_NAME@</string>
 	<key>CFBundleName</key>
 	<string>@MAC_APP_NAME@</string>
 	<key>CFBundlePackageType</key>

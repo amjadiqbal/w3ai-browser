@@ -268,9 +268,7 @@ browser {
     &.huggingchat {
       background-image: url(assets/brands/huggingchat.svg);
     }
-    &.lechat {
-      background-image: url(assets/brands/lechat.svg);
-    }
+
   }
 
   .text {
