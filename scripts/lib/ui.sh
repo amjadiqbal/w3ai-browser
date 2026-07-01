@@ -19,7 +19,7 @@ _ui_repeat() {
 }
 
 # ── Banner ────────────────────────────────────────────────────────────────────
-# Usage: ui_banner "TMRW Browser v1.0.20260624 — publishing update"
+# Usage: ui_banner "TMRW v1.0.20260624 — publishing update"
 ui_banner() {
   local msg="$1" width=60
   local pad=$(( (width - ${#msg}) / 2 ))

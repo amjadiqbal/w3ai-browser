@@ -49,7 +49,7 @@ class UpdateController extends Controller
 
         // ── Resolve real filename + display name ──────────────────────────────
         $cleanAliases = [
-            'TMRW-Browser.dmg'          => ['field' => 'dmg_filename', 'ext' => 'dmg',         'display' => 'TMRW Browser.dmg'],
+            'TMRW-Browser.dmg'          => ['field' => 'dmg_filename', 'ext' => 'dmg',         'display' => 'TMRW.dmg'],
             'TMRW-Browser.complete.mar'  => ['field' => 'mar_filename', 'ext' => 'complete.mar', 'display' => 'TMRW-Browser.complete.mar'],
         ];
 
@@ -75,7 +75,7 @@ class UpdateController extends Controller
         // ── Versioned direct download ─────────────────────────────────────────
         abort_unless(Storage::disk(self::STORAGE_DISK)->exists($filename), 404, 'File not found');
 
-        $display = preg_replace('/^TMRW-Browser-v[\d.]+\.dmg$/',          'TMRW Browser.dmg',          $filename);
+        $display = preg_replace('/^TMRW-Browser-v[\d.]+\.dmg$/',          'TMRW.dmg',          $filename);
         $display = preg_replace('/^TMRW-Browser-v[\d.]+\.complete\.mar$/', 'TMRW-Browser.complete.mar', $display);
 
         return $this->streamFile($filename, $display, immutable: true);

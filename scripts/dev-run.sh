@@ -11,8 +11,8 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OBJ="$REPO_ROOT/obj-x86_64-apple-darwin25.5.0"
-PKG_APP="$OBJ/dist/firefox/TMRW Browser.app"
-RAW_APP="$OBJ/dist/TMRW Browser.app"
+PKG_APP="$OBJ/dist/firefox/TMRW.app"
+RAW_APP="$OBJ/dist/TMRW.app"
 FIREFOX="$PKG_APP/Contents/MacOS/firefox"
 PROFILE="$OBJ/tmp/profile-default"
 
@@ -25,8 +25,8 @@ if [[ ! -f "$FIREFOX" ]]; then
 fi
 
 # Fix a .app bundle so it can run on macOS Tahoe with multi-process enabled.
-# Applied to both the raw build (dist/TMRW Browser.app, used by ./mach run) and
-# the packaged build (dist/firefox/TMRW Browser.app, used by this script).
+# Applied to both the raw build (dist/TMRW.app, used by ./mach run) and
+# the packaged build (dist/firefox/TMRW.app, used by this script).
 #
 # Three problems this resolves:
 #  1. plugin-container.app sub-bundle missing → posix_spawnp Error:0 (child never spawns)
@@ -127,7 +127,7 @@ fix_app "$PKG_APP"
 
 mkdir -p "$PROFILE"
 
-echo "==> Launching TMRW Browser (packaged build)..."
+echo "==> Launching TMRW (packaged build)..."
 echo "    Profile: $PROFILE"
 echo ""
 

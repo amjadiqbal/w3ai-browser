@@ -4,7 +4,7 @@
 #
 # Usage:
 #   EXPECTED_VERSION=1.0.20260625 \
-#   APP_PATH="/path/to/TMRW Browser.app" \
+#   APP_PATH="/path/to/TMRW.app" \
 #   DMG_PATH="/path/to/TMRW-Browser-v1.0.20260625.dmg" \
 #   MAR_PATH="/path/to/TMRW-Browser-v1.0.20260625.complete.mar" \
 #   UPDATE_XML_URL="https://tmrw-update.w3ai.io/updates/update.xml" \
@@ -54,11 +54,11 @@ fi
 
 if [[ -z "$APP_PATH" ]]; then
   # Default to built packaged app
-  APP_PATH="$REPO_ROOT/obj-x86_64-apple-darwin25.5.0/dist/firefox/TMRW Browser.app"
+  APP_PATH="$REPO_ROOT/obj-x86_64-apple-darwin25.5.0/dist/firefox/TMRW.app"
 fi
 
 echo ""
-echo "=== TMRW Browser Release Verification ==="
+echo "=== TMRW Release Verification ==="
 echo "  Expected version : $EXPECTED_VERSION"
 echo "  App bundle       : $APP_PATH"
 [[ -n "$DMG_PATH" ]] && echo "  DMG              : $DMG_PATH"
@@ -129,7 +129,7 @@ if [[ -n "$DMG_PATH" ]]; then
     ok "DMG exists ($(( $(stat -f%z "$DMG_PATH") / 1024 / 1024 )) MB)"
     MOUNT_POINT="/tmp/tmrw-verify-dmg-$$"
     if hdiutil attach "$DMG_PATH" -nobrowse -mountpoint "$MOUNT_POINT" -quiet 2>/dev/null; then
-      DMG_APP="$MOUNT_POINT/TMRW Browser.app"
+      DMG_APP="$MOUNT_POINT/TMRW.app"
       if [[ -d "$DMG_APP" ]]; then
         DMG_INI="$DMG_APP/Contents/Resources/application.ini"
         DMG_VERSION="$(grep '^Version=' "$DMG_INI" 2>/dev/null | cut -d= -f2)"
@@ -150,7 +150,7 @@ if [[ -n "$DMG_PATH" ]]; then
           fail "DMG contains stale version 1.0.20260624!"
         fi
       else
-        fail "TMRW Browser.app not found inside DMG"
+        fail "TMRW.app not found inside DMG"
       fi
       hdiutil detach "$MOUNT_POINT" -quiet 2>/dev/null || true
     else

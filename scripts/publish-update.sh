@@ -101,7 +101,7 @@ if [[ -n "$TEST_VERSION" ]]; then
   exit 0
 fi
 
-ui_banner "TMRW Browser v${VERSION} — publishing update"
+ui_banner "TMRW v${VERSION} — publishing update"
 
 # ── --publish-only: skip notarize + upload, just call the publish endpoint ────
 if [[ "$PUBLISH_ONLY" == "true" ]]; then
@@ -157,7 +157,7 @@ for path in [
 for path in [
     "$OBJ_DIR/build/platform.ini",
     "$OBJ_DIR/dist/bin/platform.ini",
-    "$OBJ_DIR/dist/TMRW Browser.app/Contents/Resources/platform.ini",
+    "$OBJ_DIR/dist/TMRW.app/Contents/Resources/platform.ini",
 ]:
     p = pathlib.Path(path)
     if not p.exists(): continue
@@ -185,7 +185,7 @@ obj = "$OBJ_DIR"
 # files first, the regenerated omni.ja will always have the stale compile-time MOZ_BUILDID.
 expanded_sources = [
     obj + "/dist/bin/modules/AppConstants.sys.mjs",
-    obj + "/dist/TMRW Browser.app/Contents/Resources/modules/AppConstants.sys.mjs",
+    obj + "/dist/TMRW.app/Contents/Resources/modules/AppConstants.sys.mjs",
 ]
 for expanded in expanded_sources:
     if not os.path.exists(expanded): continue
@@ -201,8 +201,8 @@ for expanded in expanded_sources:
 # so that mach package copies the correct version into the distributable DMG.
 import subprocess
 info_plists = [
-    obj + "/dist/TMRW Browser.app/Contents/Info.plist",
-    obj + "/dist/bin/TMRW Browser.app/Contents/Info.plist",
+    obj + "/dist/TMRW.app/Contents/Info.plist",
+    obj + "/dist/bin/TMRW.app/Contents/Info.plist",
 ]
 for plist in info_plists:
     if not os.path.exists(plist): continue
@@ -212,7 +212,7 @@ for plist in info_plists:
             capture_output=True
         )
     subprocess.run(
-        ["/usr/libexec/PlistBuddy", "-c", f"Set :CFBundleGetInfoString TMRW Browser {version}", plist],
+        ["/usr/libexec/PlistBuddy", "-c", f"Set :CFBundleGetInfoString TMRW {version}", plist],
         capture_output=True
     )
     print(f'  Patched Info.plist {version} in {os.path.relpath(plist, obj)}')
@@ -221,7 +221,7 @@ for plist in info_plists:
 # Toolkit omni.ja: patch AppConstants and UpdateService (buildID comparisons).
 jar_targets = [
     obj + "/dist/bin/omni.ja",
-    obj + "/dist/firefox/TMRW Browser.app/Contents/Resources/omni.ja",
+    obj + "/dist/firefox/TMRW.app/Contents/Resources/omni.ja",
 ]
 for path in jar_targets:
     if not os.path.exists(path):
@@ -259,7 +259,7 @@ for path in jar_targets:
 # instead of Services.appinfo which returns the compiled-in binary values.
 browser_jar_targets = [
     obj + "/dist/bin/browser/omni.ja",
-    obj + "/dist/firefox/TMRW Browser.app/Contents/Resources/browser/omni.ja",
+    obj + "/dist/firefox/TMRW.app/Contents/Resources/browser/omni.ja",
 ]
 for path in browser_jar_targets:
     if not os.path.exists(path):
@@ -297,13 +297,13 @@ ui_info "Repackaging with Version=${VERSION} BuildID=${BUILD_ID}..."
 "$REPO_ROOT/mach" package >> /tmp/publish_pkg.log 2>&1 || { ui_fail "mach package failed"; exit 1; }
 
 # Artifact builds use unofficial branding → mach package produces Nightly.app.
-# Rename it so notarize.sh and make_full_update.sh can find TMRW Browser.app.
+# Rename it so notarize.sh and make_full_update.sh can find TMRW.app.
 FIREFOX_DIR="$OBJ_DIR/dist/firefox"
-rm -rf "$FIREFOX_DIR/TMRW Browser.app.work" 2>/dev/null || true
+rm -rf "$FIREFOX_DIR/TMRW.app.work" 2>/dev/null || true
 if [[ -d "$FIREFOX_DIR/Nightly.app" ]]; then
-  rm -rf "$FIREFOX_DIR/TMRW Browser.app" 2>/dev/null || true
-  mv "$FIREFOX_DIR/Nightly.app" "$FIREFOX_DIR/TMRW Browser.app"
-  ui_info "Renamed Nightly.app → TMRW Browser.app"
+  rm -rf "$FIREFOX_DIR/TMRW.app" 2>/dev/null || true
+  mv "$FIREFOX_DIR/Nightly.app" "$FIREFOX_DIR/TMRW.app"
+  ui_info "Renamed Nightly.app → TMRW.app"
 fi
 
 # mach package names the DMG "firefox-<version>.en-US.mac.dmg" when using unofficial branding.
@@ -320,7 +320,7 @@ ui_ok "Repackaged"
 ui_step 1 5 "Notarizing build"
 "$REPO_ROOT/scripts/notarize.sh"
 
-SIGNED_DMG="$OBJ_DIR/dist/TMRW Browser.dmg"
+SIGNED_DMG="$OBJ_DIR/dist/TMRW.dmg"
 if [[ ! -f "$SIGNED_DMG" ]]; then
   ui_fail "Notarized DMG not found at $SIGNED_DMG"
   exit 1
@@ -335,24 +335,24 @@ ui_step 2 5 "Creating MAR update package"
 # Patch bundle name in the MAR source app before packaging.
 # Without this, the MAR ships Info.plist with CFBundleName=Nightly (from mach package)
 # and installed browsers show "Verifying Nightly…" on first launch after update.
-_MAR_APP="$OBJ_DIR/dist/firefox/TMRW Browser.app"
+_MAR_APP="$OBJ_DIR/dist/firefox/TMRW.app"
 if [[ -d "$_MAR_APP" ]]; then
-  /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW Browser" \
+  /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW" \
     "$_MAR_APP/Contents/Info.plist" 2>/dev/null || true
-  /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Browser" \
+  /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW" \
     "$_MAR_APP/Contents/Info.plist" 2>/dev/null || \
-  /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Browser" \
+  /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW" \
     "$_MAR_APP/Contents/Info.plist" 2>/dev/null || true
   _MAR_STRINGS="$_MAR_APP/Contents/Resources/en.lproj/InfoPlist.strings"
   if [[ -f "$_MAR_STRINGS" ]]; then
     plutil -convert xml1 "$_MAR_STRINGS" 2>/dev/null || true
-    /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW Browser" "$_MAR_STRINGS" 2>/dev/null || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundleName string TMRW Browser" "$_MAR_STRINGS" 2>/dev/null || true
-    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Browser" "$_MAR_STRINGS" 2>/dev/null || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Browser" "$_MAR_STRINGS" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW" "$_MAR_STRINGS" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleName string TMRW" "$_MAR_STRINGS" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW" "$_MAR_STRINGS" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW" "$_MAR_STRINGS" 2>/dev/null || true
     plutil -convert binary1 "$_MAR_STRINGS" 2>/dev/null || true
   fi
-  ui_info "Patched MAR source bundle name → TMRW Browser"
+  ui_info "Patched MAR source bundle name → TMRW"
 fi
 
 # Ensure all updater binaries in the firefox package are patched before MAR creation.
@@ -363,9 +363,9 @@ PATCH  = bytes([0xb8,0x01,0x00,0x00,0x00,0xc3,0x90,0x90,0x90,0x90])
 OFFSET = 0xeb10
 obj    = os.environ['REPO_ROOT'] + '/obj-x86_64-apple-darwin25.5.0'
 targets = [
-    obj + '/dist/firefox/TMRW Browser.app/Contents/MacOS/updater.app/Contents/MacOS/org.mozilla.updater',
-    obj + '/dist/firefox/TMRW Browser.app/Contents/Library/LaunchServices/org.mozilla.updater',
-    obj + '/dist/firefox/TMRW Browser.app/Contents/Resources/org.mozilla.updater',
+    obj + '/dist/firefox/TMRW.app/Contents/MacOS/updater.app/Contents/MacOS/org.mozilla.updater',
+    obj + '/dist/firefox/TMRW.app/Contents/Library/LaunchServices/org.mozilla.updater',
+    obj + '/dist/firefox/TMRW.app/Contents/Resources/org.mozilla.updater',
     obj + '/dist/bin/org.mozilla.updater',
 ]
 patched = 0
@@ -392,7 +392,7 @@ MAR_OUTPUT="$MAR_TMPDIR/tmrw-${VERSION}.complete.mar"
   MAR_CHANNEL_ID=default \
   XZ=/usr/local/bin/xz \
     "$REPO_ROOT/tools/update-packaging/make_full_update.sh" \
-    "$MAR_OUTPUT" "$OBJ_DIR/dist/firefox/TMRW Browser.app" \
+    "$MAR_OUTPUT" "$OBJ_DIR/dist/firefox/TMRW.app" \
     2>&1 | grep -v "^        add\|^ add-if-not\|^      rmdir\|^     remove\|^mv: rename" || true
 )
 

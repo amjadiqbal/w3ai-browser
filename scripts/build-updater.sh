@@ -119,10 +119,10 @@ echo "  Linking..."
 
 echo "  Replacing updater binaries..."
 for p in \
-  "$OBJ/dist/TMRW Browser.app/Contents/MacOS/updater.app/Contents/MacOS/org.mozilla.updater" \
-  "$OBJ/dist/TMRW Browser.app/Contents/Library/LaunchServices/org.mozilla.updater" \
-  "$OBJ/dist/TMRW Browser.app/Contents/Resources/org.mozilla.updater" \
-  "$OBJ/dist/firefox/TMRW Browser.app/Contents/Library/LaunchServices/org.mozilla.updater" \
+  "$OBJ/dist/TMRW.app/Contents/MacOS/updater.app/Contents/MacOS/org.mozilla.updater" \
+  "$OBJ/dist/TMRW.app/Contents/Library/LaunchServices/org.mozilla.updater" \
+  "$OBJ/dist/TMRW.app/Contents/Resources/org.mozilla.updater" \
+  "$OBJ/dist/firefox/TMRW.app/Contents/Library/LaunchServices/org.mozilla.updater" \
   "$OBJ/dist/bin/org.mozilla.updater" \
   "$OBJ/dist/bin/updater.app/Contents/MacOS/org.mozilla.updater"
 do

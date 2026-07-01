@@ -2,7 +2,7 @@
 # upload-release.sh — upload existing notarized DMG + create & upload MAR + publish manifest
 #
 # Run this after notarize.sh has produced a signed DMG, OR after manually placing
-# a notarized DMG at:  obj-x86_64-apple-darwin25.5.0/dist/TMRW Browser.dmg
+# a notarized DMG at:  obj-x86_64-apple-darwin25.5.0/dist/TMRW.dmg
 #
 # Usage:
 #   ./scripts/upload-release.sh             # upload DMG + create & upload MAR + publish
@@ -48,19 +48,19 @@ done
 BASE_URL="${UPDATE_SERVER_URL}"
 
 # ── Detect version from built app, fall back to .env ──────────────────────────
-APP_INI="$OBJ_DIR/dist/firefox/TMRW Browser.app/Contents/Resources/application.ini"
+APP_INI="$OBJ_DIR/dist/firefox/TMRW.app/Contents/Resources/application.ini"
 VERSION=""
 [[ -f "$APP_INI" ]] && VERSION="$(grep "^Version=" "$APP_INI" | cut -d= -f2)"
 [[ -z "$VERSION" ]] && VERSION="${APP_VERSION:-1.0.0}"
 
 BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
-SIGNED_DMG="$OBJ_DIR/dist/TMRW Browser.dmg"
+SIGNED_DMG="$OBJ_DIR/dist/TMRW.dmg"
 MAR_TMPDIR=""
 MAR_OUTPUT=""
 MAR_SIZE=0 ; MAR_HASH=""
 DMG_SIZE=0 ; DMG_HASH=""
 
-ui_banner "TMRW Browser v${VERSION} — upload release"
+ui_banner "TMRW v${VERSION} — upload release"
 
 # ── Step 1: Validate DMG ──────────────────────────────────────────────────────
 if [[ "$MAR_ONLY" != "true" ]]; then
@@ -78,7 +78,7 @@ fi
 # ── Step 2: Create MAR ────────────────────────────────────────────────────────
 if [[ "$DMG_ONLY" != "true" ]]; then
   ui_step 2 4 "Creating MAR update package"
-  PKG_APP="$OBJ_DIR/dist/firefox/TMRW Browser.app"
+  PKG_APP="$OBJ_DIR/dist/firefox/TMRW.app"
   if [[ ! -d "$PKG_APP" ]]; then
     ui_fail "Packaged app not found: $PKG_APP"
     ui_info "Run: ./mach build faster && ./mach package"

@@ -17,13 +17,13 @@
 ## https://mozilla-l10n.github.io/styleguides/mozilla_general/#brands-copyright-and-trademark
 
 -brand-shorter-name = TMRW
--brand-short-name = TMRW Browser
+-brand-short-name = TMRW
 -brand-shortcut-name = TMRW
--brand-full-name = TMRW Browser
+-brand-full-name = TMRW
 # This brand name can be used in messages where the product name needs to
 # remain unchanged across different versions (Nightly, Beta, etc.).
 -brand-product-name = TMRW
 -vendor-short-name = Plato
-trademarkInfo = Plato and the TMRW Browser logos are trademarks of the Plato Technologies Inc.
+trademarkInfo = Plato and the TMRW logos are trademarks of the Plato Technologies Inc.
 # Additional brand tokens used by preferences and home settings
 -firefox-home-brand-name = TMRW Home

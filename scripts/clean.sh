@@ -20,7 +20,7 @@ for arg in "$@"; do
 done
 
 echo "============================================================"
-echo "  TMRW Browser — Clean"
+echo "  TMRW — Clean"
 echo "  Mode: $([ $DEEP -eq 1 ] && echo "DEEP (--all)" || echo "safe")"
 echo "============================================================"
 echo ""
@@ -29,7 +29,7 @@ echo ""
 echo "==> Removing stale DMGs and build artifacts from dist/..."
 if [[ -d "$DIST_DIR" ]]; then
   find "$DIST_DIR" -maxdepth 1 -name "*.dmg" -delete 2>/dev/null || true
-  find "$DIST_DIR" -maxdepth 1 -name "*.app" -not -name "TMRW Browser.app" \
+  find "$DIST_DIR" -maxdepth 1 -name "*.app" -not -name "TMRW.app" \
     -exec rm -rf {} + 2>/dev/null || true
   find "$DIST_DIR" -maxdepth 1 \( -name "*.txt" -o -name "*.zip" -o -name "*.mar" \) \
     -delete 2>/dev/null || true

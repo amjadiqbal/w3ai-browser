@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Dev build + launch for TMRW Browser artifact builds.
+# Dev build + launch for TMRW artifact builds.
 #
 # Strategy: use the original UNSIGNED Mozilla artifact binary as the base so
 # child processes (tabs, GPU, sockets) spawn without code-signature enforcement.
@@ -47,11 +47,11 @@ echo "==> Installing updated JS/CSS files..."
 cd "$REPO_ROOT"
 ./mach build faster 2>&1 | grep -E "Added/updated|Elapsed" || true
 
-# ── Step 2b: ensure TMRW Browser.app has the runtime files from Nightly.app ─
+# ── Step 2b: ensure TMRW.app has the runtime files from Nightly.app ─
 # ./mach build faster only installs JS/CSS; binary-install artifacts go to
 # Nightly.app (the artifact name). Mirror the missing runtime files so that
-# dist/TMRW Browser.app (MOZ_MACBUNDLE_NAME) can actually launch.
-MACH_APP="$OBJ_DIR/dist/TMRW Browser.app"
+# dist/TMRW.app (MOZ_MACBUNDLE_NAME) can actually launch.
+MACH_APP="$OBJ_DIR/dist/TMRW.app"
 NIGHTLY_APP="$OBJ_DIR/dist/Nightly.app"
 DEPLIBS_SRC="$OBJ_DIR/toolkit/library/build/dependentlibs.list"
 if [[ -d "$MACH_APP" ]]; then
@@ -226,16 +226,16 @@ apply_branding "$BIN_DIR"
 # Fix CFBundleName and InfoPlist.strings for Nightly.app and W3Ai.app
 for APP in "$OBJ_DIR/dist/Nightly.app" "$OBJ_DIR/dist/W3Ai.app"; do
     [[ -d "$APP" ]] || continue
-    /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW Browser" "$APP/Contents/Info.plist" 2>/dev/null || true
-    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Browser" "$APP/Contents/Info.plist" 2>/dev/null || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Browser" "$APP/Contents/Info.plist" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW" "$APP/Contents/Info.plist" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW" "$APP/Contents/Info.plist" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW" "$APP/Contents/Info.plist" 2>/dev/null || true
     STRINGS="$APP/Contents/Resources/en.lproj/InfoPlist.strings"
     if [[ -f "$STRINGS" ]]; then
         plutil -convert xml1 "$STRINGS" 2>/dev/null
-        /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW Browser" "$STRINGS" 2>/dev/null || \
-          /usr/libexec/PlistBuddy -c "Add :CFBundleName string TMRW Browser" "$STRINGS" 2>/dev/null || true
-        /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Browser" "$STRINGS" 2>/dev/null || \
-          /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Browser" "$STRINGS" 2>/dev/null || true
+        /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW" "$STRINGS" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Add :CFBundleName string TMRW" "$STRINGS" 2>/dev/null || true
+        /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW" "$STRINGS" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW" "$STRINGS" 2>/dev/null || true
         plutil -convert binary1 "$STRINGS" 2>/dev/null
     fi
 done

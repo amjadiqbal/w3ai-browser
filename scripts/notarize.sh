@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# notarize.sh — package, codesign, notarize, and staple TMRW Browser
+# notarize.sh — package, codesign, notarize, and staple TMRW
 #
 # Prerequisites:
 #   1. Xcode Command Line Tools (xcode-select --install)
@@ -21,7 +21,7 @@ if [[ -z "$SOURCE_DMG" ]]; then
   SOURCE_DMG="$(ls -t "$OBJ_DIR/dist/firefox-"*.dmg 2>/dev/null | head -1)" || true
 fi
 WORK_DIR="/tmp/tmrw-notarize"
-APP_NAME="TMRW Browser"
+APP_NAME="TMRW"
 APP_PATH="$WORK_DIR/$APP_NAME.app"
 ZIP_PATH="$WORK_DIR/$APP_NAME.zip"
 OUT_DMG="$OBJ_DIR/dist/$APP_NAME.dmg"
@@ -136,22 +136,22 @@ PYEOF
     [[ -f "$SRC" && -f "$DST" ]] && cp "$SRC" "$DST"
   done
   # Update Info.plist — CFBundleName and CFBundleDisplayName
-  /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW Browser" \
+  /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW" \
     "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
-  /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Browser" \
+  /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW" \
     "$APP_PATH/Contents/Info.plist" 2>/dev/null || \
-  /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Browser" \
+  /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW" \
     "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
   # Update en.lproj/InfoPlist.strings — macOS menu bar reads this over Info.plist
   _STRINGS="$APP_PATH/Contents/Resources/en.lproj/InfoPlist.strings"
   if [[ -f "$_STRINGS" ]]; then
     plutil -convert xml1 "$_STRINGS" 2>/dev/null || true
-    /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW Browser" "$_STRINGS" 2>/dev/null || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundleName string TMRW Browser" "$_STRINGS" 2>/dev/null || true
-    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Browser" "$_STRINGS" 2>/dev/null || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Browser" "$_STRINGS" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW" "$_STRINGS" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleName string TMRW" "$_STRINGS" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW" "$_STRINGS" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW" "$_STRINGS" 2>/dev/null || true
     plutil -convert binary1 "$_STRINGS" 2>/dev/null || true
-    ui_info "Patched InfoPlist.strings → TMRW Browser"
+    ui_info "Patched InfoPlist.strings → TMRW"
   fi
 fi
 
@@ -253,9 +253,9 @@ targets = [
     app  + '/Contents/Library/LaunchServices/org.mozilla.updater',
     app  + '/Contents/Resources/org.mozilla.updater',
     obj  + '/dist/bin/org.mozilla.updater',
-    obj  + '/dist/firefox/TMRW Browser.app/Contents/MacOS/updater.app/Contents/MacOS/org.mozilla.updater',
-    obj  + '/dist/firefox/TMRW Browser.app/Contents/Library/LaunchServices/org.mozilla.updater',
-    obj  + '/dist/firefox/TMRW Browser.app/Contents/Resources/org.mozilla.updater',
+    obj  + '/dist/firefox/TMRW.app/Contents/MacOS/updater.app/Contents/MacOS/org.mozilla.updater',
+    obj  + '/dist/firefox/TMRW.app/Contents/Library/LaunchServices/org.mozilla.updater',
+    obj  + '/dist/firefox/TMRW.app/Contents/Resources/org.mozilla.updater',
 ]
 patched = 0
 for path in targets:

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# clean-local.sh — Remove TMRW Browser installation and all local profile/cache data
+# clean-local.sh — Remove TMRW installation and all local profile/cache data
 #
 # Usage:
 #   ./scripts/clean-local.sh              # interactive — asks before deleting
@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-APP_NAME="TMRW Browser"
+APP_NAME="TMRW"
 APP_PATH="/Applications/${APP_NAME}.app"
 
 # Paths controlled by Gecko profile system (uses "Firefox" dir because we
@@ -56,7 +56,7 @@ fi
 
 # ── Show what will happen ──────────────────────────────────────────────────────
 echo "============================================================"
-echo "  TMRW Browser — local cleanup"
+echo "  TMRW — local cleanup"
 echo "============================================================"
 
 print_summary
@@ -92,7 +92,7 @@ echo "Cleaning..."
 
 case "$MODE" in
   --all)
-    do_remove "$APP_PATH"    "TMRW Browser.app"
+    do_remove "$APP_PATH"    "TMRW.app"
     do_remove "$PROFILE_DIR" "Firefox profiles"
     do_remove "$MOZILLA_DIR" "Mozilla support"
     do_remove "$CACHE_DIR"   "Firefox caches"
@@ -115,6 +115,6 @@ case "$MODE" in
 esac
 
 echo ""
-echo "Done. Install the latest TMRW Browser DMG from:"
+echo "Done. Install the latest TMRW DMG from:"
 echo "  https://tmrw.w3ai.io/download"
 echo ""
