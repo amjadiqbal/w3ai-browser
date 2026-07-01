@@ -47,6 +47,26 @@ echo "==> Installing updated JS/CSS files..."
 cd "$REPO_ROOT"
 ./mach build faster 2>&1 | grep -E "Added/updated|Elapsed" || true
 
+# ── Step 2b: ensure TMRW Browser.app has the runtime files from Nightly.app ─
+# ./mach build faster only installs JS/CSS; binary-install artifacts go to
+# Nightly.app (the artifact name). Mirror the missing runtime files so that
+# dist/TMRW Browser.app (MOZ_MACBUNDLE_NAME) can actually launch.
+MACH_APP="$OBJ_DIR/dist/TMRW Browser.app"
+NIGHTLY_APP="$OBJ_DIR/dist/Nightly.app"
+DEPLIBS_SRC="$OBJ_DIR/toolkit/library/build/dependentlibs.list"
+if [[ -d "$MACH_APP" ]]; then
+    if [[ ! -f "$MACH_APP/Contents/Resources/dependentlibs.list" ]] && [[ -f "$DEPLIBS_SRC" ]]; then
+        ln -sf "$DEPLIBS_SRC" "$MACH_APP/Contents/Resources/dependentlibs.list"
+        echo "    Fixed: dependentlibs.list symlink created"
+    fi
+    if [[ ! -f "$MACH_APP/Contents/MacOS/libonnxruntime.dylib" ]] && \
+       [[ -f "$NIGHTLY_APP/Contents/MacOS/libonnxruntime.dylib" ]]; then
+        cp -a "$NIGHTLY_APP/Contents/MacOS/libonnxruntime.dylib" \
+              "$MACH_APP/Contents/MacOS/libonnxruntime.dylib"
+        echo "    Fixed: libonnxruntime.dylib copied"
+    fi
+fi
+
 # ── Step 3: overlay TMRW branding onto all dist locations ──────────────────
 echo "==> Applying TMRW branding patches..."
 BRANDING="$REPO_ROOT/browser/branding/w3ai"
