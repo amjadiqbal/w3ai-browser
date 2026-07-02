@@ -50,7 +50,7 @@ done < "$ENV_FILE"
 
 # ── Config ────────────────────────────────────────────────────────────────────
 VERSION="${APP_VERSION:-$(grep 'MOZ_APP_VERSION=' "$REPO_ROOT/browser/branding/w3ai/configure.sh" | head -1 | cut -d= -f2 | tr -d '"')}"
-BUNDLE_ID="${APPLE_BUNDLE_ID:-ai.plato.tmrw}"
+BUNDLE_ID="${APPLE_BUNDLE_ID:-io.w3ai.tmrw}"
 INSTALLER_IDENTITY="${APPLE_INSTALLER_IDENTITY:-}"
 OUT_PKG="$OBJ_DIR/dist/TMRW-v${VERSION}.pkg"
 
