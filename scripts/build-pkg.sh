@@ -78,50 +78,18 @@ ui_spinner_stop ok
 hdiutil detach "$MOUNT_POINT" -quiet
 ui_ok "Extracted $(basename "$APP_SRC")"
 
-# ── [2/5] Build component package ────────────────────────────────────────────
-ui_step 2 5 "Building component package"
-COMPONENT_PKG="$WORK_DIR/TMRW-component.pkg"
-PKG_ARGS=(
-  --component "$WORK_DIR/TMRW.app"
-  --install-location /Applications
-  --identifier "$BUNDLE_ID"
-  --version "$VERSION"
-)
-[[ -n "$INSTALLER_IDENTITY" ]] && PKG_ARGS+=(--sign "$INSTALLER_IDENTITY")
-ui_spinner_start "Running pkgbuild…"
-pkgbuild "${PKG_ARGS[@]}" "$COMPONENT_PKG" &>/dev/null
-ui_spinner_stop ok
-ui_ok "Component package ready"
+# ── [2/5] Skip (merged into step 3) ──────────────────────────────────────────
+ui_step 2 5 "Preparing component"
+ui_ok "Using TMRW.app from DMG"
 
-# ── [3/5] Build distribution package ─────────────────────────────────────────
-ui_step 3 5 "Building distribution package"
-DIST_XML="$WORK_DIR/distribution.xml"
-cat > "$DIST_XML" <<DISTEOF
-<?xml version="1.0" encoding="utf-8" standalone="no"?>
-<installer-gui-script minSpecVersion="2">
-    <title>TMRW</title>
-    <options customize="never" require-scripts="false" hostArchitectures="x86_64,arm64"/>
-    <volume-check>
-        <allowed-os-versions>
-            <os-version min="10.15"/>
-        </allowed-os-versions>
-    </volume-check>
-    <choices-outline>
-        <line choice="default">
-            <line choice="${BUNDLE_ID}"/>
-        </line>
-    </choices-outline>
-    <choice id="default"/>
-    <choice id="${BUNDLE_ID}" visible="false">
-        <pkg-ref id="${BUNDLE_ID}"/>
-    </choice>
-    <pkg-ref id="${BUNDLE_ID}" version="${VERSION}" onConclusion="none">TMRW-component.pkg</pkg-ref>
-</installer-gui-script>
-DISTEOF
-
+# ── [3/5] Build PKG with productbuild --component ────────────────────────────
+# Using --component lets productbuild auto-generate the distribution metadata
+# in the format Transporter expects (correct product-metadata.product-identifier).
+# The manual pkgbuild + distribution.xml approach produces metadata that
+# Transporter cannot parse.
+ui_step 3 5 "Building PKG"
 PROD_ARGS=(
-  --distribution "$DIST_XML"
-  --package-path "$WORK_DIR"
+  --component "$WORK_DIR/TMRW.app" /Applications
 )
 [[ -n "$INSTALLER_IDENTITY" ]] && PROD_ARGS+=(--sign "$INSTALLER_IDENTITY")
 ui_spinner_start "Running productbuild…"
