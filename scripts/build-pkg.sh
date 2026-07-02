@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # build-pkg.sh — wrap the notarized TMRW.app in a macOS .pkg installer
 #
+# If dist/TMRW.dmg is missing, notarize.sh is invoked automatically.
+#
 # Prerequisites:
-#   1. A notarized DMG at dist/TMRW.dmg  (run scripts/notarize.sh first)
-#   2. "Developer ID Installer" certificate in Keychain  (APPLE_INSTALLER_IDENTITY in .env)
-#   3. APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID for PKG notarization
+#   1. "Developer ID Installer" certificate in Keychain  (APPLE_INSTALLER_IDENTITY in .env)
+#   2. APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID for PKG notarization
 #
 # Usage:
 #   ./scripts/build-pkg.sh [/path/to/TMRW.dmg]
@@ -15,12 +16,20 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$REPO_ROOT/scripts/lib/ui.sh"
 OBJ_DIR="$REPO_ROOT/obj-x86_64-apple-darwin25.5.0"
 
-# ── Args ───────────────────────────────────────────────────────────────────────
+# ── Args ──────────────────────────────────────────────────────────────────────
 INPUT_DMG="${1:-$OBJ_DIR/dist/TMRW.dmg}"
+
+# Auto-generate DMG if not present
 if [[ ! -f "$INPUT_DMG" ]]; then
-  ui_fail "DMG not found: $INPUT_DMG"
-  ui_info "Run ./scripts/notarize.sh first, or pass the DMG path as an argument."
-  exit 1
+  ui_info "DMG not found at $INPUT_DMG — running notarize.sh to build it…"
+  "$REPO_ROOT/scripts/notarize.sh"
+  # notarize.sh always writes to dist/TMRW.dmg; update INPUT_DMG in case a
+  # custom path was passed that also doesn't exist.
+  INPUT_DMG="$OBJ_DIR/dist/TMRW.dmg"
+  if [[ ! -f "$INPUT_DMG" ]]; then
+    ui_fail "notarize.sh finished but $INPUT_DMG still not found."
+    exit 1
+  fi
 fi
 
 # ── Load .env ─────────────────────────────────────────────────────────────────
@@ -63,7 +72,9 @@ if [[ -z "$APP_SRC" ]]; then
   ui_fail "No .app found inside $INPUT_DMG"
   exit 1
 fi
+ui_spinner_start "Copying $(basename "$APP_SRC")…"
 cp -a "$APP_SRC" "$WORK_DIR/TMRW.app"
+ui_spinner_stop ok
 hdiutil detach "$MOUNT_POINT" -quiet
 ui_ok "Extracted $(basename "$APP_SRC")"
 
@@ -77,7 +88,9 @@ PKG_ARGS=(
   --version "$VERSION"
 )
 [[ -n "$INSTALLER_IDENTITY" ]] && PKG_ARGS+=(--sign "$INSTALLER_IDENTITY")
-pkgbuild "${PKG_ARGS[@]}" "$COMPONENT_PKG"
+ui_spinner_start "Running pkgbuild…"
+pkgbuild "${PKG_ARGS[@]}" "$COMPONENT_PKG" &>/dev/null
+ui_spinner_stop ok
 ui_ok "Component package ready"
 
 # ── [3/5] Build distribution package ─────────────────────────────────────────
@@ -111,28 +124,48 @@ PROD_ARGS=(
   --package-path "$WORK_DIR"
 )
 [[ -n "$INSTALLER_IDENTITY" ]] && PROD_ARGS+=(--sign "$INSTALLER_IDENTITY")
-productbuild "${PROD_ARGS[@]}" "$OUT_PKG"
-ui_ok "Distribution package: $(basename "$OUT_PKG")"
+ui_spinner_start "Running productbuild…"
+productbuild "${PROD_ARGS[@]}" "$OUT_PKG" &>/dev/null
+ui_spinner_stop ok
+ui_ok "$(basename "$OUT_PKG") created"
 
 # ── [4/5] Notarize PKG ───────────────────────────────────────────────────────
-if [[ -n "${APPLE_ID:-}" && -n "${APPLE_APP_SPECIFIC_PASSWORD:-}" && -n "${APPLE_TEAM_ID:-}" ]]; then
+# Apple requires the PKG to be signed with a Developer ID Installer cert before
+# notarization will accept it. Skip if APPLE_INSTALLER_IDENTITY is not set.
+if [[ -n "${INSTALLER_IDENTITY:-}" && -n "${APPLE_ID:-}" && \
+      -n "${APPLE_APP_SPECIFIC_PASSWORD:-}" && -n "${APPLE_TEAM_ID:-}" ]]; then
   ui_step 4 5 "Submitting to Apple Notary Service (1–5 min)"
-  ui_spinner_start "Notarizing PKG…"
+  NOTARY_OUT="$(mktemp /tmp/notary-pkg.XXXXXX)"
   xcrun notarytool submit "$OUT_PKG" \
     --apple-id "$APPLE_ID" \
     --password "$APPLE_APP_SPECIFIC_PASSWORD" \
     --team-id "$APPLE_TEAM_ID" \
-    --wait 2>&1 | grep -E "status:|id:" | head -5 || true
-  ui_spinner_stop ok
-  ui_ok "Notarization accepted"
+    --wait 2>&1 | tee "$NOTARY_OUT"
 
-  # ── [5/5] Staple ─────────────────────────────────────────────────────────
-  ui_step 5 5 "Stapling notarization ticket"
-  xcrun stapler staple "$OUT_PKG"
-  ui_ok "Stapled"
+  if grep -q "status: Accepted" "$NOTARY_OUT"; then
+    rm -f "$NOTARY_OUT"
+    ui_ok "Notarization accepted"
+
+    # ── [5/5] Staple ───────────────────────────────────────────────────────
+    ui_step 5 5 "Stapling notarization ticket"
+    ui_spinner_start "Stapling…"
+    xcrun stapler staple "$OUT_PKG" &>/dev/null
+    ui_spinner_stop ok
+    ui_ok "Stapled"
+  else
+    STATUS="$(grep "status:" "$NOTARY_OUT" | tail -1 | tr -d ' ')"
+    rm -f "$NOTARY_OUT"
+    ui_fail "Notarization ${STATUS:-failed} — check Apple developer portal for rejection details"
+    exit 1
+  fi
 else
-  ui_warn "Skipping notarization — set APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID in .env"
-  ui_step 5 5 "Done (unsigned)"
+  if [[ -z "${INSTALLER_IDENTITY:-}" ]]; then
+    ui_warn "Skipping notarization — APPLE_INSTALLER_IDENTITY not set in .env"
+    ui_warn "PKG is unsigned. Add a Developer ID Installer cert to enable notarization."
+  else
+    ui_warn "Skipping notarization — APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID not set in .env"
+  fi
+  ui_step 5 5 "Done (unsigned PKG)"
 fi
 
 # ── Summary ──────────────────────────────────────────────────────────────────
