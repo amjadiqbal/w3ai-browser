@@ -4,7 +4,7 @@
 
 MOZ_APP_DISPLAYNAME="TMRW"
 MOZ_APP_REMOTINGNAME=w3ai
-MOZ_MACBUNDLE_ID=org.w3ai.browser
+MOZ_MACBUNDLE_ID=tmrw
 MOZ_CRASHREPORTER_URL=https://crash-reports.plato.ai
 
 # Override the artifact build's 151.0a1 version with our release version
