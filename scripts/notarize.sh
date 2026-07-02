@@ -135,13 +135,16 @@ PYEOF
     DST="$APP_PATH/Contents/Resources/$ICON"
     [[ -f "$SRC" && -f "$DST" ]] && cp "$SRC" "$DST"
   done
-  # Update Info.plist — CFBundleName and CFBundleDisplayName
+  # Update Info.plist — CFBundleName, CFBundleDisplayName, CFBundleIdentifier
   /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW" \
     "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
   /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW" \
     "$APP_PATH/Contents/Info.plist" 2>/dev/null || \
   /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW" \
     "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
+  /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier ${APPLE_BUNDLE_ID}" \
+    "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
+  ui_info "Patched CFBundleIdentifier → ${APPLE_BUNDLE_ID}"
   # Update en.lproj/InfoPlist.strings — macOS menu bar reads this over Info.plist
   _STRINGS="$APP_PATH/Contents/Resources/en.lproj/InfoPlist.strings"
   if [[ -f "$_STRINGS" ]]; then
