@@ -273,32 +273,36 @@ print(f'  Patched {patched} binaries')
 PYEOF
 ui_spinner_stop ok
 
-# ── Step 2: Deep codesign with hardened runtime ───────────────────────────────
+# ── Step 2: Codesign with hardened runtime + App Sandbox ─────────────────────
 echo ""
 ui_step 2 6 "Codesigning (deep, hardened runtime)"
 
-# Sign binaries that --deep misses because they live outside MacOS/Frameworks,
-# and plugin-container which must be explicitly signed before the bundle seal.
-SKIP_SIGN=(
-  "$APP_PATH/Contents/Resources/gmp-clearkey/0.1/libclearkey.dylib"
-  "$APP_PATH/Contents/Library/LaunchServices/org.mozilla.updater"
+MAIN_ENT="$REPO_ROOT/browser/branding/w3ai/entitlements.plist"
+HELP_ENT="$REPO_ROOT/browser/branding/w3ai/entitlements-helper.plist"
+
+# Pre-sign binaries that --deep misses (outside MacOS/, or must be sealed before bundle)
+for bin in \
+  "$APP_PATH/Contents/Resources/gmp-clearkey/0.1/libclearkey.dylib" \
+  "$APP_PATH/Contents/Library/LaunchServices/org.mozilla.updater" \
   "$APP_PATH/Contents/Resources/plugin-container"
-)
-for bin in "${SKIP_SIGN[@]}"; do
+do
   if [[ -f "$bin" ]]; then
     ui_info "Pre-signing: $(basename "$bin")"
     codesign --force --timestamp --options runtime \
-      --sign "$APPLE_SIGNING_IDENTITY" "$bin"
+      --sign "$APPLE_SIGNING_IDENTITY" \
+      --entitlements "$HELP_ENT" "$bin"
   fi
 done
 
+# Deep-sign the entire bundle with App Sandbox entitlements
+# --deep handles XUL, all nested .app bundles, and every binary in Contents/MacOS/
 codesign \
   --deep \
   --force \
   --verify \
   --timestamp \
   --options runtime \
-  --entitlements "$REPO_ROOT/browser/branding/w3ai/entitlements.plist" \
+  --entitlements "$MAIN_ENT" \
   --sign "$APPLE_SIGNING_IDENTITY" \
   "$APP_PATH"
 
