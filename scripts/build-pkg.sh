@@ -130,10 +130,18 @@ ui_spinner_stop ok
 ui_ok "$(basename "$OUT_PKG") created"
 
 # ── [4/5] Notarize PKG ───────────────────────────────────────────────────────
-# Apple requires the PKG to be signed with a Developer ID Installer cert before
-# notarization will accept it. Skip if APPLE_INSTALLER_IDENTITY is not set.
-if [[ -n "${INSTALLER_IDENTITY:-}" && -n "${APPLE_ID:-}" && \
-      -n "${APPLE_APP_SPECIFIC_PASSWORD:-}" && -n "${APPLE_TEAM_ID:-}" ]]; then
+# "3rd Party Mac Developer Installer" PKGs go to App Store Connect via Transporter
+# — notarytool does not apply to them and will return Invalid.
+# "Developer ID Installer" PKGs are for direct distribution and must be notarized.
+IS_APP_STORE=false
+[[ "${INSTALLER_IDENTITY:-}" == *"3rd Party Mac Developer Installer"* ]] && IS_APP_STORE=true
+
+if $IS_APP_STORE; then
+  ui_step 4 5 "App Store PKG — skipping notarization"
+  ui_ok "Signed with 3rd Party Mac Developer Installer — submit via Transporter"
+  ui_step 5 5 "Done (App Store PKG)"
+elif [[ -n "${INSTALLER_IDENTITY:-}" && -n "${APPLE_ID:-}" && \
+        -n "${APPLE_APP_SPECIFIC_PASSWORD:-}" && -n "${APPLE_TEAM_ID:-}" ]]; then
   ui_step 4 5 "Submitting to Apple Notary Service (1–5 min)"
   NOTARY_OUT="$(mktemp /tmp/notary-pkg.XXXXXX)"
   xcrun notarytool submit "$OUT_PKG" \
@@ -161,7 +169,7 @@ if [[ -n "${INSTALLER_IDENTITY:-}" && -n "${APPLE_ID:-}" && \
 else
   if [[ -z "${INSTALLER_IDENTITY:-}" ]]; then
     ui_warn "Skipping notarization — APPLE_INSTALLER_IDENTITY not set in .env"
-    ui_warn "PKG is unsigned. Add a Developer ID Installer cert to enable notarization."
+    ui_warn "PKG is unsigned. Add a 3rd Party Mac Developer Installer or Developer ID Installer cert."
   else
     ui_warn "Skipping notarization — APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID not set in .env"
   fi
