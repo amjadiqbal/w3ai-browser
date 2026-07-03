@@ -22,6 +22,7 @@ set -euo pipefail
 #   VERSION=1.2.1
 #   MAIN_ENTITLEMENTS=build/macos/testflight/TMRW.entitlements
 #   PLUGIN_ENTITLEMENTS=build/macos/testflight/plugin-container.entitlements
+#   PLUGIN_BUNDLE_ID=com.tmrw.w3ai.plugin-container
 #   PKG_NAME=TMRW-1.2.1-TestFlight.pkg
 
 fail() {
@@ -84,6 +85,7 @@ main() {
   VERSION="${VERSION:-1.2.1}"
   MAIN_ENTITLEMENTS="${MAIN_ENTITLEMENTS:-build/macos/testflight/TMRW.entitlements}"
   PLUGIN_ENTITLEMENTS="${PLUGIN_ENTITLEMENTS:-build/macos/testflight/plugin-container.entitlements}"
+  PLUGIN_BUNDLE_ID="${PLUGIN_BUNDLE_ID:-}"
   PKG_NAME="${PKG_NAME:-TMRW-${VERSION}-TestFlight.pkg}"
 
   [ -n "$APP_PATH" ] || fail "APP_PATH is required"
@@ -107,6 +109,11 @@ main() {
   plist_set "$app_plist" CFBundleShortVersionString "$VERSION"
   plist_set "$app_plist" CFBundleVersion "$VERSION"
   plist_set "$app_plist" CFBundleGetInfoString "$VERSION"
+
+  if [ -n "$PLUGIN_BUNDLE_ID" ]; then
+    note "Setting plugin-container bundle id to $PLUGIN_BUNDLE_ID"
+    plist_set "$plugin_plist" CFBundleIdentifier "$PLUGIN_BUNDLE_ID"
+  fi
 
   note "Main bundle id: $(plist_get "$app_plist" CFBundleIdentifier)"
   note "Plugin bundle id: $(plist_get "$plugin_plist" CFBundleIdentifier)"
