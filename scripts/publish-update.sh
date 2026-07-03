@@ -52,6 +52,14 @@ sync_version() {
   sed -i '' "s/MOZ_APP_VERSION_DISPLAY=.*/MOZ_APP_VERSION_DISPLAY=$v/" "$REPO_ROOT/mozconfig" 2>/dev/null || true
   sed -i '' "s/MOZ_APP_VERSION=.*/MOZ_APP_VERSION=$v/" "$REPO_ROOT/browser/branding/w3ai/configure.sh" 2>/dev/null || true
   sed -i '' "s/MOZ_APP_VERSION_DISPLAY=.*/MOZ_APP_VERSION_DISPLAY=$v/" "$REPO_ROOT/browser/branding/w3ai/configure.sh" 2>/dev/null || true
+  # Patch the cached configure output so ./mach build faster picks up the new version
+  # without requiring a full ./mach configure run (which takes minutes).
+  _CS="$REPO_ROOT/obj-x86_64-apple-darwin25.5.0/config.status"
+  if [[ -f "$_CS" ]]; then
+    sed -i '' "s/'MOZ_APP_VERSION': '[^']*'/'MOZ_APP_VERSION': '$v'/g" "$_CS"
+    sed -i '' "s/'MOZ_APP_VERSION_DISPLAY': '[^']*'/'MOZ_APP_VERSION_DISPLAY': '$v'/g" "$_CS"
+    sed -i '' "s/'MOZ_APP_UA_VERSION': '\"[^\"]*\"'/'MOZ_APP_UA_VERSION': '\"$v\"'/g" "$_CS"
+  fi
 }
 
 # Use APP_VERSION from .env as-is (no date override).

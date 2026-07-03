@@ -16,6 +16,9 @@ browser-operator-core/
 
 # W3Ai: build artifacts
 output.mar
+/Distribution
+/Resources/
+/com.tmrw.w3ai.pkg/
 
 # Filenames that should be ignored wherever they appear
 *~
@@ -423,3 +426,4 @@ CLAUDE.local.md
 # Ignore .json.gz (typically profiles) in the root directory
 # lint-ignore-next-line: git-only
 /*.json.gz
+obj-arm64-cache/
