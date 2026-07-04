@@ -536,10 +536,18 @@ ENTXML
       /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Software Update" "$_upd_plist"
     /usr/libexec/PlistBuddy -c "Set :CFBundleName Software Update" "$_upd_plist" 2>/dev/null || \
       /usr/libexec/PlistBuddy -c "Add :CFBundleName string Software Update" "$_upd_plist"
-    # Shares the main app's CFBundleIdentifier — see tmp_shared_id_ent comment above
-    # for why (no dedicated App ID/provisioning profile exists for the updater).
-    /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier ${APPLE_BUNDLE_ID}" "$_upd_plist" 2>/dev/null || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string ${APPLE_BUNDLE_ID}" "$_upd_plist"
+    # Distinct CFBundleIdentifier — must NOT equal the main app's. Apple's App
+    # Store validator rejects a nested bundle sharing its parent's exact
+    # identifier as a "CFBundleIdentifier Collision" (reported, confusingly,
+    # as "invalid CFBundleIdentifier ''" — Transporter error 90049 — rather
+    # than a collision-specific message). This is independent of the
+    # *entitlements* application-identifier below (tmp_shared_id_ent), which
+    # stays pointed at the main app's shared identity/profile since no
+    # dedicated App ID exists for the updater — codesign auto-derives its
+    # signature Identifier from CFBundleIdentifier, so the two fields don't
+    # need to match each other, only to each independently be self-consistent.
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier ${APPLE_BUNDLE_ID}.updater" "$_upd_plist" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string ${APPLE_BUNDLE_ID}.updater" "$_upd_plist"
     /usr/libexec/PlistBuddy -c "Set :LSHasLocalizedDisplayName false" "$_upd_plist" 2>/dev/null || true
     note "Patched updater.app display name → TMRW Software Update"
   fi
@@ -575,17 +583,19 @@ ENTXML
     [ -f "$_loose" ] && mv "$_loose" "$(dirname "$_loose")/TMRWUpdater"
   done
 
-  # Re-brand remaining org.mozilla.* helper bundle IDs. These share the main
-  # app's CFBundleIdentifier (not a distinct com.tmrw.w3ai.<name> id) for the
-  # same reason as updater.app above: none of them have their own Apple
-  # Developer App ID/provisioning profile, so a distinct identifier here would
-  # have no provisioned identity backing it (Transporter error 90049).
+  # Re-brand remaining org.mozilla.* helper bundle IDs. Each gets its own
+  # distinct CFBundleIdentifier — NOT the main app's exact identifier, which
+  # Apple's App Store validator rejects as a "CFBundleIdentifier Collision"
+  # (see the updater.app comment above; same fix, same reason). Their
+  # *entitlements* application-identifier (tmp_shared_id_ent) still points at
+  # the main app's shared identity/profile, since none of them have their own
+  # Apple Developer App ID — that field is independent of CFBundleIdentifier.
   local _hplist _hbundle
   for _hpair in \
-    "gpu-helper.app=${APPLE_BUNDLE_ID}" \
-    "media-plugin-helper.app=${APPLE_BUNDLE_ID}" \
-    "security-module-helper.app=${APPLE_BUNDLE_ID}" \
-    "callback_app.app=${APPLE_BUNDLE_ID}"; do
+    "gpu-helper.app=${APPLE_BUNDLE_ID}.gpu-helper" \
+    "media-plugin-helper.app=${APPLE_BUNDLE_ID}.media-plugin-helper" \
+    "security-module-helper.app=${APPLE_BUNDLE_ID}.security-module-helper" \
+    "callback_app.app=${APPLE_BUNDLE_ID}.callback-app"; do
     local _hname="${_hpair%%=*}"
     local _hid="${_hpair##*=}"
     _hplist="$app_path/Contents/MacOS/$_hname/Contents/Info.plist"
