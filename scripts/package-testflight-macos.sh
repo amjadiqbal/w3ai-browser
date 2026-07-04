@@ -22,9 +22,10 @@ set -euo pipefail
 #   APPLE_PLUGIN_CONTAINER_BUNDLE_ID=com.tmrw.w3ai.plugin-container
 #   APPLE_PLUGIN_CONTAINER_PROVISIONING_PROFILE=/path/to/TMRW-plugin-container.provisionprofile
 #
-# Nested updater .env variables:
-#   APPLE_UPDATER_BUNDLE_ID=com.tmrw.w3ai.updater            # optional, defaults to com.tmrw.w3ai.updater
-#   APPLE_UPDATER_PROVISIONING_PROFILE=/path/to/TMRW-Updater.provisionprofile
+# updater.app is deliberately NOT shipped in this (TestFlight/App Store) build —
+# App Store handles updates; the in-app MAR updater is only for the direct-DMG
+# distribution build (scripts/notarize.sh). It's removed from BUILT_APP_PATH
+# before signing, and its absence is verified before AND after productbuild.
 #
 # Optional .env variables:
 #   TESTFLIGHT_OUT_DIR=obj-x86_64-apple-darwin25.5.0/dist   # defaults to dir containing BUILT_APP_PATH
@@ -324,40 +325,44 @@ verify_no_undeclared_executable() {
   note "  No undeclared executables found in nested .app bundles"
 }
 
-# Every prior verification in this script runs against $app_path — the
-# source .app before productbuild ever touches it. That's necessary but not
-# sufficient: productbuild reads its own copy into the pkg payload, and
-# nothing upstream actually proves the *shipped* bytes match what was just
-# verified. Expand the real pkg and re-check updater.app directly out of the
-# payload so a productbuild-stage regression can't slip through unnoticed.
-verify_pkg_updater_contents() {
+# updater.app kept failing App Store review across many rounds (409, 90049,
+# 90885, CFBundleIdentifier collision, then 90049 again even with a dedicated
+# provisioning profile — `strings` on the shipped binary still showed raw
+# Mozilla updater internals: org.mozilla.updater.server,
+# /Library/PrivilegedHelperTools/org.mozilla.updater,
+# /Library/LaunchDaemons/org.mozilla.updater.plist). App Store builds don't
+# need it at all — App Store handles updates, the in-app MAR updater is only
+# for the direct-DMG build — so it's simplest and most robust to not ship it
+# rather than keep re-branding around baked-in Mozilla internals. These two
+# checks make that verifiable rather than assumed.
+verify_no_updater_in_source() {
+  local app_path="$1"
+  if [ -d "$app_path/Contents/MacOS/updater.app" ]; then
+    echo "ERROR: updater.app must not be shipped in TestFlight/App Store build" >&2
+    exit 1
+  fi
+  if find "$app_path" -iname "*updater*" | grep -q .; then
+    echo "ERROR: updater artifacts still exist in TestFlight/App Store build:" >&2
+    find "$app_path" -iname "*updater*" -print >&2
+    exit 1
+  fi
+  note "  No updater.app or updater artifacts in source app bundle"
+}
+
+verify_no_updater_in_pkg() {
   local pkg_path="$1"
-  local expected_id="$2"
   local expand_dir="/tmp/tmrw-pkg-check"
 
   rm -rf "$expand_dir"
   pkgutil --expand-full "$pkg_path" "$expand_dir" || \
     fail "pkgutil --expand-full failed on $pkg_path"
 
-  local shipped_plist shipped_exe
-  shipped_plist="$(find "$expand_dir" -path "*/TMRW.app/Contents/MacOS/updater.app/Contents/Info.plist" | head -1)"
-  [ -n "$shipped_plist" ] && [ -f "$shipped_plist" ] || \
-    fail "Shipped pkg is missing */TMRW.app/Contents/MacOS/updater.app/Contents/Info.plist — expanded at $expand_dir"
-
-  shipped_exe="$(find "$expand_dir" -path "*/TMRW.app/Contents/MacOS/updater.app/Contents/MacOS/TMRWUpdater" | head -1)"
-  [ -n "$shipped_exe" ] && [ -f "$shipped_exe" ] || \
-    fail "Shipped pkg is missing */TMRW.app/Contents/MacOS/updater.app/Contents/MacOS/TMRWUpdater — expanded at $expand_dir"
-
-  local shipped_id shipped_bundle_exe
-  shipped_id="$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$shipped_plist" 2>/dev/null)"
-  [ "$shipped_id" = "$expected_id" ] || \
-    fail "Shipped updater.app CFBundleIdentifier is '$shipped_id', expected '$expected_id' — $shipped_plist"
-
-  shipped_bundle_exe="$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$shipped_plist" 2>/dev/null)"
-  [ "$shipped_bundle_exe" = "TMRWUpdater" ] || \
-    fail "Shipped updater.app CFBundleExecutable is '$shipped_bundle_exe', expected 'TMRWUpdater' — $shipped_plist"
-
-  note "  Shipped pkg updater.app: CFBundleIdentifier=$shipped_id, CFBundleExecutable=$shipped_bundle_exe, TMRWUpdater present"
+  if find "$expand_dir" -iname "*updater*" | grep -q .; then
+    echo "ERROR: updater artifacts exist in final pkg payload:" >&2
+    find "$expand_dir" -iname "*updater*" -print >&2
+    exit 1
+  fi
+  note "  No updater artifacts in final pkg payload"
 }
 
 main() {
@@ -399,13 +404,7 @@ main() {
   [ -n "${APPLE_BUNDLE_ID:-}" ] || fail "APPLE_BUNDLE_ID is required in .env"
   [ -n "${APPLE_PLUGIN_CONTAINER_BUNDLE_ID:-}" ] || fail "APPLE_PLUGIN_CONTAINER_BUNDLE_ID is required in .env"
 
-  # Updater bundle id defaults to com.tmrw.w3ai.updater if not set. The
-  # provisioning profile is optional: if present, updater.app gets its own
-  # dedicated identity (like plugin-container/crashreporter); if absent, it
-  # falls back to sharing the main app's identity (see tmp_shared_id_ent below).
-  APPLE_UPDATER_BUNDLE_ID="${APPLE_UPDATER_BUNDLE_ID:-com.tmrw.w3ai.updater}"
-
-  local app_path out_dir main_entitlements plugin_entitlements crashreporter_entitlements main_profile plugin_profile crashreporter_profile updater_profile
+  local app_path out_dir main_entitlements plugin_entitlements crashreporter_entitlements main_profile plugin_profile crashreporter_profile
   app_path="$(abs_path "$BUILT_APP_PATH" "$root")"
   out_dir="$(abs_path "$TESTFLIGHT_OUT_DIR" "$root")"
   main_entitlements="$(abs_path "$MAIN_ENTITLEMENTS" "$root")"
@@ -415,8 +414,6 @@ main() {
   plugin_profile="$(abs_path "$APPLE_PLUGIN_CONTAINER_PROVISIONING_PROFILE" "$root")"
   crashreporter_profile="${APPLE_CRASHREPORTER_PROVISIONING_PROFILE:-}"
   [ -n "$crashreporter_profile" ] && crashreporter_profile="$(abs_path "$crashreporter_profile" "$root")"
-  updater_profile="${APPLE_UPDATER_PROVISIONING_PROFILE:-}"
-  [ -n "$updater_profile" ] && updater_profile="$(abs_path "$updater_profile" "$root")"
 
   [ -d "$app_path" ] || fail "BUILT_APP_PATH does not exist: $app_path"
 
@@ -447,15 +444,24 @@ main() {
   note "Main bundle id: $(plist_get "$app_plist" CFBundleIdentifier)"
   note "Plugin bundle id: $(plist_get "$plugin_plist" CFBundleIdentifier)"
 
-  # Updater identity: dedicated (own App ID + provisioning profile) when
-  # APPLE_UPDATER_PROVISIONING_PROFILE is set (it now is — TMRW-Updater.provisionprofile
-  # covers K9B6ZLA9M4.com.tmrw.w3ai.updater), otherwise falls back to the
-  # collision-safe distinct-identifier/shared-entitlements approach already in
-  # place below (avoids error 90049/90885 if the profile is ever removed).
-  local _upd_app="$app_path/Contents/MacOS/updater.app"
-  local updater_has_profile=false
-  [ -n "$updater_profile" ] && [ -f "$updater_profile" ] && updater_has_profile=true
-  local updater_bundle_id="$APPLE_UPDATER_BUNDLE_ID"
+  # Remove updater.app and every updater-related artifact entirely for this
+  # TestFlight/App Store build. This does NOT apply to the direct-DMG build
+  # (scripts/notarize.sh) — only this script. Must happen after the app is
+  # fully built/copied into BUILT_APP_PATH but before any signing, so nothing
+  # downstream (entitlements, profile embedding, codesign) ever touches it.
+  note "Removing updater.app and updater artifacts (not shipped in App Store builds)"
+  rm -rf "$app_path/Contents/MacOS/updater.app"
+  rm -f "$app_path/Contents/Resources/updater.ini"
+  rm -f "$app_path/Contents/Resources/update-settings.ini"
+  rm -f "$app_path/Contents/Resources/org.mozilla.updater"
+  rm -f "$app_path/Contents/Resources/TMRWUpdater"
+  rm -f "$app_path/Contents/Library/LaunchServices/org.mozilla.updater"
+  rm -f "$app_path/Contents/Library/LaunchServices/TMRWUpdater"
+  while IFS= read -r _leftover; do
+    note "  Removing leftover updater artifact: $_leftover"
+    rm -rf "$_leftover"
+  done < <(find "$app_path" -iname "*updater*")
+  verify_no_updater_in_source "$app_path"
 
   note "Embedding provisioning profiles"
   copy_profile "$main_profile" "$app_path"
@@ -465,25 +471,19 @@ main() {
     copy_profile "$crashreporter_profile" "$cr_app"
     note "  Embedded crashreporter provisioning profile"
   fi
-  if [ "$updater_has_profile" = true ]; then
-    copy_profile "$updater_profile" "$_upd_app"
-    note "  Embedded updater provisioning profile"
-  fi
 
   # Build temp entitlements with application-identifier injected
   local main_app_id="${APPLE_TEAM_ID}.${APPLE_BUNDLE_ID}"
   local plugin_app_id="${APPLE_TEAM_ID}.${APPLE_PLUGIN_CONTAINER_BUNDLE_ID}"
   local crashreporter_bundle_id="com.tmrw.w3ai.crashreporter"
   local crashreporter_app_id="${APPLE_TEAM_ID}.${crashreporter_bundle_id}"
-  local updater_app_id="${APPLE_TEAM_ID}.${updater_bundle_id}"
-  local tmp_main_ent tmp_plugin_ent tmp_helper_ent tmp_cr_ent tmp_shared_id_ent tmp_upd_ent
+  local tmp_main_ent tmp_plugin_ent tmp_helper_ent tmp_cr_ent tmp_shared_id_ent
   tmp_main_ent=""
   tmp_plugin_ent=""
   tmp_helper_ent=""
   tmp_cr_ent=""
   tmp_shared_id_ent=""
-  tmp_upd_ent=""
-  trap 'rm -f "${tmp_main_ent:-}" "${tmp_plugin_ent:-}" "${tmp_helper_ent:-}" "${tmp_cr_ent:-}" "${tmp_shared_id_ent:-}" "${tmp_upd_ent:-}"' EXIT
+  trap 'rm -f "${tmp_main_ent:-}" "${tmp_plugin_ent:-}" "${tmp_helper_ent:-}" "${tmp_cr_ent:-}" "${tmp_shared_id_ent:-}"' EXIT
   tmp_main_ent="$(make_entitlements_with_appid "$main_entitlements" "$main_app_id" "$APPLE_TEAM_ID")"
   tmp_plugin_ent="$(make_entitlements_with_appid "$plugin_entitlements" "$plugin_app_id" "$APPLE_TEAM_ID")"
   tmp_cr_ent="$(make_entitlements_with_appid "$crashreporter_entitlements" "$crashreporter_app_id" "$APPLE_TEAM_ID")"
@@ -511,13 +511,11 @@ ENTXML
 
   # Separate entitlements for .app bundles that share the main app's identity:
   # gpu-helper.app, media-plugin-helper.app, security-module-helper.app,
-  # callback_app.app always; updater.app too, but only as a fallback when
-  # APPLE_UPDATER_PROVISIONING_PROFILE isn't set (see tmp_upd_ent below for
-  # its normal, dedicated-identity path). Unlike the loose files above, these
-  # ARE bundles and each gets a copy of the main app's own
-  # embedded.provisionprofile (see above), so an application-identifier here
-  # is valid and required — App Sandbox needs a provisioned identity, and none
-  # of these have their own Apple Developer App ID.
+  # callback_app.app. Unlike the loose files above, these ARE bundles and each
+  # gets a copy of the main app's own embedded.provisionprofile (see above),
+  # so an application-identifier here is valid and required — App Sandbox
+  # needs a provisioned identity, and none of these have their own Apple
+  # Developer App ID.
   tmp_shared_id_ent="$(mktemp /tmp/entitlements-shared-id.XXXXXX)"
   cat > "$tmp_shared_id_ent" <<ENTXML
 <?xml version="1.0" encoding="UTF-8"?>
@@ -533,30 +531,6 @@ ENTXML
 </dict>
 </plist>
 ENTXML
-
-  # Dedicated entitlements for updater.app ONLY, used when
-  # APPLE_UPDATER_PROVISIONING_PROFILE is actually set — its own App ID,
-  # backed by its own embedded provisioning profile (see above). Must NOT be
-  # used without a matching profile (that's exactly the shape of 90049/90885),
-  # so signing falls back to tmp_shared_id_ent whenever updater_has_profile is
-  # false.
-  if [ "$updater_has_profile" = true ]; then
-    tmp_upd_ent="$(mktemp /tmp/entitlements-updater.XXXXXX)"
-    cat > "$tmp_upd_ent" <<ENTXML
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>com.apple.security.app-sandbox</key><true/>
-  <key>com.apple.application-identifier</key><string>${updater_app_id}</string>
-  <key>com.apple.developer.team-identifier</key><string>${APPLE_TEAM_ID}</string>
-  <key>com.apple.security.cs.allow-jit</key><true/>
-  <key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
-  <key>com.apple.security.cs.disable-library-validation</key><true/>
-</dict>
-</plist>
-ENTXML
-  fi
 
   # Step 0: Remove build artifacts and non-distribution binaries that either
   # cause "code object not signed" failures or 409 App Sandbox rejections.
@@ -616,74 +590,13 @@ ENTXML
     /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW Crash Reporter" "$_cr_strings" 2>/dev/null || true
   fi
 
-  # Patch updater.app — artifact retains Mozilla "Nightly Software Update" branding.
-  # CFBundleIdentifier is $updater_bundle_id (com.tmrw.w3ai.updater by default,
-  # from APPLE_UPDATER_BUNDLE_ID) — distinct from the main app's own identifier
-  # either way (Apple's App Store validator rejects a nested bundle sharing its
-  # parent's exact identifier as a "CFBundleIdentifier Collision", reported
-  # confusingly as "invalid CFBundleIdentifier ''", Transporter error 90049).
-  # Whether that identifier is backed by its own dedicated provisioning profile
-  # (entitlements) or falls back to sharing the main app's is decided above via
-  # updater_has_profile / tmp_upd_ent vs tmp_shared_id_ent — this Info.plist
-  # patch is the same regardless.
-  local _upd_plist="$_upd_app/Contents/Info.plist"
-  local _upd_strings
-  _upd_strings="$(find "$_upd_app" -name "InfoPlist.strings" 2>/dev/null | head -1)"
-  if [ -f "$_upd_plist" ]; then
-    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Software Update" "$_upd_plist" 2>/dev/null || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Software Update" "$_upd_plist"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRWUpdater" "$_upd_plist" 2>/dev/null || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundleName string TMRWUpdater" "$_upd_plist"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier ${updater_bundle_id}" "$_upd_plist" 2>/dev/null || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string ${updater_bundle_id}" "$_upd_plist"
-    /usr/libexec/PlistBuddy -c "Set :CFBundlePackageType APPL" "$_upd_plist" 2>/dev/null || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundlePackageType string APPL" "$_upd_plist"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${APP_VERSION}" "$_upd_plist" 2>/dev/null || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string ${APP_VERSION}" "$_upd_plist"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${APP_VERSION}" "$_upd_plist" 2>/dev/null || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${APP_VERSION}" "$_upd_plist"
-    /usr/libexec/PlistBuddy -c "Set :LSHasLocalizedDisplayName false" "$_upd_plist" 2>/dev/null || true
-    note "Patched updater.app → CFBundleIdentifier=${updater_bundle_id}, CFBundleName=TMRWUpdater, version=${APP_VERSION}"
-  fi
-  if [ -n "$_upd_strings" ] && [ -f "$_upd_strings" ]; then
-    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Software Update" "$_upd_strings" 2>/dev/null || true
-    /usr/libexec/PlistBuddy -c "Set :CFBundleName Software Update" "$_upd_strings" 2>/dev/null || true
-  fi
-
-  # Rename the updater executable itself away from "org.mozilla.updater" — an
-  # org.mozilla.* name left in a com.tmrw.w3ai-signed bundle is its own red flag
-  # for App Store review, independent of the entitlement fix above. Avoid dots
-  # in the replacement name too: Transporter's validator has been observed
-  # treating a dotted filename directly under a Contents/MacOS/ tree as if it
-  # were its own nested bundle (error 90049) — "TMRWUpdater" avoids that class
-  # of problem as well as the branding issue.
-  local _upd_old_bin="$_upd_app/Contents/MacOS/org.mozilla.updater"
-  local _upd_new_bin="$_upd_app/Contents/MacOS/TMRWUpdater"
-  if [ -f "$_upd_old_bin" ]; then
-    mv "$_upd_old_bin" "$_upd_new_bin"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable TMRWUpdater" "$_upd_plist" 2>/dev/null || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundleExecutable string TMRWUpdater" "$_upd_plist"
-    note "Renamed updater executable → TMRWUpdater"
-  fi
-
-  # Same loose (non-bundle) copies Firefox drops alongside the app for
-  # LaunchServices/relaunch bookkeeping. Inert for App Store builds (App Store
-  # delivers updates; the in-app MAR updater never runs — see notarize.sh), but
-  # still get code-signed as-is, so rename them too or the next Transporter
-  # submission just reports the identical error against a different path.
-  for _loose in \
-    "$app_path/Contents/Resources/org.mozilla.updater" \
-    "$app_path/Contents/Library/LaunchServices/org.mozilla.updater"; do
-    [ -f "$_loose" ] && mv "$_loose" "$(dirname "$_loose")/TMRWUpdater"
-  done
-
   # Re-brand remaining org.mozilla.* helper bundle IDs. Each gets its own
   # distinct CFBundleIdentifier — NOT the main app's exact identifier, which
-  # Apple's App Store validator rejects as a "CFBundleIdentifier Collision"
-  # (see the updater.app comment above; same fix, same reason). Their
-  # *entitlements* application-identifier (tmp_shared_id_ent) still points at
-  # the main app's shared identity/profile, since none of them have their own
-  # Apple Developer App ID — that field is independent of CFBundleIdentifier.
+  # Apple's App Store validator rejects as a "CFBundleIdentifier Collision".
+  # Their *entitlements* application-identifier (tmp_shared_id_ent) still
+  # points at the main app's shared identity/profile, since none of them have
+  # their own Apple Developer App ID — that field is independent of
+  # CFBundleIdentifier.
   local _hplist _hbundle
   for _hpair in \
     "gpu-helper.app=${APPLE_BUNDLE_ID}.gpu-helper" \
@@ -725,12 +638,7 @@ ENTXML
   # shared-identity helpers (they use the main app's own identifier, so the
   # main profile already covers them — Transporter's sandbox validation has
   # been unreliable about accepting that by inheritance alone, cheap to embed
-  # directly). updater.app is handled separately above: it gets its own
-  # dedicated profile when APPLE_UPDATER_PROVISIONING_PROFILE is set, or
-  # falls back to the main profile here too when it isn't.
-  if [ "$updater_has_profile" != true ]; then
-    copy_profile "$main_profile" "$_upd_app"
-  fi
+  # directly).
   for _shared_app in \
     "$app_path/Contents/MacOS/gpu-helper.app" \
     "$app_path/Contents/MacOS/media-plugin-helper.app" \
@@ -771,19 +679,15 @@ ENTXML
   restructure_framework \
     "$app_path/Contents/Frameworks/ChannelPrefs.framework" \
     "ChannelPrefs"
-  restructure_framework \
-    "$app_path/Contents/MacOS/updater.app/Contents/Frameworks/UpdateSettings.framework" \
-    "UpdateSettings"
 
-  # Re-brand the two nested frameworks' org.mozilla.* CFBundleIdentifiers.
-  # These never carry application-identifier/provisioning (frameworks are
-  # loaded in-process, not independently provisioned), so this is a pure
-  # branding fix, not a signing-identity one — but a leftover org.mozilla.*
-  # identifier in a com.tmrw.w3ai-signed bundle is still the same red flag
-  # for App Store review as every other org.mozilla.* leftover fixed above.
+  # Re-brand the nested framework's org.mozilla.* CFBundleIdentifier. Never
+  # carries application-identifier/provisioning (frameworks are loaded
+  # in-process, not independently provisioned), so this is a pure branding
+  # fix, not a signing-identity one — but a leftover org.mozilla.* identifier
+  # in a com.tmrw.w3ai-signed bundle is still the same red flag for App Store
+  # review as every other org.mozilla.* leftover fixed above.
   for _fwpair in \
-    "$app_path/Contents/Frameworks/ChannelPrefs.framework=com.tmrw.w3ai.channelprefs" \
-    "$app_path/Contents/MacOS/updater.app/Contents/Frameworks/UpdateSettings.framework=com.tmrw.w3ai.updatesettings"; do
+    "$app_path/Contents/Frameworks/ChannelPrefs.framework=com.tmrw.w3ai.channelprefs"; do
     _fwdir="${_fwpair%%=*}"
     _fwid="${_fwpair##*=}"
     _fwplist="$(find "$_fwdir" -path "*/Resources/Info.plist" 2>/dev/null | head -1)"
@@ -796,7 +700,8 @@ ENTXML
 
   # Step 1: Sign ALL Mach-O files in Resources/ and Library/ with sandbox entitlements.
   # This covers dylibs, .so, and standalone executables (firefox-bin, pingsender,
-  # plugin-container flat binary, org.mozilla.updater, etc.) — the full set that
+  # plugin-container flat binary, etc. — updater.app and its loose copies were
+  # already removed earlier and are never reached here) — the full set that
   # Transporter validates for "com.apple.security.app-sandbox" (error 409).
   note "Signing Mach-O files in Resources/ and Library/..."
   local _signed=0
@@ -835,20 +740,12 @@ ENTXML
       --sign "$APPLE_SIGNING_IDENTITY" "$fw"
   done < <(find "$app_path/Contents/Frameworks" -name "*.framework" -type d -maxdepth 1 2>/dev/null)
 
-  # Step 3: Sign nested .app bundles. Required order: updater.app first,
-  # plugin-container.app second, main TMRW.app last — Transporter scans every
-  # nested .app bundle, so each must be fully signed/provisioned (identifier +
-  # embedded profile in place) before the parent app seals over it.
-  note "Signing updater.app (first — see required signing order)"
-  if [ "$updater_has_profile" = true ]; then
-    sign_bundle "$_upd_app" "$tmp_upd_ent"
-  else
-    codesign --deep --force --options runtime --timestamp \
-      --entitlements "$tmp_shared_id_ent" \
-      --sign "$APPLE_SIGNING_IDENTITY" "$_upd_app"
-  fi
-
-  note "Signing remaining shared-identity helper apps..."
+  # Step 3: Sign nested .app bundles. Required order: plugin-container.app
+  # second-to-last, main TMRW.app last — Transporter scans every nested .app
+  # bundle, so each must be fully signed/provisioned (identifier + embedded
+  # profile in place) before the parent app seals over it. updater.app was
+  # removed entirely earlier in this script, so it's never reached here.
+  note "Signing shared-identity helper apps..."
   local _cr_has_profile=false
   [ -n "$crashreporter_profile" ] && [ -f "$crashreporter_profile" ] && _cr_has_profile=true
 
@@ -856,7 +753,6 @@ ENTXML
     [[ "$nested" == "$app_path" ]]   && continue
     [[ "$nested" == "$plugin_app" ]] && continue  # handled separately below
     [[ "$nested" == "$cr_app" ]]     && continue  # handled separately below
-    [[ "$nested" == "$_upd_app" ]]   && continue  # already signed above, first
     local nested_name
     nested_name="$(basename "$nested")"
     note "  $nested_name"
@@ -886,14 +782,12 @@ ENTXML
     verify_bundle_profile "$cr_app" "crashreporter.app"
   verify_bundle_profile "$plugin_app" "plugin-container.app"
   verify_bundle_profile "$app_path" "TMRW.app"
-  verify_bundle_profile "$_upd_app" "updater.app"
   for _hname in gpu-helper.app media-plugin-helper.app security-module-helper.app callback_app.app; do
     _hbundle="$app_path/Contents/MacOS/$_hname"
     [ -d "$_hbundle" ] && verify_bundle_profile "$_hbundle" "$_hname"
   done
 
   note "Verifying nested bundle identifiers match their code signatures"
-  verify_identifier_match "$_upd_app" "updater.app"
   verify_identifier_match "$_cr_app" "crashreporter.app"
   for _hname in gpu-helper.app media-plugin-helper.app security-module-helper.app callback_app.app; do
     _hbundle="$app_path/Contents/MacOS/$_hname"
@@ -907,12 +801,14 @@ ENTXML
   verify_no_undeclared_executable "$app_path"
 
   # Final pre-productbuild validation: exact bundle-id checks + embedded
-  # provisioning profile existence for the three bundles Transporter is known
-  # to scan as nested apps. Deliberately explicit/literal (not routed through
+  # provisioning profile existence for the bundles Transporter is known to
+  # scan as nested apps. Deliberately explicit/literal (not routed through
   # verify_identifier_match) so a mismatch names precisely which bundle and
-  # which expected value failed, right before packaging.
+  # which expected value failed, right before packaging. Also re-confirms
+  # updater.app and every updater artifact are still absent — mandatory, not
+  # just a one-time check earlier in the script.
   note "Validating bundle identifiers before productbuild"
-  local _check_main_id _check_plugin_id _check_upd_id
+  local _check_main_id _check_plugin_id
   _check_main_id="$(plist_get "$app_plist" CFBundleIdentifier)"
   [ "$_check_main_id" = "$APPLE_BUNDLE_ID" ] || \
     fail "Main app CFBundleIdentifier is '$_check_main_id', expected '$APPLE_BUNDLE_ID'"
@@ -923,19 +819,15 @@ ENTXML
     fail "plugin-container.app CFBundleIdentifier is '$_check_plugin_id', expected '$APPLE_PLUGIN_CONTAINER_BUNDLE_ID'"
   note "  Plugin-container bundle id OK: $_check_plugin_id"
 
-  _check_upd_id="$(plist_get "$_upd_plist" CFBundleIdentifier)"
-  [ "$_check_upd_id" = "$updater_bundle_id" ] || \
-    fail "updater.app CFBundleIdentifier is '$_check_upd_id', expected '$updater_bundle_id'"
-  note "  Updater bundle id OK: $_check_upd_id"
-
   note "Validating embedded provisioning profiles before productbuild"
   [ -f "$app_path/Contents/embedded.provisionprofile" ] || \
     fail "Missing $app_path/Contents/embedded.provisionprofile"
   [ -f "$plugin_app/Contents/embedded.provisionprofile" ] || \
     fail "Missing $plugin_app/Contents/embedded.provisionprofile"
-  [ -f "$_upd_app/Contents/embedded.provisionprofile" ] || \
-    fail "Missing $_upd_app/Contents/embedded.provisionprofile"
   note "  All required embedded.provisionprofile files present"
+
+  note "Validating updater.app is absent before productbuild"
+  verify_no_updater_in_source "$app_path"
 
   local pkg_path="$out_dir/$TESTFLIGHT_PKG_NAME"
   rm -f "$pkg_path"
@@ -947,8 +839,8 @@ ENTXML
   pkgutil --check-signature "$pkg_path"
   xcrun stapler validate "$pkg_path" >/dev/null 2>&1 || true
 
-  note "Verifying updater.app contents inside the shipped pkg (post-productbuild)"
-  verify_pkg_updater_contents "$pkg_path" "$updater_bundle_id"
+  note "Validating updater.app is absent from the shipped pkg (post-productbuild)"
+  verify_no_updater_in_pkg "$pkg_path"
 
   note "Done: $pkg_path"
 }
