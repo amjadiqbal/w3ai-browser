@@ -234,6 +234,22 @@ verify_bundle_profile() {
   codesign -dv --verbose=4 "$bundle" 2>&1 | sed "s/^/$label codesign: /"
 }
 
+# Transporter error 409 "Invalid Code Signature Identifier" happens when the code
+# signature's Identifier (baked in at sign time from Info.plist) no longer matches
+# the CFBundleIdentifier actually on disk in the shipped bundle. Catch that locally
+# instead of finding out after an upload.
+verify_identifier_match() {
+  local bundle="$1"
+  local label="$2"
+  local plist_id sig_id
+  plist_id="$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$bundle/Contents/Info.plist" 2>/dev/null)"
+  sig_id="$(codesign -dv "$bundle" 2>&1 | sed -n 's/^Identifier=//p')"
+  if [ "$plist_id" != "$sig_id" ]; then
+    fail "$label: code signature identifier ('$sig_id') does not match CFBundleIdentifier ('$plist_id') — re-sign after patching Info.plist"
+  fi
+  note "  $label identifier OK: $plist_id"
+}
+
 main() {
   need_cmd codesign
   need_cmd productbuild
@@ -400,7 +416,8 @@ ENTXML
       /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Crash Reporter" "$_cr_plist"
     /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW Crash Reporter" "$_cr_plist" 2>/dev/null || \
       /usr/libexec/PlistBuddy -c "Add :CFBundleName string TMRW Crash Reporter" "$_cr_plist"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.tmrw.w3ai.crashreporter" "$_cr_plist" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.tmrw.w3ai.crashreporter" "$_cr_plist" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string com.tmrw.w3ai.crashreporter" "$_cr_plist"
     /usr/libexec/PlistBuddy -c "Set :LSHasLocalizedDisplayName false" "$_cr_plist" 2>/dev/null || true
     note "Patched crashreporter.app display name → TMRW Crash Reporter"
   fi
@@ -419,7 +436,8 @@ ENTXML
       /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Software Update" "$_upd_plist"
     /usr/libexec/PlistBuddy -c "Set :CFBundleName Software Update" "$_upd_plist" 2>/dev/null || \
       /usr/libexec/PlistBuddy -c "Add :CFBundleName string Software Update" "$_upd_plist"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.tmrw.w3ai.updater" "$_upd_plist" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.tmrw.w3ai.updater" "$_upd_plist" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string com.tmrw.w3ai.updater" "$_upd_plist"
     /usr/libexec/PlistBuddy -c "Set :LSHasLocalizedDisplayName false" "$_upd_plist" 2>/dev/null || true
     note "Patched updater.app display name → TMRW Software Update"
   fi
@@ -428,8 +446,35 @@ ENTXML
     /usr/libexec/PlistBuddy -c "Set :CFBundleName Software Update" "$_upd_strings" 2>/dev/null || true
   fi
 
+  # Rename the updater executable itself away from "org.mozilla.updater" — leaving
+  # the binary named after Mozilla's reverse-DNS identifier while the wrapping
+  # bundle claims com.tmrw.w3ai.updater is what Transporter flags as error 409
+  # "Invalid Code Signature Identifier" (the executable name reads as its own
+  # implied bundle identifier). Same rename notarize.sh already does for the
+  # Developer-ID/DMG path — ported here since this script drives the actual
+  # TestFlight/Transporter .pkg build (see TESTFLIGHT_* vars in .env).
+  local _upd_old_bin="$_upd_app/Contents/MacOS/org.mozilla.updater"
+  local _upd_new_bin="$_upd_app/Contents/MacOS/tmrw.updater"
+  if [ -f "$_upd_old_bin" ]; then
+    mv "$_upd_old_bin" "$_upd_new_bin"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable tmrw.updater" "$_upd_plist" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleExecutable string tmrw.updater" "$_upd_plist"
+    note "Renamed updater executable → tmrw.updater"
+  fi
+
+  # Same loose (non-bundle) copies Firefox drops alongside the app for
+  # LaunchServices/relaunch bookkeeping. Inert for App Store builds (App Store
+  # delivers updates; the in-app MAR updater never runs — see notarize.sh), but
+  # still get code-signed as-is, so rename them too or the next Transporter
+  # submission just reports the identical 409 against a different path.
+  for _loose in \
+    "$app_path/Contents/Resources/org.mozilla.updater" \
+    "$app_path/Contents/Library/LaunchServices/org.mozilla.updater"; do
+    [ -f "$_loose" ] && mv "$_loose" "$(dirname "$_loose")/tmrw.updater"
+  done
+
   # Re-brand remaining org.mozilla.* helper bundle IDs to com.tmrw.w3ai.*
-  local _hplist
+  local _hplist _hbundle
   for _hpair in \
     "gpu-helper.app=com.tmrw.w3ai.gpu-helper" \
     "media-plugin-helper.app=com.tmrw.w3ai.media-plugin-helper" \
@@ -439,7 +484,8 @@ ENTXML
     local _hid="${_hpair##*=}"
     _hplist="$app_path/Contents/MacOS/$_hname/Contents/Info.plist"
     if [ -f "$_hplist" ]; then
-      /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $_hid" "$_hplist" 2>/dev/null || true
+      /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $_hid" "$_hplist" 2>/dev/null || \
+        /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string $_hid" "$_hplist"
       note "Patched $_hname bundle ID → $_hid"
     fi
   done
@@ -560,6 +606,14 @@ ENTXML
     verify_bundle_profile "$cr_app" "crashreporter.app"
   verify_bundle_profile "$plugin_app" "plugin-container.app"
   verify_bundle_profile "$app_path" "TMRW.app"
+
+  note "Verifying nested bundle identifiers match their code signatures"
+  verify_identifier_match "$_upd_app" "updater.app"
+  verify_identifier_match "$_cr_app" "crashreporter.app"
+  for _hname in gpu-helper.app media-plugin-helper.app security-module-helper.app callback_app.app; do
+    _hbundle="$app_path/Contents/MacOS/$_hname"
+    [ -d "$_hbundle" ] && verify_identifier_match "$_hbundle" "$_hname"
+  done
 
   local pkg_path="$out_dir/$TESTFLIGHT_PKG_NAME"
   rm -f "$pkg_path"
