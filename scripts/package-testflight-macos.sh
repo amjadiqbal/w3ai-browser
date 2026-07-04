@@ -324,6 +324,42 @@ verify_no_undeclared_executable() {
   note "  No undeclared executables found in nested .app bundles"
 }
 
+# Every prior verification in this script runs against $app_path — the
+# source .app before productbuild ever touches it. That's necessary but not
+# sufficient: productbuild reads its own copy into the pkg payload, and
+# nothing upstream actually proves the *shipped* bytes match what was just
+# verified. Expand the real pkg and re-check updater.app directly out of the
+# payload so a productbuild-stage regression can't slip through unnoticed.
+verify_pkg_updater_contents() {
+  local pkg_path="$1"
+  local expected_id="$2"
+  local expand_dir="/tmp/tmrw-pkg-check"
+
+  rm -rf "$expand_dir"
+  pkgutil --expand-full "$pkg_path" "$expand_dir" || \
+    fail "pkgutil --expand-full failed on $pkg_path"
+
+  local shipped_plist shipped_exe
+  shipped_plist="$(find "$expand_dir" -path "*/TMRW.app/Contents/MacOS/updater.app/Contents/Info.plist" | head -1)"
+  [ -n "$shipped_plist" ] && [ -f "$shipped_plist" ] || \
+    fail "Shipped pkg is missing */TMRW.app/Contents/MacOS/updater.app/Contents/Info.plist — expanded at $expand_dir"
+
+  shipped_exe="$(find "$expand_dir" -path "*/TMRW.app/Contents/MacOS/updater.app/Contents/MacOS/TMRWUpdater" | head -1)"
+  [ -n "$shipped_exe" ] && [ -f "$shipped_exe" ] || \
+    fail "Shipped pkg is missing */TMRW.app/Contents/MacOS/updater.app/Contents/MacOS/TMRWUpdater — expanded at $expand_dir"
+
+  local shipped_id shipped_bundle_exe
+  shipped_id="$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$shipped_plist" 2>/dev/null)"
+  [ "$shipped_id" = "$expected_id" ] || \
+    fail "Shipped updater.app CFBundleIdentifier is '$shipped_id', expected '$expected_id' — $shipped_plist"
+
+  shipped_bundle_exe="$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$shipped_plist" 2>/dev/null)"
+  [ "$shipped_bundle_exe" = "TMRWUpdater" ] || \
+    fail "Shipped updater.app CFBundleExecutable is '$shipped_bundle_exe', expected 'TMRWUpdater' — $shipped_plist"
+
+  note "  Shipped pkg updater.app: CFBundleIdentifier=$shipped_id, CFBundleExecutable=$shipped_bundle_exe, TMRWUpdater present"
+}
+
 main() {
   need_cmd codesign
   need_cmd productbuild
@@ -910,6 +946,9 @@ ENTXML
   note "Verifying pkg signature"
   pkgutil --check-signature "$pkg_path"
   xcrun stapler validate "$pkg_path" >/dev/null 2>&1 || true
+
+  note "Verifying updater.app contents inside the shipped pkg (post-productbuild)"
+  verify_pkg_updater_contents "$pkg_path" "$updater_bundle_id"
 
   note "Done: $pkg_path"
 }
