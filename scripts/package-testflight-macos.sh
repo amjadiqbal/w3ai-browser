@@ -8,7 +8,7 @@ set -euo pipefail
 # passed directly to this command still override .env values.
 #
 # Main .env variables:
-#   APP_VERSION=1.2.1
+#   APP_VERSION=1.2.9                                       # required — no hardcoded fallback
 #   APPLE_ID=developer@example.com
 #   APPLE_APP_SPECIFIC_PASSWORD=xxxx-xxxx-xxxx-xxxx
 #   APPLE_TEAM_ID=TEAMID1234
@@ -22,9 +22,13 @@ set -euo pipefail
 #   APPLE_PLUGIN_CONTAINER_BUNDLE_ID=com.tmrw.w3ai.plugin-container
 #   APPLE_PLUGIN_CONTAINER_PROVISIONING_PROFILE=/path/to/TMRW-plugin-container.provisionprofile
 #
+# Nested updater .env variables:
+#   APPLE_UPDATER_BUNDLE_ID=com.tmrw.w3ai.updater            # optional, defaults to com.tmrw.w3ai.updater
+#   APPLE_UPDATER_PROVISIONING_PROFILE=/path/to/TMRW-Updater.provisionprofile
+#
 # Optional .env variables:
 #   TESTFLIGHT_OUT_DIR=obj-x86_64-apple-darwin25.5.0/dist   # defaults to dir containing BUILT_APP_PATH
-#   TESTFLIGHT_PKG_NAME=TMRW-v1.2.1.pkg                    # defaults to TMRW-v{APP_VERSION}.pkg
+#   TESTFLIGHT_PKG_NAME=TMRW-v{APP_VERSION}.pkg              # defaults to TMRW-v{APP_VERSION}.pkg
 #   MAIN_ENTITLEMENTS=build/macos/testflight/TMRW.entitlements
 #   PLUGIN_ENTITLEMENTS=build/macos/testflight/plugin-container.entitlements
 
@@ -331,7 +335,7 @@ main() {
   cd "$root"
   load_env_file
 
-  APP_VERSION="${APP_VERSION:-1.2.1}"
+  [ -n "${APP_VERSION:-}" ] || fail "APP_VERSION is required in .env (no hardcoded fallback)"
   BUILT_APP_PATH="${BUILT_APP_PATH:-}"
   TESTFLIGHT_OUT_DIR="${TESTFLIGHT_OUT_DIR:-$(dirname "${BUILT_APP_PATH:-obj-x86_64-apple-darwin25.5.0/dist/TMRW.app}")}"
   TESTFLIGHT_PKG_NAME="${TESTFLIGHT_PKG_NAME:-TMRW-v${APP_VERSION}.pkg}"
@@ -359,7 +363,13 @@ main() {
   [ -n "${APPLE_BUNDLE_ID:-}" ] || fail "APPLE_BUNDLE_ID is required in .env"
   [ -n "${APPLE_PLUGIN_CONTAINER_BUNDLE_ID:-}" ] || fail "APPLE_PLUGIN_CONTAINER_BUNDLE_ID is required in .env"
 
-  local app_path out_dir main_entitlements plugin_entitlements crashreporter_entitlements main_profile plugin_profile crashreporter_profile
+  # Updater bundle id defaults to com.tmrw.w3ai.updater if not set. The
+  # provisioning profile is optional: if present, updater.app gets its own
+  # dedicated identity (like plugin-container/crashreporter); if absent, it
+  # falls back to sharing the main app's identity (see tmp_shared_id_ent below).
+  APPLE_UPDATER_BUNDLE_ID="${APPLE_UPDATER_BUNDLE_ID:-com.tmrw.w3ai.updater}"
+
+  local app_path out_dir main_entitlements plugin_entitlements crashreporter_entitlements main_profile plugin_profile crashreporter_profile updater_profile
   app_path="$(abs_path "$BUILT_APP_PATH" "$root")"
   out_dir="$(abs_path "$TESTFLIGHT_OUT_DIR" "$root")"
   main_entitlements="$(abs_path "$MAIN_ENTITLEMENTS" "$root")"
@@ -369,6 +379,8 @@ main() {
   plugin_profile="$(abs_path "$APPLE_PLUGIN_CONTAINER_PROVISIONING_PROFILE" "$root")"
   crashreporter_profile="${APPLE_CRASHREPORTER_PROVISIONING_PROFILE:-}"
   [ -n "$crashreporter_profile" ] && crashreporter_profile="$(abs_path "$crashreporter_profile" "$root")"
+  updater_profile="${APPLE_UPDATER_PROVISIONING_PROFILE:-}"
+  [ -n "$updater_profile" ] && updater_profile="$(abs_path "$updater_profile" "$root")"
 
   [ -d "$app_path" ] || fail "BUILT_APP_PATH does not exist: $app_path"
 
@@ -399,6 +411,16 @@ main() {
   note "Main bundle id: $(plist_get "$app_plist" CFBundleIdentifier)"
   note "Plugin bundle id: $(plist_get "$plugin_plist" CFBundleIdentifier)"
 
+  # Updater identity: dedicated (own App ID + provisioning profile) when
+  # APPLE_UPDATER_PROVISIONING_PROFILE is set (it now is — TMRW-Updater.provisionprofile
+  # covers K9B6ZLA9M4.com.tmrw.w3ai.updater), otherwise falls back to the
+  # collision-safe distinct-identifier/shared-entitlements approach already in
+  # place below (avoids error 90049/90885 if the profile is ever removed).
+  local _upd_app="$app_path/Contents/MacOS/updater.app"
+  local updater_has_profile=false
+  [ -n "$updater_profile" ] && [ -f "$updater_profile" ] && updater_has_profile=true
+  local updater_bundle_id="$APPLE_UPDATER_BUNDLE_ID"
+
   note "Embedding provisioning profiles"
   copy_profile "$main_profile" "$app_path"
   copy_profile "$plugin_profile" "$plugin_app"
@@ -407,19 +429,25 @@ main() {
     copy_profile "$crashreporter_profile" "$cr_app"
     note "  Embedded crashreporter provisioning profile"
   fi
+  if [ "$updater_has_profile" = true ]; then
+    copy_profile "$updater_profile" "$_upd_app"
+    note "  Embedded updater provisioning profile"
+  fi
 
   # Build temp entitlements with application-identifier injected
   local main_app_id="${APPLE_TEAM_ID}.${APPLE_BUNDLE_ID}"
   local plugin_app_id="${APPLE_TEAM_ID}.${APPLE_PLUGIN_CONTAINER_BUNDLE_ID}"
   local crashreporter_bundle_id="com.tmrw.w3ai.crashreporter"
   local crashreporter_app_id="${APPLE_TEAM_ID}.${crashreporter_bundle_id}"
-  local tmp_main_ent tmp_plugin_ent tmp_helper_ent tmp_cr_ent tmp_shared_id_ent
+  local updater_app_id="${APPLE_TEAM_ID}.${updater_bundle_id}"
+  local tmp_main_ent tmp_plugin_ent tmp_helper_ent tmp_cr_ent tmp_shared_id_ent tmp_upd_ent
   tmp_main_ent=""
   tmp_plugin_ent=""
   tmp_helper_ent=""
   tmp_cr_ent=""
   tmp_shared_id_ent=""
-  trap 'rm -f "${tmp_main_ent:-}" "${tmp_plugin_ent:-}" "${tmp_helper_ent:-}" "${tmp_cr_ent:-}" "${tmp_shared_id_ent:-}"' EXIT
+  tmp_upd_ent=""
+  trap 'rm -f "${tmp_main_ent:-}" "${tmp_plugin_ent:-}" "${tmp_helper_ent:-}" "${tmp_cr_ent:-}" "${tmp_shared_id_ent:-}" "${tmp_upd_ent:-}"' EXIT
   tmp_main_ent="$(make_entitlements_with_appid "$main_entitlements" "$main_app_id" "$APPLE_TEAM_ID")"
   tmp_plugin_ent="$(make_entitlements_with_appid "$plugin_entitlements" "$plugin_app_id" "$APPLE_TEAM_ID")"
   tmp_cr_ent="$(make_entitlements_with_appid "$crashreporter_entitlements" "$crashreporter_app_id" "$APPLE_TEAM_ID")"
@@ -445,13 +473,15 @@ main() {
 </plist>
 ENTXML
 
-  # Separate entitlements ONLY for the five .app bundles that share the main
-  # app's identity (updater.app, gpu-helper.app, media-plugin-helper.app,
-  # security-module-helper.app, callback_app.app). Unlike the loose files
-  # above, these ARE bundles and each gets a copy of the main app's own
-  # embedded.provisionprofile (see below), so an application-identifier here
-  # is valid and required — App Sandbox needs a provisioned identity, and
-  # none of these five have their own Apple Developer App ID.
+  # Separate entitlements for .app bundles that share the main app's identity:
+  # gpu-helper.app, media-plugin-helper.app, security-module-helper.app,
+  # callback_app.app always; updater.app too, but only as a fallback when
+  # APPLE_UPDATER_PROVISIONING_PROFILE isn't set (see tmp_upd_ent below for
+  # its normal, dedicated-identity path). Unlike the loose files above, these
+  # ARE bundles and each gets a copy of the main app's own
+  # embedded.provisionprofile (see above), so an application-identifier here
+  # is valid and required — App Sandbox needs a provisioned identity, and none
+  # of these have their own Apple Developer App ID.
   tmp_shared_id_ent="$(mktemp /tmp/entitlements-shared-id.XXXXXX)"
   cat > "$tmp_shared_id_ent" <<ENTXML
 <?xml version="1.0" encoding="UTF-8"?>
@@ -467,6 +497,30 @@ ENTXML
 </dict>
 </plist>
 ENTXML
+
+  # Dedicated entitlements for updater.app ONLY, used when
+  # APPLE_UPDATER_PROVISIONING_PROFILE is actually set — its own App ID,
+  # backed by its own embedded provisioning profile (see above). Must NOT be
+  # used without a matching profile (that's exactly the shape of 90049/90885),
+  # so signing falls back to tmp_shared_id_ent whenever updater_has_profile is
+  # false.
+  if [ "$updater_has_profile" = true ]; then
+    tmp_upd_ent="$(mktemp /tmp/entitlements-updater.XXXXXX)"
+    cat > "$tmp_upd_ent" <<ENTXML
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.app-sandbox</key><true/>
+  <key>com.apple.application-identifier</key><string>${updater_app_id}</string>
+  <key>com.apple.developer.team-identifier</key><string>${APPLE_TEAM_ID}</string>
+  <key>com.apple.security.cs.allow-jit</key><true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
+  <key>com.apple.security.cs.disable-library-validation</key><true/>
+</dict>
+</plist>
+ENTXML
+  fi
 
   # Step 0: Remove build artifacts and non-distribution binaries that either
   # cause "code object not signed" failures or 409 App Sandbox rejections.
@@ -526,30 +580,34 @@ ENTXML
     /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW Crash Reporter" "$_cr_strings" 2>/dev/null || true
   fi
 
-  # Patch updater.app — artifact retains Mozilla "Nightly Software Update" branding
-  local _upd_app="$app_path/Contents/MacOS/updater.app"
+  # Patch updater.app — artifact retains Mozilla "Nightly Software Update" branding.
+  # CFBundleIdentifier is $updater_bundle_id (com.tmrw.w3ai.updater by default,
+  # from APPLE_UPDATER_BUNDLE_ID) — distinct from the main app's own identifier
+  # either way (Apple's App Store validator rejects a nested bundle sharing its
+  # parent's exact identifier as a "CFBundleIdentifier Collision", reported
+  # confusingly as "invalid CFBundleIdentifier ''", Transporter error 90049).
+  # Whether that identifier is backed by its own dedicated provisioning profile
+  # (entitlements) or falls back to sharing the main app's is decided above via
+  # updater_has_profile / tmp_upd_ent vs tmp_shared_id_ent — this Info.plist
+  # patch is the same regardless.
   local _upd_plist="$_upd_app/Contents/Info.plist"
   local _upd_strings
   _upd_strings="$(find "$_upd_app" -name "InfoPlist.strings" 2>/dev/null | head -1)"
   if [ -f "$_upd_plist" ]; then
     /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Software Update" "$_upd_plist" 2>/dev/null || \
       /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Software Update" "$_upd_plist"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleName Software Update" "$_upd_plist" 2>/dev/null || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundleName string Software Update" "$_upd_plist"
-    # Distinct CFBundleIdentifier — must NOT equal the main app's. Apple's App
-    # Store validator rejects a nested bundle sharing its parent's exact
-    # identifier as a "CFBundleIdentifier Collision" (reported, confusingly,
-    # as "invalid CFBundleIdentifier ''" — Transporter error 90049 — rather
-    # than a collision-specific message). This is independent of the
-    # *entitlements* application-identifier below (tmp_shared_id_ent), which
-    # stays pointed at the main app's shared identity/profile since no
-    # dedicated App ID exists for the updater — codesign auto-derives its
-    # signature Identifier from CFBundleIdentifier, so the two fields don't
-    # need to match each other, only to each independently be self-consistent.
-    /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier ${APPLE_BUNDLE_ID}.updater" "$_upd_plist" 2>/dev/null || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string ${APPLE_BUNDLE_ID}.updater" "$_upd_plist"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRWUpdater" "$_upd_plist" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleName string TMRWUpdater" "$_upd_plist"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier ${updater_bundle_id}" "$_upd_plist" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string ${updater_bundle_id}" "$_upd_plist"
+    /usr/libexec/PlistBuddy -c "Set :CFBundlePackageType APPL" "$_upd_plist" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundlePackageType string APPL" "$_upd_plist"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${APP_VERSION}" "$_upd_plist" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string ${APP_VERSION}" "$_upd_plist"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${APP_VERSION}" "$_upd_plist" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${APP_VERSION}" "$_upd_plist"
     /usr/libexec/PlistBuddy -c "Set :LSHasLocalizedDisplayName false" "$_upd_plist" 2>/dev/null || true
-    note "Patched updater.app display name → TMRW Software Update"
+    note "Patched updater.app → CFBundleIdentifier=${updater_bundle_id}, CFBundleName=TMRWUpdater, version=${APP_VERSION}"
   fi
   if [ -n "$_upd_strings" ] && [ -f "$_upd_strings" ]; then
     /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Software Update" "$_upd_strings" 2>/dev/null || true
@@ -627,13 +685,17 @@ ENTXML
     done < <(find "$app_path/Contents/MacOS/$_hname/Contents/MacOS" -maxdepth 1 -type f -print0 2>/dev/null)
   done
 
-  # Embed a copy of the main app's provisioning profile in updater.app and the
-  # four shared-identity helpers too. They use the main app's own identifier,
-  # so the main profile already covers them, but Transporter's sandbox
-  # validation has been unreliable about accepting that by inheritance alone —
-  # cheap to embed directly in each bundle and only adds assurance.
+  # Embed a copy of the main app's provisioning profile in the four
+  # shared-identity helpers (they use the main app's own identifier, so the
+  # main profile already covers them — Transporter's sandbox validation has
+  # been unreliable about accepting that by inheritance alone, cheap to embed
+  # directly). updater.app is handled separately above: it gets its own
+  # dedicated profile when APPLE_UPDATER_PROVISIONING_PROFILE is set, or
+  # falls back to the main profile here too when it isn't.
+  if [ "$updater_has_profile" != true ]; then
+    copy_profile "$main_profile" "$_upd_app"
+  fi
   for _shared_app in \
-    "$_upd_app" \
     "$app_path/Contents/MacOS/gpu-helper.app" \
     "$app_path/Contents/MacOS/media-plugin-helper.app" \
     "$app_path/Contents/MacOS/security-module-helper.app" \
@@ -737,16 +799,28 @@ ENTXML
       --sign "$APPLE_SIGNING_IDENTITY" "$fw"
   done < <(find "$app_path/Contents/Frameworks" -name "*.framework" -type d -maxdepth 1 2>/dev/null)
 
-  # Step 3: Sign nested .app bundles — plugin-container last among peers so its
-  # provisioning profile is in place before the main bundle seals it.
-  note "Signing nested helper apps..."
+  # Step 3: Sign nested .app bundles. Required order: updater.app first,
+  # plugin-container.app second, main TMRW.app last — Transporter scans every
+  # nested .app bundle, so each must be fully signed/provisioned (identifier +
+  # embedded profile in place) before the parent app seals over it.
+  note "Signing updater.app (first — see required signing order)"
+  if [ "$updater_has_profile" = true ]; then
+    sign_bundle "$_upd_app" "$tmp_upd_ent"
+  else
+    codesign --deep --force --options runtime --timestamp \
+      --entitlements "$tmp_shared_id_ent" \
+      --sign "$APPLE_SIGNING_IDENTITY" "$_upd_app"
+  fi
+
+  note "Signing remaining shared-identity helper apps..."
   local _cr_has_profile=false
   [ -n "$crashreporter_profile" ] && [ -f "$crashreporter_profile" ] && _cr_has_profile=true
 
   while IFS= read -r nested; do
-    [[ "$nested" == "$app_path" ]] && continue
+    [[ "$nested" == "$app_path" ]]   && continue
     [[ "$nested" == "$plugin_app" ]] && continue  # handled separately below
-    [[ "$nested" == "$cr_app" ]]    && continue  # handled separately below
+    [[ "$nested" == "$cr_app" ]]     && continue  # handled separately below
+    [[ "$nested" == "$_upd_app" ]]   && continue  # already signed above, first
     local nested_name
     nested_name="$(basename "$nested")"
     note "  $nested_name"
@@ -764,11 +838,11 @@ ENTXML
       --sign "$APPLE_SIGNING_IDENTITY" "$cr_app"
   fi
 
-  note "Signing plugin-container.app"
+  note "Signing plugin-container.app (second — see required signing order)"
   sign_bundle "$plugin_app" "$tmp_plugin_ent"
 
-  # Step 4: Seal the main bundle (no --deep; inner code already signed above)
-  note "Signing main TMRW.app"
+  # Step 4: Seal the main bundle last (no --deep; inner code already signed above)
+  note "Signing main TMRW.app (last — see required signing order)"
   sign_bundle "$app_path" "$tmp_main_ent"
 
   note "Verifying signed bundles"
@@ -795,6 +869,37 @@ ENTXML
 
   note "Scanning for undeclared executables in nested .app bundles (Transporter 90049/90885)"
   verify_no_undeclared_executable "$app_path"
+
+  # Final pre-productbuild validation: exact bundle-id checks + embedded
+  # provisioning profile existence for the three bundles Transporter is known
+  # to scan as nested apps. Deliberately explicit/literal (not routed through
+  # verify_identifier_match) so a mismatch names precisely which bundle and
+  # which expected value failed, right before packaging.
+  note "Validating bundle identifiers before productbuild"
+  local _check_main_id _check_plugin_id _check_upd_id
+  _check_main_id="$(plist_get "$app_plist" CFBundleIdentifier)"
+  [ "$_check_main_id" = "$APPLE_BUNDLE_ID" ] || \
+    fail "Main app CFBundleIdentifier is '$_check_main_id', expected '$APPLE_BUNDLE_ID'"
+  note "  Main app bundle id OK: $_check_main_id"
+
+  _check_plugin_id="$(plist_get "$plugin_plist" CFBundleIdentifier)"
+  [ "$_check_plugin_id" = "$APPLE_PLUGIN_CONTAINER_BUNDLE_ID" ] || \
+    fail "plugin-container.app CFBundleIdentifier is '$_check_plugin_id', expected '$APPLE_PLUGIN_CONTAINER_BUNDLE_ID'"
+  note "  Plugin-container bundle id OK: $_check_plugin_id"
+
+  _check_upd_id="$(plist_get "$_upd_plist" CFBundleIdentifier)"
+  [ "$_check_upd_id" = "$updater_bundle_id" ] || \
+    fail "updater.app CFBundleIdentifier is '$_check_upd_id', expected '$updater_bundle_id'"
+  note "  Updater bundle id OK: $_check_upd_id"
+
+  note "Validating embedded provisioning profiles before productbuild"
+  [ -f "$app_path/Contents/embedded.provisionprofile" ] || \
+    fail "Missing $app_path/Contents/embedded.provisionprofile"
+  [ -f "$plugin_app/Contents/embedded.provisionprofile" ] || \
+    fail "Missing $plugin_app/Contents/embedded.provisionprofile"
+  [ -f "$_upd_app/Contents/embedded.provisionprofile" ] || \
+    fail "Missing $_upd_app/Contents/embedded.provisionprofile"
+  note "  All required embedded.provisionprofile files present"
 
   local pkg_path="$out_dir/$TESTFLIGHT_PKG_NAME"
   rm -f "$pkg_path"
