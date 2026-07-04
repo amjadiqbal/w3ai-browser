@@ -353,14 +353,24 @@ main() {
   tmp_plugin_ent="$(make_entitlements_with_appid "$plugin_entitlements" "$plugin_app_id" "$APPLE_TEAM_ID")"
   tmp_cr_ent="$(make_entitlements_with_appid "$crashreporter_entitlements" "$crashreporter_app_id" "$APPLE_TEAM_ID")"
 
-  # Helper entitlements for all other nested .app bundles (sandbox + JIT flags only)
+  # Helper entitlements for updater.app + the four renamed helper apps (gpu-helper,
+  # media-plugin-helper, security-module-helper, callback_app). None of these have
+  # their own Apple Developer App ID / provisioning profile, so — like plugin-container
+  # did before it got its own dedicated profile — they must share the MAIN app's
+  # application-identifier. Without it, App Sandbox is enabled but there is no
+  # provisioned identity backing it, which Transporter reports as error 90049
+  # ("invalid CFBundleIdentifier ''") since it can't resolve who owns the sandbox
+  # container. Their CFBundleIdentifier is also set to $APPLE_BUNDLE_ID (see below)
+  # so it matches this entitlement and the code signature identifier.
   tmp_helper_ent="$(mktemp /tmp/entitlements-helper.XXXXXX)"
-  cat > "$tmp_helper_ent" <<'ENTXML'
+  cat > "$tmp_helper_ent" <<ENTXML
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
   <key>com.apple.security.app-sandbox</key><true/>
+  <key>com.apple.application-identifier</key><string>${main_app_id}</string>
+  <key>com.apple.developer.team-identifier</key><string>${APPLE_TEAM_ID}</string>
   <key>com.apple.security.cs.allow-jit</key><true/>
   <key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
   <key>com.apple.security.cs.disable-library-validation</key><true/>
@@ -436,8 +446,10 @@ ENTXML
       /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Software Update" "$_upd_plist"
     /usr/libexec/PlistBuddy -c "Set :CFBundleName Software Update" "$_upd_plist" 2>/dev/null || \
       /usr/libexec/PlistBuddy -c "Add :CFBundleName string Software Update" "$_upd_plist"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.tmrw.w3ai.updater" "$_upd_plist" 2>/dev/null || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string com.tmrw.w3ai.updater" "$_upd_plist"
+    # Shares the main app's CFBundleIdentifier — see tmp_helper_ent comment above
+    # for why (no dedicated App ID/provisioning profile exists for the updater).
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier ${APPLE_BUNDLE_ID}" "$_upd_plist" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string ${APPLE_BUNDLE_ID}" "$_upd_plist"
     /usr/libexec/PlistBuddy -c "Set :LSHasLocalizedDisplayName false" "$_upd_plist" 2>/dev/null || true
     note "Patched updater.app display name → TMRW Software Update"
   fi
@@ -446,19 +458,13 @@ ENTXML
     /usr/libexec/PlistBuddy -c "Set :CFBundleName Software Update" "$_upd_strings" 2>/dev/null || true
   fi
 
-  # Rename the updater executable itself away from "org.mozilla.updater" — leaving
-  # the binary named after Mozilla's reverse-DNS identifier while the wrapping
-  # bundle claims com.tmrw.w3ai.updater is what Transporter flags as error 409
-  # "Invalid Code Signature Identifier" (the executable name reads as its own
-  # implied bundle identifier).
-  #
-  # IMPORTANT: the replacement name must not contain a "." — Transporter's
-  # validator treats ANY dotted filename directly under a Contents/MacOS/ tree
-  # as if it were meant to be its own nested bundle, and then rejects it for
-  # having no CFBundleIdentifier of its own (error 90049, "invalid
-  # CFBundleIdentifier ''"). Confirmed by testing: renaming to "tmrw.updater"
-  # (still dotted) traded the 409 for a 90049 on this exact path. "TMRWUpdater"
-  # (no separators) is the only form that has passed local signing/validation.
+  # Rename the updater executable itself away from "org.mozilla.updater" — an
+  # org.mozilla.* name left in a com.tmrw.w3ai-signed bundle is its own red flag
+  # for App Store review, independent of the entitlement fix above. Avoid dots
+  # in the replacement name too: Transporter's validator has been observed
+  # treating a dotted filename directly under a Contents/MacOS/ tree as if it
+  # were its own nested bundle (error 90049) — "TMRWUpdater" avoids that class
+  # of problem as well as the branding issue.
   local _upd_old_bin="$_upd_app/Contents/MacOS/org.mozilla.updater"
   local _upd_new_bin="$_upd_app/Contents/MacOS/TMRWUpdater"
   if [ -f "$_upd_old_bin" ]; then
@@ -479,13 +485,17 @@ ENTXML
     [ -f "$_loose" ] && mv "$_loose" "$(dirname "$_loose")/TMRWUpdater"
   done
 
-  # Re-brand remaining org.mozilla.* helper bundle IDs to com.tmrw.w3ai.*
+  # Re-brand remaining org.mozilla.* helper bundle IDs. These share the main
+  # app's CFBundleIdentifier (not a distinct com.tmrw.w3ai.<name> id) for the
+  # same reason as updater.app above: none of them have their own Apple
+  # Developer App ID/provisioning profile, so a distinct identifier here would
+  # have no provisioned identity backing it (Transporter error 90049).
   local _hplist _hbundle
   for _hpair in \
-    "gpu-helper.app=com.tmrw.w3ai.gpu-helper" \
-    "media-plugin-helper.app=com.tmrw.w3ai.media-plugin-helper" \
-    "security-module-helper.app=com.tmrw.w3ai.security-module-helper" \
-    "callback_app.app=com.tmrw.w3ai.callback-app"; do
+    "gpu-helper.app=${APPLE_BUNDLE_ID}" \
+    "media-plugin-helper.app=${APPLE_BUNDLE_ID}" \
+    "security-module-helper.app=${APPLE_BUNDLE_ID}" \
+    "callback_app.app=${APPLE_BUNDLE_ID}"; do
     local _hname="${_hpair%%=*}"
     local _hid="${_hpair##*=}"
     _hplist="$app_path/Contents/MacOS/$_hname/Contents/Info.plist"
@@ -494,6 +504,20 @@ ENTXML
         /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string $_hid" "$_hplist"
       note "Patched $_hname bundle ID → $_hid"
     fi
+  done
+
+  # Embed a copy of the main app's provisioning profile in updater.app and the
+  # four shared-identity helpers too. They use the main app's own identifier,
+  # so the main profile already covers them, but Transporter's sandbox
+  # validation has been unreliable about accepting that by inheritance alone —
+  # cheap to embed directly in each bundle and only adds assurance.
+  for _shared_app in \
+    "$_upd_app" \
+    "$app_path/Contents/MacOS/gpu-helper.app" \
+    "$app_path/Contents/MacOS/media-plugin-helper.app" \
+    "$app_path/Contents/MacOS/security-module-helper.app" \
+    "$app_path/Contents/MacOS/callback_app.app"; do
+    [ -d "$_shared_app" ] && copy_profile "$main_profile" "$_shared_app"
   done
 
   # Resolve nmhproxy symlink to a real file so it can be signed
@@ -612,6 +636,11 @@ ENTXML
     verify_bundle_profile "$cr_app" "crashreporter.app"
   verify_bundle_profile "$plugin_app" "plugin-container.app"
   verify_bundle_profile "$app_path" "TMRW.app"
+  verify_bundle_profile "$_upd_app" "updater.app"
+  for _hname in gpu-helper.app media-plugin-helper.app security-module-helper.app callback_app.app; do
+    _hbundle="$app_path/Contents/MacOS/$_hname"
+    [ -d "$_hbundle" ] && verify_bundle_profile "$_hbundle" "$_hname"
+  done
 
   note "Verifying nested bundle identifiers match their code signatures"
   verify_identifier_match "$_upd_app" "updater.app"
