@@ -250,6 +250,39 @@ verify_identifier_match() {
   note "  $label identifier OK: $plist_id"
 }
 
+# Transporter error 90885 ("missing a provisioning profile but has an
+# application identifier in its signature") happens when ANY signed Mach-O
+# file — bundle or loose executable — carries an application-identifier
+# entitlement without a provisioning profile to back it. A loose (non-bundle)
+# executable can never have one, so it must never carry this entitlement at
+# all; a bundle must have Contents/embedded.provisionprofile if it does.
+# Scans the whole app after signing so this can't silently regress again.
+verify_no_orphan_appid() {
+  local app_path="$1"
+  local f is_bundle bundle_root ent
+  while IFS= read -r -d '' f; do
+    file "$f" 2>/dev/null | grep -q "Mach-O" || continue
+    ent="$(codesign -d --entitlements - "$f" 2>&1)"
+    echo "$ent" | grep -q "application-identifier" || continue
+    is_bundle=false
+    bundle_root=""
+    case "$f" in
+      */Contents/MacOS/*)
+        bundle_root="${f%/Contents/MacOS/*}"
+        [ -d "$bundle_root" ] && [ "$(basename "$bundle_root")" != "MacOS" ] && \
+          case "$bundle_root" in *.app|*.framework) is_bundle=true ;; esac
+        ;;
+    esac
+    if [ "$is_bundle" = true ]; then
+      [ -f "$bundle_root/Contents/embedded.provisionprofile" ] || \
+        fail "$f has an application-identifier entitlement but $bundle_root is missing Contents/embedded.provisionprofile (Transporter 90885)"
+    else
+      fail "$f is a loose executable with an application-identifier entitlement but no bundle to hold a provisioning profile (Transporter 90885) — it must be signed without application-identifier"
+    fi
+  done < <(find "$app_path/Contents" -type f -print0 2>/dev/null)
+  note "  No orphaned application-identifier entitlements found"
+}
+
 main() {
   need_cmd codesign
   need_cmd productbuild
@@ -343,27 +376,47 @@ main() {
   local plugin_app_id="${APPLE_TEAM_ID}.${APPLE_PLUGIN_CONTAINER_BUNDLE_ID}"
   local crashreporter_bundle_id="com.tmrw.w3ai.crashreporter"
   local crashreporter_app_id="${APPLE_TEAM_ID}.${crashreporter_bundle_id}"
-  local tmp_main_ent tmp_plugin_ent tmp_helper_ent tmp_cr_ent
+  local tmp_main_ent tmp_plugin_ent tmp_helper_ent tmp_cr_ent tmp_shared_id_ent
   tmp_main_ent=""
   tmp_plugin_ent=""
   tmp_helper_ent=""
   tmp_cr_ent=""
-  trap 'rm -f "${tmp_main_ent:-}" "${tmp_plugin_ent:-}" "${tmp_helper_ent:-}" "${tmp_cr_ent:-}"' EXIT
+  tmp_shared_id_ent=""
+  trap 'rm -f "${tmp_main_ent:-}" "${tmp_plugin_ent:-}" "${tmp_helper_ent:-}" "${tmp_cr_ent:-}" "${tmp_shared_id_ent:-}"' EXIT
   tmp_main_ent="$(make_entitlements_with_appid "$main_entitlements" "$main_app_id" "$APPLE_TEAM_ID")"
   tmp_plugin_ent="$(make_entitlements_with_appid "$plugin_entitlements" "$plugin_app_id" "$APPLE_TEAM_ID")"
   tmp_cr_ent="$(make_entitlements_with_appid "$crashreporter_entitlements" "$crashreporter_app_id" "$APPLE_TEAM_ID")"
 
-  # Helper entitlements for updater.app + the four renamed helper apps (gpu-helper,
-  # media-plugin-helper, security-module-helper, callback_app). None of these have
-  # their own Apple Developer App ID / provisioning profile, so — like plugin-container
-  # did before it got its own dedicated profile — they must share the MAIN app's
-  # application-identifier. Without it, App Sandbox is enabled but there is no
-  # provisioned identity backing it, which Transporter reports as error 90049
-  # ("invalid CFBundleIdentifier ''") since it can't resolve who owns the sandbox
-  # container. Their CFBundleIdentifier is also set to $APPLE_BUNDLE_ID (see below)
-  # so it matches this entitlement and the code signature identifier.
+  # Generic entitlements for loose (non-bundle) Mach-O files and frameworks —
+  # dylibs, standalone tools (ssltunnel, certutil, pingsender, crashhelper...),
+  # and the loose TMRWUpdater copies. These can never have an embedded
+  # provisioning profile of their own (they're not bundles), so they must NOT
+  # carry an application-identifier entitlement — Transporter's TestFlight
+  # check (error 90885) rejects any signed executable that has an
+  # application-identifier but no matching provisioning profile alongside it.
   tmp_helper_ent="$(mktemp /tmp/entitlements-helper.XXXXXX)"
-  cat > "$tmp_helper_ent" <<ENTXML
+  cat > "$tmp_helper_ent" <<'ENTXML'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.app-sandbox</key><true/>
+  <key>com.apple.security.cs.allow-jit</key><true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
+  <key>com.apple.security.cs.disable-library-validation</key><true/>
+</dict>
+</plist>
+ENTXML
+
+  # Separate entitlements ONLY for the five .app bundles that share the main
+  # app's identity (updater.app, gpu-helper.app, media-plugin-helper.app,
+  # security-module-helper.app, callback_app.app). Unlike the loose files
+  # above, these ARE bundles and each gets a copy of the main app's own
+  # embedded.provisionprofile (see below), so an application-identifier here
+  # is valid and required — App Sandbox needs a provisioned identity, and
+  # none of these five have their own Apple Developer App ID.
+  tmp_shared_id_ent="$(mktemp /tmp/entitlements-shared-id.XXXXXX)"
+  cat > "$tmp_shared_id_ent" <<ENTXML
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -446,7 +499,7 @@ ENTXML
       /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Software Update" "$_upd_plist"
     /usr/libexec/PlistBuddy -c "Set :CFBundleName Software Update" "$_upd_plist" 2>/dev/null || \
       /usr/libexec/PlistBuddy -c "Add :CFBundleName string Software Update" "$_upd_plist"
-    # Shares the main app's CFBundleIdentifier — see tmp_helper_ent comment above
+    # Shares the main app's CFBundleIdentifier — see tmp_shared_id_ent comment above
     # for why (no dedicated App ID/provisioning profile exists for the updater).
     /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier ${APPLE_BUNDLE_ID}" "$_upd_plist" 2>/dev/null || \
       /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string ${APPLE_BUNDLE_ID}" "$_upd_plist"
@@ -611,7 +664,7 @@ ENTXML
     nested_name="$(basename "$nested")"
     note "  $nested_name"
     codesign --deep --force --options runtime --timestamp \
-      --entitlements "$tmp_helper_ent" \
+      --entitlements "$tmp_shared_id_ent" \
       --sign "$APPLE_SIGNING_IDENTITY" "$nested"
   done < <(find "$app_path/Contents" -name "*.app" -type d | sort -r)
 
@@ -649,6 +702,9 @@ ENTXML
     _hbundle="$app_path/Contents/MacOS/$_hname"
     [ -d "$_hbundle" ] && verify_identifier_match "$_hbundle" "$_hname"
   done
+
+  note "Scanning for orphaned application-identifier entitlements (Transporter 90885)"
+  verify_no_orphan_appid "$app_path"
 
   local pkg_path="$out_dir/$TESTFLIGHT_PKG_NAME"
   rm -f "$pkg_path"
