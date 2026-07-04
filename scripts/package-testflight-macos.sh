@@ -139,8 +139,23 @@ make_universal() {
   note "Merging arm64 slices into bundle (fixes 91167)..."
   local _lipoed=0
 
-  # Phase A: path-matched files
+  # Phase A: path-matched files.
+  # Cheap bash-native extension filter BEFORE the expensive `file` subprocess
+  # call — the Gecko resource resync (2026-07-05) grew this tree from ~340 to
+  # ~7300+ files, nearly all of them .properties/.js/.ftl/etc, none of which
+  # can ever be Mach-O. Without this filter, `find -type f` spawning `file`
+  # (plus `grep`) per file made this step take many minutes instead of
+  # seconds. Skip by extension first; only files with no recognized
+  # non-binary extension go through the real `file`-based check.
   while IFS= read -r -d '' x86f; do
+    case "$x86f" in
+      *.properties|*.js|*.mjs|*.jsm|*.ftl|*.json|*.css|*.html|*.xhtml|*.xml| \
+      *.svg|*.png|*.jpg|*.jpeg|*.gif|*.ico|*.icns|*.ini|*.manifest|*.txt| \
+      *.dtd|*.md|*.map|*.woff|*.woff2|*.ttf|*.otf|*.py|*.sh|*.plist| \
+      *.strings|*.nib/*|*.car|*.list|*.done|*.rdf|*.dat|*.wasm|*.jsonlz4| \
+      *.mozlz4|*.bin|*.sqlite|*.db)
+        continue ;;
+    esac
     file "$x86f" 2>/dev/null | grep -q "Mach-O" || continue
     lipo -info "$x86f" 2>/dev/null | grep -q "arm64" && continue
     local rel="${x86f#$app_path/}"
@@ -277,6 +292,17 @@ verify_no_orphan_appid() {
   local app_path="$1"
   local f is_bundle bundle_root ent
   while IFS= read -r -d '' f; do
+    # Cheap bash-native extension filter before the expensive `file`/codesign
+    # subprocess calls — see make_universal()'s Phase A comment for why this
+    # matters now that the resource tree is ~7300+ files instead of ~340.
+    case "$f" in
+      *.properties|*.js|*.mjs|*.jsm|*.ftl|*.json|*.css|*.html|*.xhtml|*.xml| \
+      *.svg|*.png|*.jpg|*.jpeg|*.gif|*.ico|*.icns|*.ini|*.manifest|*.txt| \
+      *.dtd|*.md|*.map|*.woff|*.woff2|*.ttf|*.otf|*.py|*.sh|*.plist| \
+      *.strings|*.nib/*|*.car|*.list|*.done|*.rdf|*.dat|*.wasm|*.jsonlz4| \
+      *.mozlz4|*.bin|*.sqlite|*.db)
+        continue ;;
+    esac
     file "$f" 2>/dev/null | grep -q "Mach-O" || continue
     ent="$(codesign -d --entitlements - "$f" 2>&1)"
     echo "$ent" | grep -q "application-identifier" || continue
@@ -409,6 +435,54 @@ verify_no_crashreporter_in_pkg() {
     exit 1
   fi
   note "  No crash reporter artifacts or Nightly/Mozilla branding in final pkg payload"
+}
+
+# Found 2026-07-05: $BUILT_APP_PATH was silently missing hundreds of Gecko
+# chrome/locale/JS resources (see the resync step above for the full story) —
+# `codesign --verify` passed the whole time, because a signature only proves
+# the bytes present weren't tampered with, not that all the *expected* bytes
+# are actually there. This is the check that would have caught it: validates
+# MainMenu.nib actually has content (not just an empty directory — this is
+# exactly what produced "Unable to load the Interface Builder file
+# MainMenu.nib" on a real device) and that a curated set of chrome/locale
+# files Gecko unconditionally needs at startup are present as real,
+# non-empty files. $1 is the app root to check — works against either
+# $app_path pre-productbuild or the expanded pkg's Payload/TMRW.app post.
+validate_gecko_resources() {
+  local app_path="$1"
+  local label="$2"
+  local failures=0
+
+  local nib_dir="$app_path/Contents/Resources/res/MainMenu.nib"
+  if [ ! -d "$nib_dir" ]; then
+    echo "ERROR: $label: missing $nib_dir" >&2
+    failures=$((failures + 1))
+  elif ! ls "$nib_dir" 2>/dev/null | grep -qE '^(keyedobjects|objects|data)\.nib$'; then
+    echo "ERROR: $label: $nib_dir exists but contains none of keyedobjects.nib/objects.nib/data.nib — it's an empty/invalid nib archive" >&2
+    failures=$((failures + 1))
+  fi
+
+  local rel
+  for rel in \
+    "chrome/en-US/locale/en-US/mozapps/profile/profileSelection.properties" \
+    "chrome/en-US/locale/en-US/global/commonDialogs.properties" \
+    "chrome/en-US/locale/en-US/global/css.properties" \
+    "chrome/en-US/locale/en-US/global/xul.properties" \
+    "chrome/en-US/locale/en-US/global/layout_errors.properties" \
+    "chrome/en-US/locale/en-US/global/dom/dom.properties" \
+    "chrome/en-US/locale/en-US/necko/necko.properties" \
+    "browser/chrome/en-US/locale/branding/brand.properties" \
+  ; do
+    if [ ! -s "$app_path/Contents/Resources/$rel" ]; then
+      echo "ERROR: $label: missing or empty required resource: Contents/Resources/$rel" >&2
+      failures=$((failures + 1))
+    fi
+  done
+
+  if [ "$failures" -gt 0 ]; then
+    fail "$label: $failures Gecko resource check(s) failed — see errors above (App Store builds ship real files here, not symlinks — see the resync step for why this can silently regress)"
+  fi
+  note "  Gecko chrome/locale/MainMenu.nib resources present and non-empty ($label)"
 }
 
 # `codesign --verify --deep --strict` only checks code signature integrity —
@@ -552,11 +626,54 @@ audit_app_bundle_profile_and_signature() {
   note "  Audit clean: every bundle's CFBundleIdentifier, code signature, entitlements, and embedded profile agree ($label)"
 }
 
+# Deletes updater.app/crashreporter.app and every related artifact. Called
+# twice: once early (so nothing downstream in this script touches them), and
+# again right after the Gecko resource resync — the resync pulls files in
+# from dist/bin by design, and dist/bin (an ordinary Firefox build) still
+# contains updater/crashreporter-named files (e.g. AppUpdater.sys.mjs,
+# crashreporter.ftl) that would otherwise get silently re-added by
+# --ignore-existing once the first pass has already removed them. This
+# second call is what actually has the last word.
+remove_updater_and_crashreporter_artifacts() {
+  local app_path="$1"
+
+  note "Removing updater.app and updater artifacts (not shipped in App Store builds)"
+  rm -rf "$app_path/Contents/MacOS/updater.app"
+  rm -f "$app_path/Contents/Resources/updater.ini"
+  rm -f "$app_path/Contents/Resources/update-settings.ini"
+  rm -f "$app_path/Contents/Resources/org.mozilla.updater"
+  rm -f "$app_path/Contents/Resources/TMRWUpdater"
+  rm -f "$app_path/Contents/Library/LaunchServices/org.mozilla.updater"
+  rm -f "$app_path/Contents/Library/LaunchServices/TMRWUpdater"
+  while IFS= read -r _leftover; do
+    note "  Removing leftover updater artifact: $_leftover"
+    rm -rf "$_leftover"
+  done < <(find "$app_path" -iname "*updater*")
+  verify_no_updater_in_source "$app_path"
+
+  # Remove crashreporter.app and every crash-reporter-related artifact
+  # entirely for this TestFlight/App Store build — same treatment and same
+  # reasoning as updater.app above. Direct-DMG builds (scripts/notarize.sh)
+  # are untouched and keep shipping crashreporter.app unchanged.
+  note "Removing crashreporter.app and crash reporter artifacts (not shipped in App Store builds)"
+  rm -rf "$app_path/Contents/MacOS/crashreporter.app"
+  rm -f "$app_path/Contents/MacOS/crashreporter"
+  rm -f "$app_path/Contents/MacOS/crashhelper"
+  rm -f "$app_path/Contents/Resources/crashreporter.ini"
+  rm -f "$app_path/Contents/Resources/browser/crashreporter.ini"
+  while IFS= read -r _leftover; do
+    note "  Removing leftover crash reporter artifact: $_leftover"
+    rm -rf "$_leftover"
+  done < <(find "$app_path" \( -iname "*crashreporter*" -o -iname "*crashhelper*" \))
+  verify_no_crashreporter_in_source "$app_path"
+}
+
 main() {
   need_cmd codesign
   need_cmd productbuild
   need_cmd pkgutil
   need_cmd xcrun
+  need_cmd rsync
 
   local root
   root="$(repo_root)"
@@ -632,35 +749,7 @@ main() {
   # (scripts/notarize.sh) — only this script. Must happen after the app is
   # fully built/copied into BUILT_APP_PATH but before any signing, so nothing
   # downstream (entitlements, profile embedding, codesign) ever touches it.
-  note "Removing updater.app and updater artifacts (not shipped in App Store builds)"
-  rm -rf "$app_path/Contents/MacOS/updater.app"
-  rm -f "$app_path/Contents/Resources/updater.ini"
-  rm -f "$app_path/Contents/Resources/update-settings.ini"
-  rm -f "$app_path/Contents/Resources/org.mozilla.updater"
-  rm -f "$app_path/Contents/Resources/TMRWUpdater"
-  rm -f "$app_path/Contents/Library/LaunchServices/org.mozilla.updater"
-  rm -f "$app_path/Contents/Library/LaunchServices/TMRWUpdater"
-  while IFS= read -r _leftover; do
-    note "  Removing leftover updater artifact: $_leftover"
-    rm -rf "$_leftover"
-  done < <(find "$app_path" -iname "*updater*")
-  verify_no_updater_in_source "$app_path"
-
-  # Remove crashreporter.app and every crash-reporter-related artifact
-  # entirely for this TestFlight/App Store build — same treatment and same
-  # reasoning as updater.app above. Direct-DMG builds (scripts/notarize.sh)
-  # are untouched and keep shipping crashreporter.app unchanged.
-  note "Removing crashreporter.app and crash reporter artifacts (not shipped in App Store builds)"
-  rm -rf "$app_path/Contents/MacOS/crashreporter.app"
-  rm -f "$app_path/Contents/MacOS/crashreporter"
-  rm -f "$app_path/Contents/MacOS/crashhelper"
-  rm -f "$app_path/Contents/Resources/crashreporter.ini"
-  rm -f "$app_path/Contents/Resources/browser/crashreporter.ini"
-  while IFS= read -r _leftover; do
-    note "  Removing leftover crash reporter artifact: $_leftover"
-    rm -rf "$_leftover"
-  done < <(find "$app_path" \( -iname "*crashreporter*" -o -iname "*crashhelper*" \))
-  verify_no_crashreporter_in_source "$app_path"
+  remove_updater_and_crashreporter_artifacts "$app_path"
 
   note "Embedding provisioning profiles"
   copy_profile "$main_profile" "$app_path"
@@ -771,6 +860,48 @@ ENTXML
       note "WARNING: dependentlibs.list not found; XPCOMGlue will fail to launch"
     fi
   fi
+
+  # dependentlibs.list turned out to be one symptom of a much bigger, same-
+  # shaped bug (found 2026-07-05): $BUILT_APP_PATH's dist/bin/ counterpart
+  # ships chrome/locale/JS resources as symlinks back into the source tree
+  # (e.g. dist/bin/browser/chrome/en-US/locale/branding/brand.properties ->
+  # browser/branding/w3ai/locales/en-US/brand.properties) — completely normal
+  # for this artifact-build setup, since dist/bin runs directly off the
+  # source tree during local dev. But $app_path (the reused bundle this
+  # script has signed/repackaged across many sessions) was missing the
+  # *resolved* file content entirely for huge swaths of these — not broken
+  # symlinks, just absent — for chrome/, browser/ (actors, modules,
+  # localization, components — the JS-level frontend almost entirely),
+  # res/ (including MainMenu.nib, which was an empty directory), moz-src,
+  # contentaccessible, hyphenation, dictionaries, distribution, defaults,
+  # and the gmp-fake* test plugin dirs. This is what caused the "Missing
+  # chrome or resource URL" spam and "Unable to load Interface Builder file
+  # MainMenu.nib" errors on a real TestFlight install, and is a strong
+  # candidate for the ServiceWorkerRegistrar startup crash too — JS-level
+  # Gecko startup depends heavily on modules/actors/localization being
+  # resolvable. `--ignore-existing` only fills gaps; it never touches a file
+  # that's already present, so this can't clobber any TMRW-specific
+  # branding/customization already baked into $app_path.
+  note "Resyncing Gecko chrome/locale/module resources from dist/bin (fills gaps only, never overwrites)"
+  local _bin_dir="$root/obj-x86_64-apple-darwin25.5.0/dist/bin"
+  if [ -d "$_bin_dir" ]; then
+    for _resync_dir in chrome browser res moz-src contentaccessible hyphenation \
+                       components actors localization modules dictionaries \
+                       distribution defaults gmp-fake gmp-clearkey gmp-fakeopenh264; do
+      if [ -d "$_bin_dir/$_resync_dir" ]; then
+        rsync -aL --ignore-existing "$_bin_dir/$_resync_dir/" "$app_path/Contents/Resources/$_resync_dir/"
+      fi
+    done
+    note "  Resource resync complete"
+  else
+    note "  WARNING: $_bin_dir not found — skipping resource resync (dependentlibs.list check above already warns if the app can't even launch)"
+  fi
+
+  # The resync above pulls from dist/bin, an ordinary Firefox build that
+  # still contains updater/crashreporter-named files — remove them again so
+  # this pass has the last word (see function comment for why this must run
+  # twice).
+  remove_updater_and_crashreporter_artifacts "$app_path"
 
   # Re-brand remaining org.mozilla.* helper bundle IDs. Each gets its own
   # distinct CFBundleIdentifier — NOT the main app's exact identifier, which
@@ -891,6 +1022,17 @@ ENTXML
   note "Signing Mach-O files in Resources/ and Library/..."
   local _signed=0
   while IFS= read -r -d '' f; do
+    # Cheap bash-native extension filter before the expensive `file`
+    # subprocess call — Contents/Resources now holds ~7300+ resynced Gecko
+    # chrome/locale/JS resource files (2026-07-05), none of which are Mach-O.
+    case "$f" in
+      *.properties|*.js|*.mjs|*.jsm|*.ftl|*.json|*.css|*.html|*.xhtml|*.xml| \
+      *.svg|*.png|*.jpg|*.jpeg|*.gif|*.ico|*.icns|*.ini|*.manifest|*.txt| \
+      *.dtd|*.md|*.map|*.woff|*.woff2|*.ttf|*.otf|*.py|*.sh|*.plist| \
+      *.strings|*.nib/*|*.car|*.list|*.done|*.rdf|*.dat|*.wasm|*.jsonlz4| \
+      *.mozlz4|*.bin|*.sqlite|*.db)
+        continue ;;
+    esac
     file "$f" 2>/dev/null | grep -q "Mach-O" || continue
     codesign --force --timestamp --options runtime \
       --entitlements "$tmp_helper_ent" \
@@ -1009,6 +1151,9 @@ ENTXML
   note "Validating crash reporter artifacts are absent before productbuild"
   verify_no_crashreporter_in_source "$app_path"
 
+  note "Validating Gecko chrome/locale/MainMenu.nib resources before productbuild"
+  validate_gecko_resources "$app_path" "BUILT_APP_PATH pre-productbuild"
+
   # Mandatory: every nested .app's CFBundleIdentifier, code signature,
   # entitlements, and embedded provisioning profile must all actually agree
   # with each other — not just individually pass codesign --verify. This is
@@ -1038,6 +1183,9 @@ ENTXML
   [ -n "$_shipped_app" ] && [ -d "$_shipped_app" ] || \
     fail "Could not find TMRW.app in expanded pkg payload at $_expand_dir"
   audit_app_bundle_profile_and_signature "$_shipped_app" "shipped pkg payload post-productbuild"
+
+  note "Validating Gecko chrome/locale/MainMenu.nib resources in the shipped pkg (post-productbuild)"
+  validate_gecko_resources "$_shipped_app" "shipped pkg payload post-productbuild"
 
   # The expanded payload (several hundred MB) was only needed for the checks
   # above — left in place it silently accumulates on /tmp on every single
