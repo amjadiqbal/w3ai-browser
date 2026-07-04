@@ -20,6 +20,7 @@ output.mar
 /plugin-container.entitlements
 /Resources/
 /com.tmrw.w3ai.pkg/
+/dist-testflight/
 
 # Filenames that should be ignored wherever they appear
 *~
