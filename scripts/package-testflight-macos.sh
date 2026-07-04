@@ -450,27 +450,33 @@ ENTXML
   # the binary named after Mozilla's reverse-DNS identifier while the wrapping
   # bundle claims com.tmrw.w3ai.updater is what Transporter flags as error 409
   # "Invalid Code Signature Identifier" (the executable name reads as its own
-  # implied bundle identifier). Same rename notarize.sh already does for the
-  # Developer-ID/DMG path — ported here since this script drives the actual
-  # TestFlight/Transporter .pkg build (see TESTFLIGHT_* vars in .env).
+  # implied bundle identifier).
+  #
+  # IMPORTANT: the replacement name must not contain a "." — Transporter's
+  # validator treats ANY dotted filename directly under a Contents/MacOS/ tree
+  # as if it were meant to be its own nested bundle, and then rejects it for
+  # having no CFBundleIdentifier of its own (error 90049, "invalid
+  # CFBundleIdentifier ''"). Confirmed by testing: renaming to "tmrw.updater"
+  # (still dotted) traded the 409 for a 90049 on this exact path. "TMRWUpdater"
+  # (no separators) is the only form that has passed local signing/validation.
   local _upd_old_bin="$_upd_app/Contents/MacOS/org.mozilla.updater"
-  local _upd_new_bin="$_upd_app/Contents/MacOS/tmrw.updater"
+  local _upd_new_bin="$_upd_app/Contents/MacOS/TMRWUpdater"
   if [ -f "$_upd_old_bin" ]; then
     mv "$_upd_old_bin" "$_upd_new_bin"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable tmrw.updater" "$_upd_plist" 2>/dev/null || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundleExecutable string tmrw.updater" "$_upd_plist"
-    note "Renamed updater executable → tmrw.updater"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable TMRWUpdater" "$_upd_plist" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleExecutable string TMRWUpdater" "$_upd_plist"
+    note "Renamed updater executable → TMRWUpdater"
   fi
 
   # Same loose (non-bundle) copies Firefox drops alongside the app for
   # LaunchServices/relaunch bookkeeping. Inert for App Store builds (App Store
   # delivers updates; the in-app MAR updater never runs — see notarize.sh), but
   # still get code-signed as-is, so rename them too or the next Transporter
-  # submission just reports the identical 409 against a different path.
+  # submission just reports the identical error against a different path.
   for _loose in \
     "$app_path/Contents/Resources/org.mozilla.updater" \
     "$app_path/Contents/Library/LaunchServices/org.mozilla.updater"; do
-    [ -f "$_loose" ] && mv "$_loose" "$(dirname "$_loose")/tmrw.updater"
+    [ -f "$_loose" ] && mv "$_loose" "$(dirname "$_loose")/TMRWUpdater"
   done
 
   # Re-brand remaining org.mozilla.* helper bundle IDs to com.tmrw.w3ai.*
