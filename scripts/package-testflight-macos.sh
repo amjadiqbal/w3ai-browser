@@ -8,7 +8,7 @@ set -euo pipefail
 # passed directly to this command still override .env values.
 #
 # Main .env variables:
-#   APP_VERSION=1.2.9                                       # required — no hardcoded fallback
+#   APP_VERSION=1.2.11                                      # required — no hardcoded fallback
 #   APPLE_ID=developer@example.com
 #   APPLE_APP_SPECIFIC_PASSWORD=xxxx-xxxx-xxxx-xxxx
 #   APPLE_TEAM_ID=TEAMID1234
@@ -26,6 +26,17 @@ set -euo pipefail
 # App Store handles updates; the in-app MAR updater is only for the direct-DMG
 # distribution build (scripts/notarize.sh). It's removed from BUILT_APP_PATH
 # before signing, and its absence is verified before AND after productbuild.
+#
+# crashreporter.app is likewise NOT shipped — Apple/TestFlight already collects
+# crash reports, and the Gecko crash reporter binary crashed at launch on
+# device (EXC_BAD_INSTRUCTION / SIGILL, SYSCALL_SET_USERLAND_PROFILE — it
+# fails during its own sandbox/profile initialization under App Store
+# sandboxing) plus showed a Gatekeeper "differs from previously opened
+# versions" warning from leftover Nightly/Mozilla strings baked into the
+# compiled binary — the same class of problem that got updater.app removed.
+# Same treatment: removed before signing, absence verified before AND after
+# productbuild. This only applies to this script — direct-DMG builds
+# (scripts/notarize.sh) keep shipping crashreporter.app unchanged.
 #
 # Optional .env variables:
 #   TESTFLIGHT_OUT_DIR=obj-x86_64-apple-darwin25.5.0/dist   # defaults to dir containing BUILT_APP_PATH
@@ -365,6 +376,41 @@ verify_no_updater_in_pkg() {
   note "  No updater artifacts in final pkg payload"
 }
 
+# crashreporter.app crashed at launch on-device after a real TestFlight
+# install (EXC_BAD_INSTRUCTION / SIGILL, asi signature
+# SYSCALL_SET_USERLAND_PROFILE — it fails during its own sandbox/profile
+# initialization under App Store sandboxing) and also triggered a Gatekeeper
+# "differs from previously opened versions" warning from leftover Nightly/
+# Mozilla strings baked into the compiled binary — the same shape of problem
+# that got updater.app removed. Apple/TestFlight already collects crash
+# reports on its own, so there's no need to ship Gecko's crash reporter in
+# this build at all. These two checks make its absence verifiable.
+verify_no_crashreporter_in_source() {
+  local app_path="$1"
+  if find "$app_path" \( -iname "*crashreporter*" -o -iname "*crashhelper*" \) | grep -q .; then
+    echo "ERROR: crash reporter artifacts must not be shipped in TestFlight/App Store build" >&2
+    find "$app_path" \( -iname "*crashreporter*" -o -iname "*crashhelper*" \) -print >&2
+    exit 1
+  fi
+  note "  No crash reporter artifacts in source app bundle"
+}
+
+verify_no_crashreporter_in_pkg() {
+  local expand_dir="$1"
+
+  if find "$expand_dir" \( -iname "*crashreporter*" -o -iname "*crashhelper*" \) | grep -q .; then
+    echo "ERROR: crash reporter artifacts exist in final pkg payload:" >&2
+    find "$expand_dir" \( -iname "*crashreporter*" -o -iname "*crashhelper*" \) -print >&2
+    exit 1
+  fi
+
+  if grep -R "Nightly Crash Reporter\|Mozilla Crash Reporter" "$expand_dir" 2>/dev/null | grep -q .; then
+    echo "ERROR: Nightly/Mozilla crash reporter branding found in final pkg" >&2
+    exit 1
+  fi
+  note "  No crash reporter artifacts or Nightly/Mozilla branding in final pkg payload"
+}
+
 # `codesign --verify --deep --strict` only checks code signature integrity —
 # hashes match, cert chain is valid. It does NOT check whether an embedded
 # provisioning profile's application-identifier actually matches what the
@@ -523,7 +569,6 @@ main() {
   TESTFLIGHT_PKG_NAME="${TESTFLIGHT_PKG_NAME:-TMRW-v${APP_VERSION}.pkg}"
   MAIN_ENTITLEMENTS="${MAIN_ENTITLEMENTS:-build/macos/testflight/TMRW.entitlements}"
   PLUGIN_ENTITLEMENTS="${PLUGIN_ENTITLEMENTS:-build/macos/testflight/plugin-container.entitlements}"
-  CRASHREPORTER_ENTITLEMENTS="${CRASHREPORTER_ENTITLEMENTS:-build/macos/testflight/crashreporter.entitlements}"
 
   # Backward compatible overrides for earlier command examples.
   if [ -n "${VERSION:-}" ]; then APP_VERSION="$VERSION"; fi
@@ -545,16 +590,13 @@ main() {
   [ -n "${APPLE_BUNDLE_ID:-}" ] || fail "APPLE_BUNDLE_ID is required in .env"
   [ -n "${APPLE_PLUGIN_CONTAINER_BUNDLE_ID:-}" ] || fail "APPLE_PLUGIN_CONTAINER_BUNDLE_ID is required in .env"
 
-  local app_path out_dir main_entitlements plugin_entitlements crashreporter_entitlements main_profile plugin_profile crashreporter_profile
+  local app_path out_dir main_entitlements plugin_entitlements main_profile plugin_profile
   app_path="$(abs_path "$BUILT_APP_PATH" "$root")"
   out_dir="$(abs_path "$TESTFLIGHT_OUT_DIR" "$root")"
   main_entitlements="$(abs_path "$MAIN_ENTITLEMENTS" "$root")"
   plugin_entitlements="$(abs_path "$PLUGIN_ENTITLEMENTS" "$root")"
-  crashreporter_entitlements="$(abs_path "$CRASHREPORTER_ENTITLEMENTS" "$root")"
   main_profile="$(abs_path "$APPLE_PROVISIONING_PROFILE" "$root")"
   plugin_profile="$(abs_path "$APPLE_PLUGIN_CONTAINER_PROVISIONING_PROFILE" "$root")"
-  crashreporter_profile="${APPLE_CRASHREPORTER_PROVISIONING_PROFILE:-}"
-  [ -n "$crashreporter_profile" ] && crashreporter_profile="$(abs_path "$crashreporter_profile" "$root")"
 
   [ -d "$app_path" ] || fail "BUILT_APP_PATH does not exist: $app_path"
 
@@ -604,33 +646,40 @@ main() {
   done < <(find "$app_path" -iname "*updater*")
   verify_no_updater_in_source "$app_path"
 
+  # Remove crashreporter.app and every crash-reporter-related artifact
+  # entirely for this TestFlight/App Store build — same treatment and same
+  # reasoning as updater.app above. Direct-DMG builds (scripts/notarize.sh)
+  # are untouched and keep shipping crashreporter.app unchanged.
+  note "Removing crashreporter.app and crash reporter artifacts (not shipped in App Store builds)"
+  rm -rf "$app_path/Contents/MacOS/crashreporter.app"
+  rm -f "$app_path/Contents/MacOS/crashreporter"
+  rm -f "$app_path/Contents/MacOS/crashhelper"
+  rm -f "$app_path/Contents/Resources/crashreporter.ini"
+  rm -f "$app_path/Contents/Resources/browser/crashreporter.ini"
+  while IFS= read -r _leftover; do
+    note "  Removing leftover crash reporter artifact: $_leftover"
+    rm -rf "$_leftover"
+  done < <(find "$app_path" \( -iname "*crashreporter*" -o -iname "*crashhelper*" \))
+  verify_no_crashreporter_in_source "$app_path"
+
   note "Embedding provisioning profiles"
   copy_profile "$main_profile" "$app_path"
   copy_profile "$plugin_profile" "$plugin_app"
-  local cr_app="$app_path/Contents/MacOS/crashreporter.app"
-  if [ -n "$crashreporter_profile" ] && [ -f "$crashreporter_profile" ]; then
-    copy_profile "$crashreporter_profile" "$cr_app"
-    note "  Embedded crashreporter provisioning profile"
-  fi
 
   # Build temp entitlements with application-identifier injected
   local main_app_id="${APPLE_TEAM_ID}.${APPLE_BUNDLE_ID}"
   local plugin_app_id="${APPLE_TEAM_ID}.${APPLE_PLUGIN_CONTAINER_BUNDLE_ID}"
-  local crashreporter_bundle_id="com.tmrw.w3ai.crashreporter"
-  local crashreporter_app_id="${APPLE_TEAM_ID}.${crashreporter_bundle_id}"
-  local tmp_main_ent tmp_plugin_ent tmp_helper_ent tmp_cr_ent tmp_shared_id_ent
+  local tmp_main_ent tmp_plugin_ent tmp_helper_ent tmp_shared_id_ent
   tmp_main_ent=""
   tmp_plugin_ent=""
   tmp_helper_ent=""
-  tmp_cr_ent=""
   tmp_shared_id_ent=""
-  trap 'rm -f "${tmp_main_ent:-}" "${tmp_plugin_ent:-}" "${tmp_helper_ent:-}" "${tmp_cr_ent:-}" "${tmp_shared_id_ent:-}"' EXIT
+  trap 'rm -f "${tmp_main_ent:-}" "${tmp_plugin_ent:-}" "${tmp_helper_ent:-}" "${tmp_shared_id_ent:-}"' EXIT
   tmp_main_ent="$(make_entitlements_with_appid "$main_entitlements" "$main_app_id" "$APPLE_TEAM_ID")"
   tmp_plugin_ent="$(make_entitlements_with_appid "$plugin_entitlements" "$plugin_app_id" "$APPLE_TEAM_ID")"
-  tmp_cr_ent="$(make_entitlements_with_appid "$crashreporter_entitlements" "$crashreporter_app_id" "$APPLE_TEAM_ID")"
 
   # Generic entitlements for loose (non-bundle) Mach-O files and frameworks —
-  # dylibs, standalone tools (ssltunnel, certutil, pingsender, crashhelper...),
+  # dylibs, standalone tools (ssltunnel, certutil, pingsender...),
   # and the loose TMRWUpdater copies. These can never have an embedded
   # provisioning profile of their own (they're not bundles), so they must NOT
   # carry an application-identifier entitlement — Transporter's TestFlight
@@ -721,25 +770,6 @@ ENTXML
     else
       note "WARNING: dependentlibs.list not found; XPCOMGlue will fail to launch"
     fi
-  fi
-
-  # Patch crashreporter.app — artifact retains Mozilla "Nightly Crash Reporter" branding
-  local _cr_app="$app_path/Contents/MacOS/crashreporter.app"
-  local _cr_plist="$_cr_app/Contents/Info.plist"
-  local _cr_strings="$_cr_app/Contents/Resources/English.lproj/InfoPlist.strings"
-  if [ -f "$_cr_plist" ]; then
-    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Crash Reporter" "$_cr_plist" 2>/dev/null || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Crash Reporter" "$_cr_plist"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW Crash Reporter" "$_cr_plist" 2>/dev/null || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundleName string TMRW Crash Reporter" "$_cr_plist"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.tmrw.w3ai.crashreporter" "$_cr_plist" 2>/dev/null || \
-      /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string com.tmrw.w3ai.crashreporter" "$_cr_plist"
-    /usr/libexec/PlistBuddy -c "Set :LSHasLocalizedDisplayName false" "$_cr_plist" 2>/dev/null || true
-    note "Patched crashreporter.app display name → TMRW Crash Reporter"
-  fi
-  if [ -f "$_cr_strings" ]; then
-    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Crash Reporter" "$_cr_strings" 2>/dev/null || true
-    /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW Crash Reporter" "$_cr_strings" 2>/dev/null || true
   fi
 
   # Re-brand remaining org.mozilla.* helper bundle IDs. Each gets its own
@@ -872,7 +902,8 @@ ENTXML
     -type f -print0 2>/dev/null)
   note "  Signed $_signed Mach-O files"
 
-  # Step 2: Sign loose Mach-O executables in MacOS/ (XUL, crashhelper, pingsender…)
+  # Step 2: Sign loose Mach-O executables in MacOS/ (XUL, pingsender... —
+  # crashhelper was already removed earlier and is never reached here)
   note "Signing executables in MacOS/..."
   _signed=0
   while IFS= read -r -d '' f; do
@@ -898,16 +929,13 @@ ENTXML
   # Step 3: Sign nested .app bundles. Required order: plugin-container.app
   # second-to-last, main TMRW.app last — Transporter scans every nested .app
   # bundle, so each must be fully signed/provisioned (identifier + embedded
-  # profile in place) before the parent app seals over it. updater.app was
-  # removed entirely earlier in this script, so it's never reached here.
+  # profile in place) before the parent app seals over it. updater.app and
+  # crashreporter.app were both removed entirely earlier in this script, so
+  # neither is ever reached here.
   note "Signing shared-identity helper apps..."
-  local _cr_has_profile=false
-  [ -n "$crashreporter_profile" ] && [ -f "$crashreporter_profile" ] && _cr_has_profile=true
-
   while IFS= read -r nested; do
     [[ "$nested" == "$app_path" ]]   && continue
     [[ "$nested" == "$plugin_app" ]] && continue  # handled separately below
-    [[ "$nested" == "$cr_app" ]]     && continue  # handled separately below
     local nested_name
     nested_name="$(basename "$nested")"
     note "  $nested_name"
@@ -915,15 +943,6 @@ ENTXML
       --entitlements "$tmp_shared_id_ent" \
       --sign "$APPLE_SIGNING_IDENTITY" "$nested"
   done < <(find "$app_path/Contents" -name "*.app" -type d | sort -r)
-
-  note "Signing crashreporter.app"
-  if [ "$_cr_has_profile" = true ]; then
-    sign_bundle "$cr_app" "$tmp_cr_ent"
-  else
-    codesign --deep --force --options runtime --timestamp \
-      --entitlements "$tmp_cr_ent" \
-      --sign "$APPLE_SIGNING_IDENTITY" "$cr_app"
-  fi
 
   note "Signing plugin-container.app (second — see required signing order)"
   sign_bundle "$plugin_app" "$tmp_plugin_ent"
@@ -933,8 +952,6 @@ ENTXML
   sign_bundle "$app_path" "$tmp_main_ent"
 
   note "Verifying signed bundles"
-  [ -n "$crashreporter_profile" ] && [ -f "$crashreporter_profile" ] && \
-    verify_bundle_profile "$cr_app" "crashreporter.app"
   verify_bundle_profile "$plugin_app" "plugin-container.app"
   verify_bundle_profile "$app_path" "TMRW.app"
   # No verify_bundle_profile for the 4 shared helpers — they deliberately have
@@ -949,7 +966,6 @@ ENTXML
   done
 
   note "Verifying nested bundle identifiers match their code signatures"
-  verify_identifier_match "$_cr_app" "crashreporter.app"
   for _hname in gpu-helper.app media-plugin-helper.app security-module-helper.app callback_app.app; do
     _hbundle="$app_path/Contents/MacOS/$_hname"
     [ -d "$_hbundle" ] && verify_identifier_match "$_hbundle" "$_hname"
@@ -966,8 +982,8 @@ ENTXML
   # scan as nested apps. Deliberately explicit/literal (not routed through
   # verify_identifier_match) so a mismatch names precisely which bundle and
   # which expected value failed, right before packaging. Also re-confirms
-  # updater.app and every updater artifact are still absent — mandatory, not
-  # just a one-time check earlier in the script.
+  # updater.app/crashreporter.app and their artifacts are still absent —
+  # mandatory, not just a one-time check earlier in the script.
   note "Validating bundle identifiers before productbuild"
   local _check_main_id _check_plugin_id
   _check_main_id="$(plist_get "$app_plist" CFBundleIdentifier)"
@@ -990,6 +1006,9 @@ ENTXML
   note "Validating updater.app is absent before productbuild"
   verify_no_updater_in_source "$app_path"
 
+  note "Validating crash reporter artifacts are absent before productbuild"
+  verify_no_crashreporter_in_source "$app_path"
+
   # Mandatory: every nested .app's CFBundleIdentifier, code signature,
   # entitlements, and embedded provisioning profile must all actually agree
   # with each other — not just individually pass codesign --verify. This is
@@ -1008,6 +1027,9 @@ ENTXML
 
   note "Validating updater.app is absent from the shipped pkg (post-productbuild)"
   verify_no_updater_in_pkg "$pkg_path"
+
+  note "Validating crash reporter artifacts are absent from the shipped pkg (post-productbuild)"
+  verify_no_crashreporter_in_pkg "/tmp/tmrw-pkg-check"
 
   note "Re-auditing bundle/profile/signature consistency against the actual shipped payload"
   local _expand_dir="/tmp/tmrw-pkg-check"
