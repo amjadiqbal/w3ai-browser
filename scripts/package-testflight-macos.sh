@@ -265,6 +265,7 @@ verify_no_orphan_appid() {
     ent="$(codesign -d --entitlements - "$f" 2>&1)"
     echo "$ent" | grep -q "application-identifier" || continue
     is_bundle=false
+    is_framework=false
     bundle_root=""
     case "$f" in
       */Contents/MacOS/*)
@@ -272,8 +273,18 @@ verify_no_orphan_appid() {
         [ -d "$bundle_root" ] && [ "$(basename "$bundle_root")" != "MacOS" ] && \
           case "$bundle_root" in *.app|*.framework) is_bundle=true ;; esac
         ;;
+      */Versions/*/*)
+        # Framework binaries live at Foo.framework/Versions/A/Foo, not under a
+        # Contents/MacOS tree — this class of path was previously invisible to
+        # this check entirely, letting an orphaned application-identifier
+        # entitlement on a framework binary slip past silently.
+        bundle_root="${f%/Versions/*}"
+        [ -d "$bundle_root" ] && case "$bundle_root" in *.framework) is_bundle=true; is_framework=true ;; esac
+        ;;
     esac
-    if [ "$is_bundle" = true ]; then
+    if [ "$is_framework" = true ]; then
+      fail "$f (inside a .framework) has an application-identifier entitlement — frameworks can never carry a provisioning profile, this must be signed without application-identifier (Transporter 90885)"
+    elif [ "$is_bundle" = true ]; then
       [ -f "$bundle_root/Contents/embedded.provisionprofile" ] || \
         fail "$f has an application-identifier entitlement but $bundle_root is missing Contents/embedded.provisionprofile (Transporter 90885)"
     else
@@ -281,6 +292,32 @@ verify_no_orphan_appid() {
     fi
   done < <(find "$app_path/Contents" -type f -print0 2>/dev/null)
   note "  No orphaned application-identifier entitlements found"
+}
+
+# Catches the class of bug found 2026-07-04: a stale executable left in a
+# nested .app's Contents/MacOS/ from an earlier build under different
+# branding (e.g. an old thin-arch binary sitting next to the real,
+# universal-arch one CFBundleExecutable actually points to). --deep signing
+# resigns every Mach-O it finds there regardless of whether Info.plist
+# declares it, so an orphan silently picks up the same identity/entitlements
+# as the bundle's real executable — undetectable by entitlement-only checks
+# since the orphan looks "correctly" signed on its own.
+verify_no_undeclared_executable() {
+  local app_path="$1"
+  local nested plist exe f
+  while IFS= read -r nested; do
+    [ "$nested" = "$app_path" ] && continue
+    plist="$nested/Contents/Info.plist"
+    [ -f "$plist" ] || continue
+    exe="$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$plist" 2>/dev/null)" || continue
+    [ -n "$exe" ] || continue
+    while IFS= read -r -d '' f; do
+      [ "$(basename "$f")" = "$exe" ] && continue
+      file "$f" 2>/dev/null | grep -q "Mach-O" || continue
+      fail "$f is an undeclared executable in $(basename "$nested") — Info.plist's CFBundleExecutable is '$exe', not '$(basename "$f")' (would be silently re-signed with the bundle's identity by --deep)"
+    done < <(find "$nested/Contents/MacOS" -maxdepth 1 -type f -print0 2>/dev/null)
+  done < <(find "$app_path/Contents/MacOS" -name "*.app" -type d)
+  note "  No undeclared executables found in nested .app bundles"
 }
 
 main() {
@@ -559,6 +596,27 @@ ENTXML
     fi
   done
 
+  # Delete orphaned executables left behind in these bundles' Contents/MacOS/
+  # by earlier builds under a different branding config (e.g. a stale
+  # thin-arch "W3Ai GPU Helper" sitting next to the actual universal-arch
+  # "Nightly GPU Helper" that CFBundleExecutable still points to). --deep
+  # signing in Step 3 below signs every Mach-O it finds in the bundle, so an
+  # undeclared orphan still picks up the shared application-identifier
+  # entitlement despite not being the bundle's real identity — exactly the
+  # shape of Transporter errors 90049/90885. Keep only the file Info.plist
+  # actually declares as CFBundleExecutable.
+  for _hname in gpu-helper.app media-plugin-helper.app security-module-helper.app callback_app.app; do
+    _hplist="$app_path/Contents/MacOS/$_hname/Contents/Info.plist"
+    [ -f "$_hplist" ] || continue
+    _hexe="$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$_hplist" 2>/dev/null)"
+    [ -n "$_hexe" ] || continue
+    while IFS= read -r -d '' _horphan; do
+      [ "$(basename "$_horphan")" = "$_hexe" ] && continue
+      note "Removing orphaned undeclared executable: $_horphan"
+      rm -f "$_horphan"
+    done < <(find "$app_path/Contents/MacOS/$_hname/Contents/MacOS" -maxdepth 1 -type f -print0 2>/dev/null)
+  done
+
   # Embed a copy of the main app's provisioning profile in updater.app and the
   # four shared-identity helpers too. They use the main app's own identifier,
   # so the main profile already covers them, but Transporter's sandbox
@@ -608,6 +666,25 @@ ENTXML
   restructure_framework \
     "$app_path/Contents/MacOS/updater.app/Contents/Frameworks/UpdateSettings.framework" \
     "UpdateSettings"
+
+  # Re-brand the two nested frameworks' org.mozilla.* CFBundleIdentifiers.
+  # These never carry application-identifier/provisioning (frameworks are
+  # loaded in-process, not independently provisioned), so this is a pure
+  # branding fix, not a signing-identity one — but a leftover org.mozilla.*
+  # identifier in a com.tmrw.w3ai-signed bundle is still the same red flag
+  # for App Store review as every other org.mozilla.* leftover fixed above.
+  for _fwpair in \
+    "$app_path/Contents/Frameworks/ChannelPrefs.framework=com.tmrw.w3ai.channelprefs" \
+    "$app_path/Contents/MacOS/updater.app/Contents/Frameworks/UpdateSettings.framework=com.tmrw.w3ai.updatesettings"; do
+    _fwdir="${_fwpair%%=*}"
+    _fwid="${_fwpair##*=}"
+    _fwplist="$(find "$_fwdir" -path "*/Resources/Info.plist" 2>/dev/null | head -1)"
+    if [ -n "$_fwplist" ] && [ -f "$_fwplist" ]; then
+      /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $_fwid" "$_fwplist" 2>/dev/null || \
+        /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string $_fwid" "$_fwplist"
+      note "Patched $(basename "$_fwdir") bundle ID → $_fwid"
+    fi
+  done
 
   # Step 1: Sign ALL Mach-O files in Resources/ and Library/ with sandbox entitlements.
   # This covers dylibs, .so, and standalone executables (firefox-bin, pingsender,
@@ -705,6 +782,9 @@ ENTXML
 
   note "Scanning for orphaned application-identifier entitlements (Transporter 90885)"
   verify_no_orphan_appid "$app_path"
+
+  note "Scanning for undeclared executables in nested .app bundles (Transporter 90049/90885)"
+  verify_no_undeclared_executable "$app_path"
 
   local pkg_path="$out_dir/$TESTFLIGHT_PKG_NAME"
   rm -f "$pkg_path"
