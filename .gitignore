@@ -17,6 +17,7 @@ browser-operator-core/
 # W3Ai: build artifacts
 output.mar
 /Distribution
+/plugin-container.entitlements
 /Resources/
 /com.tmrw.w3ai.pkg/
 

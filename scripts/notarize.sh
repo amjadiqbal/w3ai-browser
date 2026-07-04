@@ -606,18 +606,25 @@ if $IS_APP_STORE; then
   ui_info "Entitlements: application-identifier=${APPLE_TEAM_ID}.${APPLE_BUNDLE_ID}"
 fi
 
-# [2a] Sign all dylibs, binaries, and frameworks with helper entitlements.
-# Covers gmp-clearkey, XUL (the Mozilla engine), plugin-container, updater,
-# and all .framework bundles in Contents/Frameworks/.
-ui_info "Signing dylibs and standalone binaries…"
+# [2a] Sign ALL Mach-O files in Resources/ and Library/ with sandbox entitlements.
+# Previously only dylibs/so were signed; this left firefox-bin, pingsender, signmar,
+# crashhelper, nmhproxy, org.mozilla.updater, plugin-container (flat), etc. unsigned,
+# causing Transporter error 409 "App sandbox not enabled".
+ui_info "Signing Mach-O files in Resources/ and Library/…"
+# Remove non-distribution development binaries that aren't allowed in App Store builds
+for _dev_bin in signmar logalloc-replay zucchini zucchini-gtest; do
+  rm -f "${APP_PATH:?}/Contents/Resources/$_dev_bin" 2>/dev/null || true
+done
+rm -f "${APP_PATH:?}/Contents/Resources/firefox.bak" \
+      "${APP_PATH:?}/Contents/MacOS/firefox.bak" 2>/dev/null || true
 while IFS= read -r -d '' f; do
+  file "$f" 2>/dev/null | grep -q "Mach-O" || continue
   codesign --force --timestamp --options runtime \
     --sign "$APPLE_SIGNING_IDENTITY" --entitlements "$HELP_ENT" "$f" 2>/dev/null || true
 done < <(find \
   "$APP_PATH/Contents/Resources" \
   "$APP_PATH/Contents/Library" \
-  -type f \( -name "*.dylib" -o -name "*.so" -o -name "plugin-container" -o -name "org.mozilla.updater" \) \
-  -print0 2>/dev/null)
+  -type f -print0 2>/dev/null)
 
 # Sign framework bundles in Contents/Frameworks/ (ChannelPrefs.framework etc.)
 ui_info "Signing frameworks…"
@@ -627,8 +634,9 @@ while IFS= read -r fw; do
     --sign "$APPLE_SIGNING_IDENTITY" --entitlements "$HELP_ENT" "$fw"
 done < <(find "$APP_PATH/Contents/Frameworks" -name "*.framework" -type d -maxdepth 1 2>/dev/null)
 
-# Sign extension-less Mach-O files directly in Contents/MacOS/ (e.g. XUL)
+# Sign all Mach-O files in Contents/MacOS/ (XUL, crashhelper, pingsender, nmhproxy…)
 while IFS= read -r -d '' f; do
+  file "$f" 2>/dev/null | grep -q "Mach-O" || continue
   codesign --force --timestamp --options runtime \
     --sign "$APPLE_SIGNING_IDENTITY" --entitlements "$HELP_ENT" "$f" 2>/dev/null || true
 done < <(find "$APP_PATH/Contents/MacOS" -maxdepth 1 \

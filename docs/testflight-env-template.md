@@ -1,0 +1,25 @@
+# TestFlight environment variables
+
+Add these values to your local `.env` file. Do not commit real values.
+
+```env
+APP_VERSION=1.2.1
+APPLE_ID=
+APPLE_APP_SPECIFIC_PASSWORD=
+APPLE_TEAM_ID=
+APPLE_BUNDLE_ID=com.tmrw.w3ai
+APPLE_PLUGIN_CONTAINER_BUNDLE_ID=com.tmrw.w3ai.plugin-container
+APPLE_SIGNING_IDENTITY=
+APPLE_INSTALLER_IDENTITY=
+APPLE_PROVISIONING_PROFILE=
+APPLE_PLUGIN_CONTAINER_PROVISIONING_PROFILE=
+BUILT_APP_PATH=
+TESTFLIGHT_OUT_DIR=dist-testflight
+TESTFLIGHT_PKG_NAME=TMRW-1.2.1-TestFlight.pkg
+MAIN_ENTITLEMENTS=build/macos/testflight/TMRW.entitlements
+PLUGIN_ENTITLEMENTS=build/macos/testflight/plugin-container.entitlements
+```
+
+`APPLE_PROVISIONING_PROFILE` must match `APPLE_BUNDLE_ID`.
+
+`APPLE_PLUGIN_CONTAINER_PROVISIONING_PROFILE` must match `APPLE_PLUGIN_CONTAINER_BUNDLE_ID`.
