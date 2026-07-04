@@ -365,6 +365,147 @@ verify_no_updater_in_pkg() {
   note "  No updater artifacts in final pkg payload"
 }
 
+# `codesign --verify --deep --strict` only checks code signature integrity —
+# hashes match, cert chain is valid. It does NOT check whether an embedded
+# provisioning profile's application-identifier actually matches what the
+# bundle's own CFBundleIdentifier or entitlements claim. That mismatch is
+# invisible to every check in this script until macOS enforces it at
+# TestFlight *install/launch* time ("The provisioning profile is invalid"),
+# which is exactly what happened: gpu-helper.app/media-plugin-helper.app/
+# security-module-helper.app/callback_app.app each had a distinct
+# CFBundleIdentifier (com.tmrw.w3ai.gpu-helper etc, from the earlier
+# CFBundleIdentifier-collision fix) but were embedded with the MAIN app's
+# provisioning profile (covers K9B6ZLA9M4.com.tmrw.w3ai, not
+# K9B6ZLA9M4.com.tmrw.w3ai.gpu-helper) — internally self-consistent by every
+# check this script had (identifier matches signature, profile file exists,
+# codesign --verify passes) but wrong the moment the OS actually checks
+# profile-to-identity binding rather than just signature validity.
+#
+# Scans every nested .app bundle under $1 (root can be BUILT_APP_PATH or an
+# expanded pkg's Payload/TMRW.app) and checks A-I below. Any failure prints a
+# precise "expected X, got Y" message and hard-fails packaging.
+audit_app_bundle_profile_and_signature() {
+  local root="$1"
+  local label="$2"
+  local bundle plist bundle_id bundle_exe sig_id sig_team ent_file ent_appid
+  local profile_file profile_plist profile_appid profile_team profile_exp profile_exp_epoch now_epoch
+  local failures=0
+
+  note "Auditing bundle/profile/signature consistency ($label)"
+
+  while IFS= read -r bundle; do
+    plist="$bundle/Contents/Info.plist"
+    [ -f "$plist" ] || continue
+
+    bundle_id="$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$plist" 2>/dev/null || true)"
+    bundle_exe="$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$plist" 2>/dev/null || true)"
+
+    # A. CFBundleIdentifier must not be empty.
+    if [ -z "$bundle_id" ]; then
+      echo "ERROR: $bundle has an empty CFBundleIdentifier" >&2
+      failures=$((failures + 1))
+      continue
+    fi
+
+    sig_id="$(codesign -dv "$bundle" 2>&1 | sed -n 's/^Identifier=//p' || true)"
+    sig_team="$(codesign -dv "$bundle" 2>&1 | sed -n 's/^TeamIdentifier=//p' || true)"
+
+    # B. codesign Identifier must equal CFBundleIdentifier.
+    if [ "$sig_id" != "$bundle_id" ]; then
+      echo "ERROR: $bundle ($bundle_exe) codesign Identifier '$sig_id' does not match CFBundleIdentifier '$bundle_id'" >&2
+      failures=$((failures + 1))
+    fi
+
+    # C. codesign TeamIdentifier must equal the configured team.
+    if [ "$sig_team" != "$APPLE_TEAM_ID" ]; then
+      echo "ERROR: $bundle ($bundle_exe) codesign TeamIdentifier '$sig_team' does not match expected '$APPLE_TEAM_ID'" >&2
+      failures=$((failures + 1))
+    fi
+
+    ent_file="$(mktemp /tmp/audit-entitlements.XXXXXX)"
+    codesign -d --entitlements :- "$bundle" > "$ent_file" 2>/dev/null || true
+    ent_appid=""
+    if [ -s "$ent_file" ]; then
+      ent_appid="$(/usr/libexec/PlistBuddy -c "Print :com.apple.application-identifier" "$ent_file" 2>/dev/null || true)"
+    fi
+
+    # D. If entitlements carry application-identifier, it must equal
+    # TEAMID.<CFBundleIdentifier> — exactly this bundle's own identity, never
+    # a different bundle's (e.g. the main app's, when this bundle isn't main).
+    if [ -n "$ent_appid" ] && [ "$ent_appid" != "${APPLE_TEAM_ID}.${bundle_id}" ]; then
+      echo "ERROR: $bundle ($bundle_exe) entitlements application-identifier is '$ent_appid', expected '${APPLE_TEAM_ID}.${bundle_id}'" >&2
+      failures=$((failures + 1))
+    fi
+    rm -f "$ent_file"
+
+    profile_file="$bundle/Contents/embedded.provisionprofile"
+    if [ -f "$profile_file" ]; then
+      profile_plist="$(mktemp /tmp/audit-profile.XXXXXX)"
+      security cms -D -i "$profile_file" > "$profile_plist" 2>/dev/null || true
+      profile_appid="$(/usr/libexec/PlistBuddy -c "Print :Entitlements:com.apple.application-identifier" "$profile_plist" 2>/dev/null || true)"
+      profile_team="$(/usr/libexec/PlistBuddy -c "Print :Entitlements:com.apple.developer.team-identifier" "$profile_plist" 2>/dev/null || true)"
+      profile_exp="$(/usr/libexec/PlistBuddy -c "Print :ExpirationDate" "$profile_plist" 2>/dev/null || true)"
+
+      # E/I. Profile's application-identifier must match THIS bundle's own
+      # identity — the exact mismatch class that broke TestFlight runtime
+      # provisioning: a profile that actually covers a *different* bundle's
+      # identifier (typically the main app's) embedded into this one instead.
+      if [ "$profile_appid" != "${APPLE_TEAM_ID}.${bundle_id}" ]; then
+        echo "ERROR: $bundle ($bundle_exe) profile app id '$profile_appid' does not match bundle id ${APPLE_TEAM_ID}.${bundle_id}" >&2
+        echo "  Expected profile app id ${APPLE_TEAM_ID}.${bundle_id}" >&2
+        failures=$((failures + 1))
+      fi
+
+      # F. Profile team id must equal the configured team.
+      if [ "$profile_team" != "$APPLE_TEAM_ID" ]; then
+        echo "ERROR: $bundle ($bundle_exe) profile team id '$profile_team' does not match expected '$APPLE_TEAM_ID'" >&2
+        failures=$((failures + 1))
+      fi
+
+      # G. Profile must not be expired.
+      if [ -n "$profile_exp" ]; then
+        profile_exp_epoch="$(date -j -f "%a %b %d %T %Z %Y" "$profile_exp" "+%s" 2>/dev/null || echo 0)"
+        now_epoch="$(date "+%s")"
+        if [ "$profile_exp_epoch" -gt 0 ] && [ "$profile_exp_epoch" -lt "$now_epoch" ]; then
+          echo "ERROR: $bundle ($bundle_exe) embedded provisioning profile expired on $profile_exp" >&2
+          failures=$((failures + 1))
+        fi
+      fi
+
+      # H (profile-present side): entitlements app id, if present, must agree
+      # with what the profile actually covers too — catches the case where
+      # entitlements and profile agree with each other but neither matches
+      # CFBundleIdentifier (exactly what happened with the shared-identity
+      # helpers: entitlements said K9B6ZLA9M4.com.tmrw.w3ai, profile also said
+      # K9B6ZLA9M4.com.tmrw.w3ai, but the bundle's own id was
+      # com.tmrw.w3ai.gpu-helper).
+      if [ -n "$ent_appid" ] && [ "$ent_appid" != "$profile_appid" ]; then
+        echo "ERROR: $bundle ($bundle_exe) entitlements application-identifier '$ent_appid' does not match embedded profile application-identifier '$profile_appid'" >&2
+        failures=$((failures + 1))
+      fi
+      rm -f "$profile_plist"
+    else
+      # H (no-profile side): an application-identifier entitlement with no
+      # embedded profile to back it is the exact shape of Transporter 90885.
+      if [ -n "$ent_appid" ]; then
+        echo "ERROR: $bundle ($bundle_exe) has entitlements application-identifier '$ent_appid' but no Contents/embedded.provisionprofile" >&2
+        failures=$((failures + 1))
+      fi
+    fi
+
+    if [ -z "$ent_appid" ] && [ ! -f "$profile_file" ]; then
+      note "  $bundle_exe ($bundle_id): no application-identifier, no embedded profile — OK"
+    else
+      note "  $bundle_exe ($bundle_id): application-identifier and profile consistent"
+    fi
+  done < <(find "$root" -name "*.app" -type d)
+
+  if [ "$failures" -gt 0 ]; then
+    fail "$failures bundle/profile/signature audit failure(s) found in $label — see errors above"
+  fi
+  note "  Audit clean: every bundle's CFBundleIdentifier, code signature, entitlements, and embedded profile agree ($label)"
+}
+
 main() {
   need_cmd codesign
   need_cmd productbuild
@@ -509,22 +650,33 @@ main() {
 </plist>
 ENTXML
 
-  # Separate entitlements for .app bundles that share the main app's identity:
-  # gpu-helper.app, media-plugin-helper.app, security-module-helper.app,
-  # callback_app.app. Unlike the loose files above, these ARE bundles and each
-  # gets a copy of the main app's own embedded.provisionprofile (see above),
-  # so an application-identifier here is valid and required — App Sandbox
-  # needs a provisioned identity, and none of these have their own Apple
-  # Developer App ID.
+  # Entitlements for gpu-helper.app, media-plugin-helper.app,
+  # security-module-helper.app, callback_app.app: sandboxed, but deliberately
+  # NO application-identifier and NO embedded provisioning profile.
+  #
+  # This used to give them application-identifier = TEAMID.com.tmrw.w3ai (the
+  # MAIN app's identity) plus a copy of the main app's own embedded profile —
+  # while each bundle's own CFBundleIdentifier is distinct
+  # (com.tmrw.w3ai.gpu-helper etc, needed to avoid the CFBundleIdentifier
+  # Collision Transporter rejects). That mismatch (profile covers
+  # TEAMID.com.tmrw.w3ai, bundle claims to be com.tmrw.w3ai.gpu-helper) passed
+  # every check this script had — codesign --verify only checks signature
+  # integrity, not whether the embedded profile's identity actually matches
+  # the bundle claiming it — but macOS enforces it at TestFlight install/
+  # launch time: "The provisioning profile is invalid." None of these four
+  # have a dedicated Apple Developer App ID, so the only fix that doesn't
+  # require new Apple Developer Portal registrations is to not claim an
+  # application-identifier at all — a plain sandboxed helper needs no
+  # provisioned identity of its own to run inside its parent's sandbox.
+  # See audit_app_bundle_profile_and_signature() above, which is exactly the
+  # check that would have caught this the first time.
   tmp_shared_id_ent="$(mktemp /tmp/entitlements-shared-id.XXXXXX)"
-  cat > "$tmp_shared_id_ent" <<ENTXML
+  cat > "$tmp_shared_id_ent" <<'ENTXML'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
   <key>com.apple.security.app-sandbox</key><true/>
-  <key>com.apple.application-identifier</key><string>${main_app_id}</string>
-  <key>com.apple.developer.team-identifier</key><string>${APPLE_TEAM_ID}</string>
   <key>com.apple.security.cs.allow-jit</key><true/>
   <key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
   <key>com.apple.security.cs.disable-library-validation</key><true/>
@@ -634,17 +786,20 @@ ENTXML
     done < <(find "$app_path/Contents/MacOS/$_hname/Contents/MacOS" -maxdepth 1 -type f -print0 2>/dev/null)
   done
 
-  # Embed a copy of the main app's provisioning profile in the four
-  # shared-identity helpers (they use the main app's own identifier, so the
-  # main profile already covers them — Transporter's sandbox validation has
-  # been unreliable about accepting that by inheritance alone, cheap to embed
-  # directly).
+  # Deliberately do NOT embed any provisioning profile in gpu-helper.app,
+  # media-plugin-helper.app, security-module-helper.app, callback_app.app —
+  # see the tmp_shared_id_ent comment above for why (embedding the main app's
+  # profile into a bundle with a different CFBundleIdentifier is exactly what
+  # broke TestFlight runtime provisioning). Actively remove any stale one a
+  # previous run of this script may have left behind, so re-running against
+  # an already-mutated BUILT_APP_PATH doesn't leave a leftover mismatched
+  # profile in place.
   for _shared_app in \
     "$app_path/Contents/MacOS/gpu-helper.app" \
     "$app_path/Contents/MacOS/media-plugin-helper.app" \
     "$app_path/Contents/MacOS/security-module-helper.app" \
     "$app_path/Contents/MacOS/callback_app.app"; do
-    [ -d "$_shared_app" ] && copy_profile "$main_profile" "$_shared_app"
+    [ -d "$_shared_app" ] && rm -f "$_shared_app/Contents/embedded.provisionprofile"
   done
 
   # Resolve nmhproxy symlink to a real file so it can be signed
@@ -782,9 +937,15 @@ ENTXML
     verify_bundle_profile "$cr_app" "crashreporter.app"
   verify_bundle_profile "$plugin_app" "plugin-container.app"
   verify_bundle_profile "$app_path" "TMRW.app"
+  # No verify_bundle_profile for the 4 shared helpers — they deliberately have
+  # no embedded.provisionprofile now (see tmp_shared_id_ent comment above),
+  # so that check would always fail. Plain signature verification still
+  # applies.
   for _hname in gpu-helper.app media-plugin-helper.app security-module-helper.app callback_app.app; do
     _hbundle="$app_path/Contents/MacOS/$_hname"
-    [ -d "$_hbundle" ] && verify_bundle_profile "$_hbundle" "$_hname"
+    if [ -d "$_hbundle" ]; then
+      codesign --verify --deep --strict --verbose=2 "$_hbundle"
+    fi
   done
 
   note "Verifying nested bundle identifiers match their code signatures"
@@ -829,6 +990,12 @@ ENTXML
   note "Validating updater.app is absent before productbuild"
   verify_no_updater_in_source "$app_path"
 
+  # Mandatory: every nested .app's CFBundleIdentifier, code signature,
+  # entitlements, and embedded provisioning profile must all actually agree
+  # with each other — not just individually pass codesign --verify. This is
+  # what codesign --verify structurally cannot catch (see function comment).
+  audit_app_bundle_profile_and_signature "$app_path" "BUILT_APP_PATH pre-productbuild"
+
   local pkg_path="$out_dir/$TESTFLIGHT_PKG_NAME"
   rm -f "$pkg_path"
 
@@ -841,6 +1008,14 @@ ENTXML
 
   note "Validating updater.app is absent from the shipped pkg (post-productbuild)"
   verify_no_updater_in_pkg "$pkg_path"
+
+  note "Re-auditing bundle/profile/signature consistency against the actual shipped payload"
+  local _expand_dir="/tmp/tmrw-pkg-check"
+  local _shipped_app
+  _shipped_app="$(find "$_expand_dir" -maxdepth 4 -name "TMRW.app" -type d | head -1)"
+  [ -n "$_shipped_app" ] && [ -d "$_shipped_app" ] || \
+    fail "Could not find TMRW.app in expanded pkg payload at $_expand_dir"
+  audit_app_bundle_profile_and_signature "$_shipped_app" "shipped pkg payload post-productbuild"
 
   note "Done: $pkg_path"
 }
