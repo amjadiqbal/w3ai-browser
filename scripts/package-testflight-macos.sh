@@ -391,7 +391,7 @@ ENTXML
     fi
   fi
 
-  # Patch crashreporter.app — artifact download retains Mozilla "Nightly Crash Reporter" branding
+  # Patch crashreporter.app — artifact retains Mozilla "Nightly Crash Reporter" branding
   local _cr_app="$app_path/Contents/MacOS/crashreporter.app"
   local _cr_plist="$_cr_app/Contents/Info.plist"
   local _cr_strings="$_cr_app/Contents/Resources/English.lproj/InfoPlist.strings"
@@ -408,6 +408,41 @@ ENTXML
     /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Crash Reporter" "$_cr_strings" 2>/dev/null || true
     /usr/libexec/PlistBuddy -c "Set :CFBundleName TMRW Crash Reporter" "$_cr_strings" 2>/dev/null || true
   fi
+
+  # Patch updater.app — artifact retains Mozilla "Nightly Software Update" branding
+  local _upd_app="$app_path/Contents/MacOS/updater.app"
+  local _upd_plist="$_upd_app/Contents/Info.plist"
+  local _upd_strings
+  _upd_strings="$(find "$_upd_app" -name "InfoPlist.strings" 2>/dev/null | head -1)"
+  if [ -f "$_upd_plist" ]; then
+    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Software Update" "$_upd_plist" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TMRW Software Update" "$_upd_plist"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleName Software Update" "$_upd_plist" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :CFBundleName string Software Update" "$_upd_plist"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.tmrw.w3ai.updater" "$_upd_plist" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :LSHasLocalizedDisplayName false" "$_upd_plist" 2>/dev/null || true
+    note "Patched updater.app display name → TMRW Software Update"
+  fi
+  if [ -n "$_upd_strings" ] && [ -f "$_upd_strings" ]; then
+    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TMRW Software Update" "$_upd_strings" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :CFBundleName Software Update" "$_upd_strings" 2>/dev/null || true
+  fi
+
+  # Re-brand remaining org.mozilla.* helper bundle IDs to com.tmrw.w3ai.*
+  local _hplist
+  for _hpair in \
+    "gpu-helper.app=com.tmrw.w3ai.gpu-helper" \
+    "media-plugin-helper.app=com.tmrw.w3ai.media-plugin-helper" \
+    "security-module-helper.app=com.tmrw.w3ai.security-module-helper" \
+    "callback_app.app=com.tmrw.w3ai.callback-app"; do
+    local _hname="${_hpair%%=*}"
+    local _hid="${_hpair##*=}"
+    _hplist="$app_path/Contents/MacOS/$_hname/Contents/Info.plist"
+    if [ -f "$_hplist" ]; then
+      /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $_hid" "$_hplist" 2>/dev/null || true
+      note "Patched $_hname bundle ID → $_hid"
+    fi
+  done
 
   # Resolve nmhproxy symlink to a real file so it can be signed
   _NMH_LINK="$app_path/Contents/MacOS/nmhproxy"
