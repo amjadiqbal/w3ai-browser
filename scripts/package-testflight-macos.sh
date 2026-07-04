@@ -1017,6 +1017,12 @@ ENTXML
     fail "Could not find TMRW.app in expanded pkg payload at $_expand_dir"
   audit_app_bundle_profile_and_signature "$_shipped_app" "shipped pkg payload post-productbuild"
 
+  # The expanded payload (several hundred MB) was only needed for the checks
+  # above — left in place it silently accumulates on /tmp on every single
+  # run, which is exactly what emptied the boot disk and corrupted a pkg
+  # build outright on 2026-07-05 (productbuild failed mid-write with ENOSPC).
+  rm -rf "$_expand_dir"
+
   note "Done: $pkg_path"
 }
 
