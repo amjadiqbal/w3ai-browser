@@ -43,6 +43,14 @@ set -euo pipefail
 #   TESTFLIGHT_PKG_NAME=TMRW-v{APP_VERSION}.pkg              # defaults to TMRW-v{APP_VERSION}.pkg
 #   MAIN_ENTITLEMENTS=build/macos/testflight/TMRW.entitlements
 #   PLUGIN_ENTITLEMENTS=build/macos/testflight/plugin-container.entitlements
+#
+# Before testing each new TestFlight version on a Mac, run:
+#   ./scripts/clear-old-testflight-install.sh --clear=old
+# then install fresh from TestFlight. This removes the previously installed
+# app plus old caches/profiles/preferences/crash reports, so stale data from
+# an earlier build can't confuse whether a new fix actually worked. Not
+# invoked automatically from this script — packaging runs on the build
+# machine, cleanup runs on the tester's Mac.
 
 fail() {
   echo "ERROR: $*" >&2
@@ -1194,6 +1202,12 @@ ENTXML
   rm -rf "$_expand_dir"
 
   note "Done: $pkg_path"
+  # Packaging runs on the build machine; cleanup is for the tester's Mac —
+  # deliberately not invoked automatically from here (see
+  # scripts/clear-old-testflight-install.sh's header comment for why).
+  echo ""
+  echo "Before testing this build on a Mac, run:"
+  echo "  ./scripts/clear-old-testflight-install.sh --clear=old"
 }
 
 main "$@"
