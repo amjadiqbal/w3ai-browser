@@ -16,5 +16,14 @@
 
   <key>com.apple.security.network.client</key>
   <true/>
+
+  <!-- Client side of the same IPC channel — see TMRW.entitlements for the
+       full explanation. plugin-container does bootstrap_look_up() against
+       the name the parent registered, so it needs mach-lookup (not
+       mach-register) for the same pattern. -->
+  <key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
+  <array>
+    <string>org.mozilla.machname.*</string>
+  </array>
 </dict>
 </plist>

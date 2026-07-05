@@ -40,5 +40,26 @@
 
   <key>com.apple.security.print</key>
   <true/>
+
+  <!-- Firefox's own multi-process IPC (ipc/glue/GeckoChildProcessHost.cpp)
+       registers a randomly-named Mach service per child-process launch —
+       org.mozilla.machname.<random int> — via bootstrap_check_in(), and the
+       single-instance "remote" protocol (toolkit/components/remote/RemoteUtils.h)
+       looks up Mozilla_<hash>_RemoteWindow. Under App Sandbox neither is
+       permitted by default, which is why no content/GPU/plugin-container
+       process was ever able to connect to the parent (found 2026-07-05 via
+       sandboxd denial logs — this is what caused pages to never load even
+       though the browser window opened). Found empirically that a trailing
+       wildcard is honored for temporary-exception mach entries. -->
+  <key>com.apple.security.temporary-exception.mach-register.global-name</key>
+  <array>
+    <string>org.mozilla.machname.*</string>
+  </array>
+  <key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
+  <array>
+    <string>org.mozilla.machname.*</string>
+    <string>org.mozilla.crashhelper.*</string>
+    <string>Mozilla_*_RemoteWindow</string>
+  </array>
 </dict>
 </plist>

@@ -826,6 +826,15 @@ ENTXML
   <key>com.apple.security.cs.allow-jit</key><true/>
   <key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
   <key>com.apple.security.cs.disable-library-validation</key><true/>
+  <!-- These are also Gecko child processes (GPU/RDD/socket/etc.) launched via
+       the same GeckoChildProcessHost bootstrap_check_in()/bootstrap_look_up()
+       mechanism as plugin-container — see TMRW.entitlements for the full
+       explanation. Without this they'd fail to connect to the parent exactly
+       like plugin-container did. -->
+  <key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
+  <array>
+    <string>org.mozilla.machname.*</string>
+  </array>
 </dict>
 </plist>
 ENTXML
