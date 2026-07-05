@@ -611,18 +611,16 @@ audit_app_bundle_profile_and_signature() {
       ent_appid="$(/usr/libexec/PlistBuddy -c "Print :com.apple.application-identifier" "$ent_file" 2>/dev/null || true)"
     fi
 
-    # D. If entitlements carry application-identifier, it must equal either
-    # TEAMID.<CFBundleIdentifier> (this bundle's own identity) OR
-    # TEAMID.<APPLE_BUNDLE_ID> (the main app's shared identity) — the one
-    # deliberate exception, for plugin-container.app specifically (found
-    # 2026-07-05: mismatched application-identifier vs the main app kept
-    # remoteTab/frameLoader null and pages from loading). Any OTHER bundle
-    # claiming a THIRD-PARTY identity that's neither its own nor the main
-    # app's is still rejected.
-    if [ -n "$ent_appid" ] && \
-       [ "$ent_appid" != "${APPLE_TEAM_ID}.${bundle_id}" ] && \
-       [ "$ent_appid" != "${APPLE_TEAM_ID}.${APPLE_BUNDLE_ID}" ]; then
-      echo "ERROR: $bundle ($bundle_exe) entitlements application-identifier is '$ent_appid', expected '${APPLE_TEAM_ID}.${bundle_id}' or the main app's '${APPLE_TEAM_ID}.${APPLE_BUNDLE_ID}'" >&2
+    # D. If entitlements carry application-identifier, it must equal
+    # TEAMID.<CFBundleIdentifier> — exactly this bundle's own identity, never
+    # a different bundle's (e.g. the main app's, when this bundle isn't main).
+    # (2026-07-05: briefly widened this to also allow the main app's shared
+    # identity, for plugin-container.app — reverted the same day after that
+    # approach broke the main app's own launch on a real TestFlight install;
+    # plugin-container now carries no application-identifier at all instead,
+    # so this check no longer needs an exception.)
+    if [ -n "$ent_appid" ] && [ "$ent_appid" != "${APPLE_TEAM_ID}.${bundle_id}" ]; then
+      echo "ERROR: $bundle ($bundle_exe) entitlements application-identifier is '$ent_appid', expected '${APPLE_TEAM_ID}.${bundle_id}'" >&2
       failures=$((failures + 1))
     fi
     rm -f "$ent_file"
@@ -636,15 +634,12 @@ audit_app_bundle_profile_and_signature() {
       profile_exp="$(/usr/libexec/PlistBuddy -c "Print :ExpirationDate" "$profile_plist" 2>/dev/null || true)"
 
       # E/I. Profile's application-identifier must match THIS bundle's own
-      # identity, OR the main app's shared identity (the one deliberate
-      # exception — see the condition D comment above; plugin-container.app
-      # intentionally embeds and is entitled with the main app's own profile/
-      # identifier, not a dedicated one). Otherwise this is the exact
-      # mismatch class that broke TestFlight runtime provisioning: a profile
-      # covering some other, unrelated identifier embedded into this bundle.
-      if [ "$profile_appid" != "${APPLE_TEAM_ID}.${bundle_id}" ] && \
-         [ "$profile_appid" != "${APPLE_TEAM_ID}.${APPLE_BUNDLE_ID}" ]; then
-        echo "ERROR: $bundle ($bundle_exe) profile app id '$profile_appid' does not match bundle id ${APPLE_TEAM_ID}.${bundle_id} or the main app's ${APPLE_TEAM_ID}.${APPLE_BUNDLE_ID}" >&2
+      # identity — the exact mismatch class that broke TestFlight runtime
+      # provisioning: a profile that actually covers a *different* bundle's
+      # identifier (typically the main app's) embedded into this one instead.
+      if [ "$profile_appid" != "${APPLE_TEAM_ID}.${bundle_id}" ]; then
+        echo "ERROR: $bundle ($bundle_exe) profile app id '$profile_appid' does not match bundle id ${APPLE_TEAM_ID}.${bundle_id}" >&2
+        echo "  Expected profile app id ${APPLE_TEAM_ID}.${bundle_id}" >&2
         failures=$((failures + 1))
       fi
 
@@ -872,35 +867,47 @@ main() {
 
   note "Embedding provisioning profiles"
   copy_profile "$main_profile" "$app_path"
-  # plugin-container embeds the MAIN app's profile (not a dedicated one of
-  # its own) — it now signs with the main app's shared application-identifier
-  # (see below), and this is the profile that actually covers that identity.
-  # A bundle can't carry an application-identifier entitlement with zero
-  # embedded profile at all (Transporter 90885), so omitting a profile
-  # entirely — the pattern used for the four *other* shared helpers, which
-  # carry no application-identifier in the first place — isn't an option
-  # here; reusing the main app's own profile is what actually matches.
-  copy_profile "$main_profile" "$plugin_app"
+
+  # BUILT_APP_PATH is reused/re-signed across many runs — explicitly remove
+  # any embedded.provisionprofile a *previous* run's approach may have left
+  # in plugin-container.app. Not copying a new one here is not the same as
+  # there being none at all; confirmed 2026-07-05 that a stale profile from
+  # an earlier attempt silently survived into a later run and tripped this
+  # script's own validation.
+  rm -f "$plugin_app/Contents/embedded.provisionprofile"
 
   # plugin-container does NOT get its own dedicated provisioning profile or
-  # its own application-identifier (found 2026-07-05: a real device test
-  # showed remoteTab/frameLoader stayed null and pages never loaded even
-  # after every other TestFlight blocker — updater/crashreporter/resources/
-  # Mach IPC entitlements/dev-path leak — was fixed). Root cause, confirmed
-  # against an old v1.2.0 commit that diagnosed the exact same symptom for
-  # the direct-DMG pipeline: plugin-container's application-identifier
-  # (K9B6ZLA9M4.com.tmrw.w3ai.plugin-container) didn't match the main app's
-  # (K9B6ZLA9M4.com.tmrw.w3ai), so macOS App Sandbox assigned it to a
-  # different container identity than its parent — exactly the setup that
-  # note warned "macOS kills plugin-container in TestFlight → remoteTab is
-  # null → all tabs blank." plugin-container now shares the main app's
-  # application-identity, the same pattern already used successfully by the
+  # any application-identifier entitlement at all (found 2026-07-05: a real
+  # device test showed remoteTab/frameLoader stayed null and pages never
+  # loaded even after every other TestFlight blocker — updater/crashreporter/
+  # resources/Mach IPC entitlements/dev-path leak — was fixed. Root cause,
+  # confirmed against an old v1.2.0 commit that diagnosed the exact same
+  # symptom for the direct-DMG pipeline: plugin-container's
+  # application-identifier (K9B6ZLA9M4.com.tmrw.w3ai.plugin-container) didn't
+  # match the main app's (K9B6ZLA9M4.com.tmrw.w3ai), so macOS App Sandbox
+  # assigned it to a different container identity than its parent.
+  #
+  # First attempt (commit 8ea441edbf39) explicitly set plugin-container's
+  # application-identifier to the main app's value AND duplicated the main
+  # app's embedded profile into it. That broke something worse: the *main
+  # app* itself then failed to launch at all after a real TestFlight
+  # install/re-sign — "AMFI: Code has restricted entitlements, but the
+  # validation of its code signature failed... No matching profile found"
+  # with unsatisfiedEntitlements beta-reports-active (the entitlement Apple's
+  # own TestFlight distribution adds during server-side re-signing). Likely
+  # cause: Apple's re-signing pass doesn't expect the identical embedded
+  # profile to appear in two bundles in the same package. Reverted that
+  # specific approach (2026-07-05, same day) in favor of this one: give
+  # plugin-container NO application-identifier and NO embedded profile at
+  # all — exactly the pattern already proven working, for years, by the
   # four other helpers (gpu-helper/media-plugin-helper/security-module-
-  # helper/callback_app) that were never given a dedicated identity in the
-  # first place. Its CFBundleIdentifier (com.tmrw.w3ai.plugin-container)
-  # stays distinct — that field only needs to be unique for Transporter, it
-  # doesn't need to match the entitlements application-identifier (codesign
-  # derives its signature Identifier from CFBundleIdentifier independently).
+  # helper/callback_app). A sandboxed child process with no application-
+  # identifier of its own inherits its parent's container identity rather
+  # than claiming a separate, mismatched one — the same underlying fix, via
+  # omission instead of explicit (and, it turns out, unsafe) duplication.
+  # Its CFBundleIdentifier (com.tmrw.w3ai.plugin-container) still stays
+  # distinct — that field only needs to be unique for Transporter's
+  # CFBundleIdentifier-collision check (90049), unrelated to this.
 
   # Build temp entitlements with application-identifier injected
   local main_app_id="${APPLE_TEAM_ID}.${APPLE_BUNDLE_ID}"
@@ -911,7 +918,12 @@ main() {
   tmp_shared_id_ent=""
   trap 'rm -f "${tmp_main_ent:-}" "${tmp_plugin_ent:-}" "${tmp_helper_ent:-}" "${tmp_shared_id_ent:-}"' EXIT
   tmp_main_ent="$(make_entitlements_with_appid "$main_entitlements" "$main_app_id" "$APPLE_TEAM_ID")"
-  tmp_plugin_ent="$(make_entitlements_with_appid "$plugin_entitlements" "$main_app_id" "$APPLE_TEAM_ID")"
+  # No make_entitlements_with_appid here — plugin-container signs with
+  # plugin_entitlements exactly as authored (app-sandbox, JIT flags,
+  # network.client, mach-lookup wildcards), with no application-identifier
+  # or team-identifier key added at all. See the comment above for why.
+  tmp_plugin_ent="$(mktemp /tmp/entitlements-plugin.XXXXXX)"
+  cp "$plugin_entitlements" "$tmp_plugin_ent"
 
   # Generic entitlements for loose (non-bundle) Mach-O files and frameworks —
   # dylibs, standalone tools (ssltunnel, certutil, pingsender...),
@@ -1252,12 +1264,12 @@ ENTXML
   sign_bundle "$app_path" "$tmp_main_ent"
 
   note "Verifying signed bundles"
-  verify_bundle_profile "$plugin_app" "plugin-container.app"
   verify_bundle_profile "$app_path" "TMRW.app"
-  # No verify_bundle_profile for the 4 shared helpers — they deliberately have
-  # no embedded.provisionprofile now (see tmp_shared_id_ent comment above),
-  # so that check would always fail. Plain signature verification still
-  # applies.
+  # No verify_bundle_profile for plugin-container or the 4 shared helpers —
+  # they deliberately have no embedded.provisionprofile now (see tmp_plugin_ent/
+  # tmp_shared_id_ent comments above), so that check would always fail. Plain
+  # signature verification still applies.
+  codesign --verify --deep --strict --verbose=2 "$plugin_app"
   for _hname in gpu-helper.app media-plugin-helper.app security-module-helper.app callback_app.app; do
     _hbundle="$app_path/Contents/MacOS/$_hname"
     if [ -d "$_hbundle" ]; then
@@ -1266,6 +1278,7 @@ ENTXML
   done
 
   note "Verifying nested bundle identifiers match their code signatures"
+  verify_identifier_match "$plugin_app" "plugin-container.app"
   for _hname in gpu-helper.app media-plugin-helper.app security-module-helper.app callback_app.app; do
     _hbundle="$app_path/Contents/MacOS/$_hname"
     [ -d "$_hbundle" ] && verify_identifier_match "$_hbundle" "$_hname"
@@ -1312,31 +1325,28 @@ ENTXML
   fi
   note "  CFBundleIdentifier=$_check_plugin_id"
   note "  codesign Identifier=$_pc_sig_id"
-  note "  application-identifier=$_pc_appid"
+  note "  application-identifier=${_pc_appid:-<none>}"
   note "  embedded profile app id=${_pc_profile_appid:-<none>}"
 
-  # Explicit, literal assertions for the plugin-container identity-alignment
-  # fix (2026-07-05) — same spirit as the bundle-id checks above: name
-  # exactly which field is wrong right before packaging, not several
-  # abstraction layers away in audit_app_bundle_profile_and_signature.
+  # Explicit, literal assertions for the plugin-container identity fix
+  # (2026-07-05) — same spirit as the bundle-id checks above: name exactly
+  # which field is wrong right before packaging, not several abstraction
+  # layers away in audit_app_bundle_profile_and_signature. plugin-container
+  # must have NO application-identifier and NO embedded profile at all — see
+  # the "Embedding provisioning profiles" comment above for why an earlier
+  # attempt at explicitly sharing the main app's identity + profile broke
+  # the main app's own launch, and was reverted the same day.
   [ "$_pc_sig_id" = "$APPLE_PLUGIN_CONTAINER_BUNDLE_ID" ] || \
     fail "plugin-container.app codesign Identifier is '$_pc_sig_id', expected '$APPLE_PLUGIN_CONTAINER_BUNDLE_ID'"
-  [ "$_pc_appid" = "${APPLE_TEAM_ID}.${APPLE_BUNDLE_ID}" ] || \
-    fail "plugin-container.app application-identifier is '$_pc_appid', expected the main app's '${APPLE_TEAM_ID}.${APPLE_BUNDLE_ID}' (not a dedicated ${APPLE_TEAM_ID}.${APPLE_PLUGIN_CONTAINER_BUNDLE_ID})"
-  local _main_appid_check _main_ent_file
-  _main_ent_file="$(mktemp /tmp/main-entitlements-check.XXXXXX)"
-  codesign -d --entitlements :- "$app_path" > "$_main_ent_file" 2>/dev/null
-  _main_appid_check="$(/usr/libexec/PlistBuddy -c "Print :com.apple.application-identifier" "$_main_ent_file" 2>/dev/null || true)"
-  rm -f "$_main_ent_file"
-  [ "$_main_appid_check" = "${APPLE_TEAM_ID}.${APPLE_BUNDLE_ID}" ] || \
-    fail "Main app application-identifier is '$_main_appid_check', expected '${APPLE_TEAM_ID}.${APPLE_BUNDLE_ID}'"
-  note "  Plugin-container/main app application-identifier alignment OK"
+  [ -z "$_pc_appid" ] || \
+    fail "plugin-container.app has an application-identifier entitlement ('$_pc_appid') — it must have none at all (matches gpu-helper/media-plugin-helper/security-module-helper/callback_app)"
+  [ -z "$_pc_profile_appid" ] || \
+    fail "plugin-container.app has an embedded provisioning profile (app id '$_pc_profile_appid') — it must have none at all"
+  note "  Plugin-container has no application-identifier and no embedded profile — OK"
 
   note "Validating embedded provisioning profiles before productbuild"
   [ -f "$app_path/Contents/embedded.provisionprofile" ] || \
     fail "Missing $app_path/Contents/embedded.provisionprofile"
-  [ -f "$plugin_app/Contents/embedded.provisionprofile" ] || \
-    fail "Missing $plugin_app/Contents/embedded.provisionprofile"
   note "  All required embedded.provisionprofile files present"
 
   note "Validating updater.app is absent before productbuild"
