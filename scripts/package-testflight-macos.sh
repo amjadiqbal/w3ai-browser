@@ -493,6 +493,53 @@ validate_gecko_resources() {
   note "  Gecko chrome/locale/MainMenu.nib resources present and non-empty ($label)"
 }
 
+# Found 2026-07-05: MozillaDeveloperRepoPath/MozillaDeveloperObjPath in
+# Info.plist (baked in at build time with the build machine's actual local
+# paths) get read by every content/GMP child process at launch and passed to
+# their own sandbox as -sbTestingReadPath — leaking the build machine's
+# filesystem layout into a shipped, sandboxed app, and widening its sandbox
+# with real read access to that machine's disk. The Info.plist keys are
+# repointed at a safe in-bundle path above (this is an artifact build, so the
+# keys can't be removed outright — see that comment for why).
+#
+# Scope: this checks plain-text/config/plist files only — the functionally
+# reachable surface, i.e. things that get *read* by running code and can
+# turn into actual sandbox arguments or behavior. It deliberately does NOT
+# scan compiled Mach-O binaries or the codesign-generated
+# Contents/*/_CodeSignature/ directory:
+#   - Every compiled binary (XUL, firefox, the dylibs) embeds this build's
+#     absolute source/object file paths as inert DWARF debug-symbol strings
+#     (checked 2026-07-05 via `strings` — e.g. literal .cpp/.o paths in
+#     firefox's symbol table). These are never read or acted on at runtime;
+#     removing them would need a full non-artifact rebuild with
+#     -ffile-prefix-map or similar, which is out of scope here (this is an
+#     artifact build — see the Info.plist comment above for why that
+#     blocks recompiling anything).
+#   - _CodeSignature/CodeResources can carry stale historical "this path
+#     was a symlink to <repo path> when last sealed" metadata for files
+#     that have since been replaced with real content (confirmed
+#     2026-07-05: the .sys.mjs files it names are real files on disk now,
+#     not symlinks) — this is signing-artifact residue, not a live leak,
+#     and gets superseded whenever the bundle is next resealed.
+# Also deliberately does NOT check for the literal string
+# "sbTestingReadPath" itself — that's Gecko's own compiled-in sandbox flag
+# name and is present in every build's binary regardless of this bug; only
+# the actual leaked path *values* matter. $1 is the app root to check; $2 is
+# a human label for the error message.
+verify_no_dev_paths_leaked() {
+  local app_path="$1"
+  local label="$2"
+
+  local hit
+  hit="$(grep -rlI -e "/Volumes/Amjad/Plato/W3Ai" -e "obj-x86_64-apple-darwin25.5.0" "$app_path" 2>/dev/null | grep -v '/_CodeSignature/' || true)"
+  if [ -n "$hit" ]; then
+    echo "ERROR: $label: development/build-machine paths leaked into a text/config/plist file:" >&2
+    echo "$hit" >&2
+    exit 1
+  fi
+  note "  No development/build-machine paths found in $label"
+}
+
 # `codesign --verify --deep --strict` only checks code signature integrity —
 # hashes match, cert chain is valid. It does NOT check whether an embedded
 # provisioning profile's application-identifier actually matches what the
@@ -751,6 +798,56 @@ main() {
 
   note "Main bundle id: $(plist_get "$app_plist" CFBundleIdentifier)"
   note "Plugin bundle id: $(plist_get "$plugin_plist" CFBundleIdentifier)"
+
+  # MozillaDeveloperRepoPath/MozillaDeveloperObjPath (browser/app/macbuild/
+  # Contents/Info.plist.in) get baked into Info.plist at build time with the
+  # build machine's actual local paths (e.g. /Volumes/Amjad/Plato/W3Ai). Every
+  # child process reads them at launch (nsMacUtilsImpl::GetRepoDir/GetObjDir,
+  # xpcom/base/nsMacUtilsImpl.cpp) and passes them to its own sandbox as
+  # -sbTestingReadPath, whitelisting the build machine's filesystem inside a
+  # shipped, sandboxed app — found 2026-07-05 via `ps` on a real TestFlight
+  # install.
+  #
+  # This is an artifact build (mozconfig: --enable-artifact-builds) — libxul
+  # is a prebuilt binary from Mozilla's CI, not compiled locally, so there is
+  # no way to change what happens if these keys are *missing*: the compiled
+  # code unconditionally MOZ_CRASHes every content/GMP process at launch if
+  # GetRepoDir()/GetObjDir() fail (dom/ipc/ContentParent.cpp,
+  # dom/media/gmp/GMPProcessParent.cpp), and that behavior can't be patched
+  # without a full non-artifact rebuild. So the keys must stay present and
+  # resolve to a real directory — packaging-only fix: repoint their *values*
+  # at a directory that (a) exists inside this app's own bundle, so it's
+  # something the sandbox already has to allow anyway, and (b) is a fixed,
+  # well-known path rather than this build machine's location. TestFlight/
+  # Mac App Store-distributed apps are always installed at
+  # /Applications/<Name>.app, so that's a safe, portable literal to bake in.
+  note "Repointing developer repo/obj-dir paths at a safe in-bundle path (was leaking as -sbTestingReadPath)"
+  local _safe_dev_path="/Applications/TMRW.app/Contents/Resources"
+  for _plist_target in \
+    "$app_plist" \
+    "$plugin_app/Contents/Info.plist" \
+    "$app_path/Contents/MacOS/gpu-helper.app/Contents/Info.plist" \
+    "$app_path/Contents/MacOS/media-plugin-helper.app/Contents/Info.plist" \
+    "$app_path/Contents/MacOS/security-module-helper.app/Contents/Info.plist" \
+  ; do
+    [ -f "$_plist_target" ] || continue
+    /usr/libexec/PlistBuddy -c "Set :MozillaDeveloperRepoPath $_safe_dev_path" "$_plist_target" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :MozillaDeveloperRepoPath string $_safe_dev_path" "$_plist_target"
+    /usr/libexec/PlistBuddy -c "Set :MozillaDeveloperObjPath $_safe_dev_path" "$_plist_target" 2>/dev/null || \
+      /usr/libexec/PlistBuddy -c "Add :MozillaDeveloperObjPath string $_safe_dev_path" "$_plist_target"
+  done
+
+  # .lldbinit is a debugger convenience script pointing at the build
+  # machine's source tree — useless in a shipped app, remove entirely.
+  rm -f "$app_path/Contents/Resources/.lldbinit"
+
+  # RFPTargetConstants.sys.mjs's header comment names the generator script's
+  # absolute input paths — functionally harmless (it's a comment) but still
+  # leaks the build machine's path; strip just that one line.
+  local _rfp_constants="$app_path/Contents/Resources/modules/RFPTargetConstants.sys.mjs"
+  if [ -f "$_rfp_constants" ]; then
+    sed -i '' '/\/Volumes\/Amjad\/Plato\/W3Ai/d' "$_rfp_constants"
+  fi
 
   # Remove updater.app and every updater-related artifact entirely for this
   # TestFlight/App Store build. This does NOT apply to the direct-DMG build
@@ -1171,6 +1268,9 @@ ENTXML
   note "Validating Gecko chrome/locale/MainMenu.nib resources before productbuild"
   validate_gecko_resources "$app_path" "BUILT_APP_PATH pre-productbuild"
 
+  note "Validating no development/build-machine paths leaked before productbuild"
+  verify_no_dev_paths_leaked "$app_path" "BUILT_APP_PATH pre-productbuild"
+
   # Mandatory: every nested .app's CFBundleIdentifier, code signature,
   # entitlements, and embedded provisioning profile must all actually agree
   # with each other — not just individually pass codesign --verify. This is
@@ -1203,6 +1303,9 @@ ENTXML
 
   note "Validating Gecko chrome/locale/MainMenu.nib resources in the shipped pkg (post-productbuild)"
   validate_gecko_resources "$_shipped_app" "shipped pkg payload post-productbuild"
+
+  note "Validating no development/build-machine paths leaked in the shipped pkg (post-productbuild)"
+  verify_no_dev_paths_leaked "$_shipped_app" "shipped pkg payload post-productbuild"
 
   # The expanded payload (several hundred MB) was only needed for the checks
   # above — left in place it silently accumulates on /tmp on every single
