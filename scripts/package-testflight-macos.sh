@@ -926,11 +926,14 @@ ENTXML
   <!-- These are also Gecko child processes (GPU/RDD/socket/etc.) launched via
        the same GeckoChildProcessHost bootstrap_check_in()/bootstrap_look_up()
        mechanism as plugin-container — see TMRW.entitlements for the full
-       explanation. Without this they'd fail to connect to the parent exactly
-       like plugin-container did. -->
+       explanation, including why "Mozilla_*" (pure prefix) replaced
+       "Mozilla_*_RemoteWindow". Without this they'd fail to connect to the
+       parent exactly like plugin-container did. -->
   <key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
   <array>
     <string>org.mozilla.machname.*</string>
+    <string>org.mozilla.crashhelper.*</string>
+    <string>Mozilla_*</string>
   </array>
 </dict>
 </plist>

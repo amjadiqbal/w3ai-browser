@@ -43,23 +43,36 @@
 
   <!-- Firefox's own multi-process IPC (ipc/glue/GeckoChildProcessHost.cpp)
        registers a randomly-named Mach service per child-process launch —
-       org.mozilla.machname.<random int> — via bootstrap_check_in(), and the
-       single-instance "remote" protocol (toolkit/components/remote/RemoteUtils.h)
-       looks up Mozilla_<hash>_RemoteWindow. Under App Sandbox neither is
-       permitted by default, which is why no content/GPU/plugin-container
-       process was ever able to connect to the parent (found 2026-07-05 via
-       sandboxd denial logs — this is what caused pages to never load even
-       though the browser window opened). Found empirically that a trailing
-       wildcard is honored for temporary-exception mach entries. -->
+       org.mozilla.machname.<random int> — via bootstrap_check_in(). Crash-
+       reporting IPC code still compiled into the main binary (even though
+       crashreporter.app/crashhelper were removed, Round 13) separately
+       registers org.mozilla.crashhelper.<hash>. The single-instance "remote"
+       protocol (toolkit/components/remote/RemoteUtils.h) both registers and
+       looks up Mozilla_<profile-or-hash>_RemoteWindow. Under App Sandbox
+       none of these are permitted by default — found 2026-07-05 via
+       sandboxd denial logs, this is what caused pages to never load even
+       though the browser window opened.
+       Found empirically (2026-07-05) that only a *trailing* wildcard is
+       honored for temporary-exception mach entries — "Mozilla_*_RemoteWindow"
+       (wildcard sandwiched between two literal segments) kept getting
+       denied even with this exact entry present, while
+       "org.mozilla.machname.*" (pure prefix match) worked. Switched to
+       "Mozilla_*" (pure prefix, no trailing literal) to match every
+       RemoteWindow variant regardless of what follows "Mozilla_". Also
+       added mach-register (not just mach-lookup) for crashhelper/
+       RemoteWindow — this app is on both the registering and the looking-up
+       side of these channels depending on which one runs first. -->
   <key>com.apple.security.temporary-exception.mach-register.global-name</key>
   <array>
     <string>org.mozilla.machname.*</string>
+    <string>org.mozilla.crashhelper.*</string>
+    <string>Mozilla_*</string>
   </array>
   <key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
   <array>
     <string>org.mozilla.machname.*</string>
     <string>org.mozilla.crashhelper.*</string>
-    <string>Mozilla_*_RemoteWindow</string>
+    <string>Mozilla_*</string>
   </array>
 </dict>
 </plist>

@@ -17,13 +17,17 @@
   <key>com.apple.security.network.client</key>
   <true/>
 
-  <!-- Client side of the same IPC channel — see TMRW.entitlements for the
-       full explanation. plugin-container does bootstrap_look_up() against
-       the name the parent registered, so it needs mach-lookup (not
-       mach-register) for the same pattern. -->
+  <!-- Client side of the same IPC channels — see TMRW.entitlements for the
+       full explanation, including why "Mozilla_*" (pure prefix) replaced
+       "Mozilla_*_RemoteWindow" (2026-07-05: a wildcard sandwiched between
+       two literal segments was not honored). plugin-container does
+       bootstrap_look_up() against names the parent registered, so it needs
+       mach-lookup (not mach-register) for the same patterns. -->
   <key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
   <array>
     <string>org.mozilla.machname.*</string>
+    <string>org.mozilla.crashhelper.*</string>
+    <string>Mozilla_*</string>
   </array>
 </dict>
 </plist>
